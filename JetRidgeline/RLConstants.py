@@ -4,7 +4,7 @@
 Constants for the ridgeline toolkit
 
 Author:         bonnybarkus 04/10/2019
-Modified by:    LizWhitehead 12/11/2024
+Modified by:    LizWhitehead 12/11/2024 to set global maptype specific constants
 """
 ##  Debugging on or off turns on print statements if True
 debug = True
@@ -102,7 +102,7 @@ def init_maptype_specific_constants(map_type):
     if map_type == 'VLA':
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
-        nSig = 4.0
+        nSig = 3.0
     elif map_type == 'LOFAR-DR1':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667
