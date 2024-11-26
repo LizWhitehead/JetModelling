@@ -11,7 +11,8 @@ import os
 
 # Load in files -- added by setup script
 
-indir=os.getenv('RLDIR')
+##LW##indir=os.getenv('RLDIR')
+indir = os.getcwd()   ##LW##
 
 LofCat = indir+'/radio.fits'
 CompCat = indir+'/components.fits' # changed by MJH -- each dir has
@@ -22,12 +23,12 @@ PossHosts = indir+'/hosts.csv'
 tmpdir = indir+'/'
 
 # Data files
-fitsfile = indir+'/fits_cutouts/'
-npyfile = indir+'/rms4_cutouts/'
-rms4 = indir+'/rms4/'
-rms4cutout = indir+'/rms4_cutouts/'
-fits = indir+'/fits/'
-fitscutout = indir+'/fits_cutouts/'
+fitsfile = indir + '/fits_cutouts/'
+npyfile = indir + '/rms_cutouts/'
+rms = indir + '/rms/'
+rmscutout = indir + '/rms_cutouts/'
+fits = indir + '/fits/'
+fitscutout = indir + '/fits_cutouts/'
 
 # Ridgelines
 TFC = indir+'/total_flux_cutWorkingSet.txt'

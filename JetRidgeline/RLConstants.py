@@ -102,7 +102,7 @@ def init_maptype_specific_constants(map_type):
     if map_type == 'VLA':
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
-        nSig = 3.0
+        nSig = 3.5
     elif map_type == 'LOFAR-DR1':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667

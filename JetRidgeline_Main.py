@@ -9,7 +9,10 @@ Author: LizWhitehead 12/11/2024
 """
 import JetRidgeline.RLConstants as RLC
 import JetRidgeline.RLSetup as RLS
+import JetRidgeline.Ridgelines as RL
 import argparse
+from warnings import simplefilter
+simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
 
 # Read in the FITS file and map type arguments
 # # parser = argparse.ArgumentParser(description='Create ridgelines for radio map')
@@ -24,5 +27,8 @@ import argparse
 map_file = 'C:/Maps/3C31.HGEOM2Copy.FITS'
 map_type = 'VLA'
 
-# Set up the directory structure for ridgeline processing. Produce thresholded npy cutout.
-RLS.setup(map_file, map_type)
+# Set up the directory structure for ridgeline processing. Produce 2D flattened map and thresholded npy cutout.
+RLS.Setup(map_file, map_type)
+
+# Draw the ridgelines
+RL.Draw_Ridgelines()
