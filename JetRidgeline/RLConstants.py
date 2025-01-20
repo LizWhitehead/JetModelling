@@ -43,6 +43,9 @@ Lcone = 85  ##  The angle in degrees of the larger cone
 MaxLen = 0.95 ##  Multiplier of Source size to determine max RL length
 ipit = 6  ##  Max number of iterations in the initial point search for directions
 
+## FindEdgePoints
+EPFlag = True  ## Find edge points for a jet
+
 ##  FloodFill, GetAvailableSources, CreateCutOutCat
 #rdel  ## See function init_maptype_specific_constants
 #ddel  ## See function init_maptype_specific_constants
@@ -102,7 +105,7 @@ def init_maptype_specific_constants(map_type):
     if map_type == 'VLA':
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
-        nSig = 3.5
+        nSig = 12.0
     elif map_type == 'LOFAR-DR1':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667
