@@ -11,8 +11,8 @@ import os
 
 # Load in files -- added by setup script
 
-##LW##indir=os.getenv('RLDIR')
-indir = os.getcwd()   ##LW##
+#indir=os.getenv('RLDIR')      ## Linux
+indir = os.getcwd()            ## Windows
 
 LofCat = indir+'/radio.fits'
 CompCat = indir+'/components.fits' # changed by MJH -- each dir has
@@ -41,6 +41,12 @@ psl = indir+'/problematic/problematic_sources_listWorkingSet.txt'
 # EdgePoints
 EP1 = indir+'/edgepoints/%s_edgepoint1.txt'
 EP2 = indir+'/edgepoints/%s_edgepoint2.txt'
+SP1 = indir+'/edgepoints/%s_sectionparameters1.txt'
+SP2 = indir+'/edgepoints/%s_sectionparameters2.txt'
+JP1 = indir+'/edgepoints/%s_jetparameters1.txt'
+JP2 = indir+'/edgepoints/%s_jetparameters2.txt'
+EPimage = indir+'/edgepoints/%s_edgepoints%d.png'
+JPimage = indir+'/edgepoints/%s_jetparameters%d.png'
 
 # SourceSearch
 coc = indir+'/CutOutCats/Cutout_Catalogue-%s.txt'

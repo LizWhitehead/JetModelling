@@ -5,9 +5,11 @@
 # Modified some more by Bonny
 # Modified to work on a single source radio map by Liz
 
+from ast import While
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 import JetRidgeline.RLGlobal as RLG
+import JetRidgeline.EdgeToolkit as ETK
 from JetRidgeline.sizeflux_tools import Flood,Mask
 from astropy.io import fits
 from astropy.table import Table
@@ -552,10 +554,7 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
             else:
 
                 if RLC.EPFlag:
-                    if np.isnan(phi_val1):
-                        init_edge_points = FindInitEdgePoints(area_fluxes, init_point, phi_val2)     # Find initial edge points
-                    else:
-                        init_edge_points = FindInitEdgePoints(area_fluxes, init_point, phi_val1)     # Find initial edge points
+                    init_edge_points = ETK.FindInitEdgePoints(area_fluxes, init_point, phi_val1, ridge_R = 0)      # Find initial edge points
                 
                 chain_mask1 = larger_cone1.mask
                 chain_mask2 = larger_cone2.mask
@@ -564,15 +563,25 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                                                                   init_point, cone1, chain_mask1, R)
                 ridge1 = np.vstack((init_point, new_point1))
                 if RLC.EPFlag and not np.isnan(new_phi1):
-                    stop_finding_edge_points1, new_edge_points1 = FindEdgePoints(area_fluxes, new_point1, new_phi1, init_edge_points) # Find edge points 1
-                    edge_points1 = np.vstack(init_edge_points, new_edge_points1)
+                    try:
+                        stop_finding_edge_points1, new_edge_points1 = ETK.FindEdgePoints(area_fluxes, new_point1, new_phi1, RFNew1, init_edge_points) # Find edge points 1
+                    except:
+                        stop_finding_edge_points1 = True
+                    else:
+                        if not np.isnan(new_edge_points1).any(): 
+                            edge_points1 = np.vstack((init_edge_points, new_edge_points1))
 
                 new_point2, new_phi2, chain_mask2, RFNew2 = GetFirstPoint(new_fluxes, \
                                                                   init_point, cone2, chain_mask2, R)
                 ridge2 = np.vstack((init_point, new_point2))
                 if RLC.EPFlag and not np.isnan(new_phi2):
-                    stop_finding_edge_points2, new_edge_points2 = FindEdgePoints(area_fluxes, new_point2, new_phi2, init_edge_points) # Find edge points 2
-                    edge_points2 = np.vstack(init_edge_points, new_edge_points2)
+                    try:
+                        stop_finding_edge_points2, new_edge_points2 = ETK.FindEdgePoints(area_fluxes, new_point2, new_phi2, RFNew2, init_edge_points) # Find edge points 2
+                    except:
+                        stop_finding_edge_points2 = True
+                    else:
+                        if not np.isnan(new_edge_points2).any(): 
+                            edge_points2 = np.vstack((init_edge_points, new_edge_points2))
                 
                 #print('RFNew1 = ' + str(RFNew1))
                 #print('RFNew2 = ' + str(RFNew2))
@@ -624,8 +633,16 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
 
                         # Find edge points
                         if RLC.EPFlag and not stop_finding_edge_points1:
-                            stop_finding_edge_points1, new_edge_points1 = FindEdgePoints(area_fluxes, new_point1, new_phi1, prev_edge_points = edge_points1[-1])
-                            edge_points1 = np.vstack(edge_points1, edge_points1)
+                            try:
+                                if RNew1 < (RLC.MaxRFactor * R):    # Test whether the last step size has increased by too much
+                                    stop_finding_edge_points1, new_edge_points1 = ETK.FindEdgePoints(area_fluxes, new_point1, new_phi1, Rtot1, prev_edge_points = edge_points1[-1])
+                                else:
+                                    new_edge_points1 = ETK.FindInitEdgePoints(area_fluxes, new_point1, new_phi1, Rtot1)      # Re-initialise edge points algorithm
+                            except:
+                                stop_finding_edge_points1 = True
+                            else:
+                                if not np.isnan(new_edge_points1).any(): 
+                                    edge_points1 = np.vstack((edge_points1, new_edge_points1))
                     
                     if RLC.debug == True:
                         print('Tracing second ridgeline')
@@ -653,8 +670,16 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
 
                         # Find edge points
                         if RLC.EPFlag and not stop_finding_edge_points2:
-                            stop_finding_edge_points2, new_edge_points2 = FindEdgePoints(area_fluxes, new_point2, new_phi2, prev_edge_points = edge_points2[-1])
-                            edge_points2 = np.vstack(edge_points2, edge_points2)
+                            try:
+                                if RNew2 < (RLC.MaxRFactor * R):    # Test whether the last step size has increased by too much
+                                    stop_finding_edge_points2, new_edge_points2 = ETK.FindEdgePoints(area_fluxes, new_point2, new_phi2, Rtot2, prev_edge_points = edge_points2[-1])
+                                else:
+                                    new_edge_points2 = ETK.FindInitEdgePoints(area_fluxes, new_point2, new_phi2, Rtot2)      # Re-initialise edge points algorithm
+                            except:
+                                stop_finding_edge_points2 = True
+                            else:
+                                if not np.isnan(new_edge_points2).any(): 
+                                    edge_points2 = np.vstack((edge_points2, new_edge_points2))
                 
                 #print('Rtot1 = ' + str(Rtot1))
                 #print('Rtot2 = ' + str(Rtot2))
@@ -1698,7 +1723,7 @@ def PiRange(angle):
 
 #############################################
 
-def PolarCoordinates(a, pos):
+def PolarCoordinatesOld(a, pos):
 
     """
     Returns a grid of r and phi polar coordinate values
@@ -1743,6 +1768,21 @@ def PolarCoordinates(a, pos):
         theta = round(atan2(r_y, r_x), 3)
         theta = PiRange(theta)
         phi[index[0], index[1]] = theta
+
+    return r, phi
+
+#############################################
+
+def PolarCoordinates(a, pos):
+
+    X = pos[0]
+    Y = pos[1]
+    r = np.zeros_like(a)
+    phi = np.zeros_like(a)
+    a_offset = np.indices(a.shape)
+
+    r[:,:] = np.sqrt((a_offset[0,:,:] + 0.5 - Y)**2 + (a_offset[1,:,:] + 0.5 - X)**2)
+    phi[:,:] = np.round(np.arctan2((a_offset[0,:,:] + 0.5 - Y), (a_offset[1,:,:] + 0.5 - X)), 3)
 
     return r, phi
 
@@ -1835,7 +1875,6 @@ def TrialSeries(R, dphi):
         
     if RLC.debug: print(str(source_name) + ' Convolution')
     area_fluxes = AreaFluxes(flux_array)            ## Convolution
-    ##LW##area_fluxes = flux_array            ## No convolution
                     
     if RLC.debug: print(str(source_name) + ' Initial Point')
     try:
@@ -1853,6 +1892,26 @@ def TrialSeries(R, dphi):
     try:
         ridge1, edge_points1, phi_val1, Rlen1, \
         ridge2, edge_points2, phi_val2, Rlen2, Error = FindRidges(area_fluxes, init_point, R, dphi, lmsize)
+
+        if RLC.EPFlag:
+            try:
+                # Interpolate extra edge points at points in the jet where significant flux is cut off
+                edge_points1 = ETK.AddEdgePoints(area_fluxes, edge_points1)
+                edge_points2 = ETK.AddEdgePoints(area_fluxes, edge_points2)
+            except:
+                print('Error occurred interpolating extra edge points')
+
+            try:
+                # Get sections and section parameters (distance from source, flux, volume) of the jet
+                section_parameters1, section_parameters2 = ETK.GetJetSections(area_fluxes, edge_points1, edge_points2)
+            except:
+                print('Error occurred computing section parameters')
+
+            try:
+                # Get parameter values along each arm of the jet
+                jet_parameters1, jet_parameters2 = ETK.GetJetParameters(section_parameters1, section_parameters2)
+            except:
+                print('Error occurred computing jet parameters')
                     
     except (ValueError, UnboundLocalError):# TypeError, 
             
@@ -1944,11 +2003,6 @@ def TrialSeries(R, dphi):
                 file2 = np.column_stack((ridge2[:,0], ridge2[:,1], phi_val2, Rlen2))
                 np.savetxt(RLF.R1 %source_name, file1, delimiter=' ')
                 np.savetxt(RLF.R2 %source_name, file2, delimiter=' ')
-                if RLC.EPFlag:
-                    fileEP1 = np.column_stack(edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], Rlen1)
-                    fileEP2 = np.column_stack(edge_points2[:,0], edge_points2[:,1], edge_points2[:,2], edge_points2[:,3], Rlen2)
-                    np.savetxt(RLF.EP1 %source_name, fileEP1, delimiter=' ')
-                    np.savetxt(RLF.EP2 %source_name, fileEP2, delimiter=' ')
     
                 y, x = np.mgrid[slice((0),(area_fluxes.shape[0]),1), slice((0),(area_fluxes.shape[1]),1)]
                 y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes).mask)
@@ -1992,21 +2046,8 @@ def TrialSeries(R, dphi):
     
                 A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
                 ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
-                ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1')
-                ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2')
-                if RLC.EPFlag:
-                    ax.plot(edge_points1[:,0], edge_points1[:,1], 'r-', linestyle='--', marker='o') # Edge lines
-                    ax.plot(edge_points1[:,2], edge_points1[:,3], 'r-', linestyle='--', marker='o')
-                    ax.plot(edge_points2[:,0], edge_points2[:,1], 'r-', linestyle='--', marker='o')
-                    ax.plot(edge_points2[:,2], edge_points2[:,3], 'r-', linestyle='--', marker='o')
-                    for (x1,y1,x2,y2), value in np.ndenumerate(edge_points1):
-                        x_values = [x1, x2]
-                        y_values = [y2, y2]
-                        ax.plot(x_values, y_values, 'r-', linestyle='--')               # Edge point segment separators
-                    for (x1,y1,x2,y2), value in np.ndenumerate(edge_points2):
-                        x_values = [x1, x2]
-                        y_values = [y2, y2]
-                        ax.plot(x_values, y_values, 'r-', linestyle='--')               # Edge point segment separators
+                ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
+                ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
                 #ax.scatter(float(cat_pos[0]), float(cat_pos[1]), s=130, c='m', marker='x', label='LOFAR id')
                 #ax.scatter(float(init_point[0]), float(init_point[1]), s=130, c='c', marker='x', label='Initial point')
                 ax.legend()
@@ -2015,6 +2056,11 @@ def TrialSeries(R, dphi):
     
                 fig.savefig(RLF.Rimage %(source_name, dphi))
                 plt.close(fig)
+
+                if RLC.EPFlag: 
+                    ETK.SaveEdgepointFiles(source_name, edge_points1, edge_points2, \
+                                           section_parameters1, section_parameters2, jet_parameters1, jet_parameters2)
+                    ETK.PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, section_parameters1, section_parameters2)
 
     # save the list of problematic sources in problematic_sources_list.txt
     # with source names separated from the problem type with a space.
@@ -2129,242 +2175,5 @@ def FindNoiseArea(source, hdu3):
 
     print("mean, noise: ", mean, noise)
     return mean, noise
-
-#############################################
-
-def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, prev_edge_points):
-
-    """
-    Returns edge points, on either side of the jet, corresponding to
-    the closest distance to that edge from the supplied ridge point.
-
-    Parameters
-    -----------
-    area_fluxes - 2D array,
-                  raw image array
-
-    ridge_point - 1D array, shape(2, )
-                  ridge point along the ridge line
-
-    ridge_phi - float,
-                angular direction of the ridge point
-
-    prev_edge_points - 1D array, shape(4,)
-                       edge points corresponding to
-                       previous ridge point
-                       (x1,y1,x2,y2)
-    
-    Constants
-    ---------
-
-    Returns
-    -----------
-
-    edge_points - 1D array, shape(4,)
-                  Points on either side of the jet, corresponding to the 
-                  closest distance to that edge from the initial ridge point.
-                  (x1,y1,x2,y2)
-
-    Notes
-    -----------
-
-    """
-
-    # Initialise flag to indicate that edge points determination should stop
-    stop_finding_edge_points = False
-
-    # Initialise edge_points array
-    edge_points = np.full(4, np.nan)
-
-    # Get polar coordinates for area_fluxes, around the ridge point
-    r, phi = PolarCoordinates(area_fluxes, ridge_point)
-
-    # Find the r and phi values of the previous edge points around the ridge point
-    phi1 = phi[prev_edge_points[0], prev_edge_points[1]]
-    phi2 = phi[prev_edge_points[2], prev_edge_points[3]]
-    r1 = r[prev_edge_points[0], prev_edge_points[1]]
-    r2 = r[prev_edge_points[2], prev_edge_points[3]]
-
-    # Find the difference between phi of the ridge point and that of each previous edge point
-    phi_diff1 = max(ridge_phi, phi1) - min(ridge_phi, phi1)
-    phi_diff2 = max(ridge_phi, phi2) - min(ridge_phi, phi2)
-
-    # Start looking for the edge point with the smallest phi difference
-    if phi_diff1 < phi_diff2:
-        phi_prev = phi1
-        r_prev = r1
-    else:
-        phi_prev = phi2
-        r_prev = r2
-
-    # Fill invalid (nan) values with zeroes in area_fluxes
-    area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
-
-    # Mask the jet - where flux values are above (RLC.nSig * rms)
-    jet_mask = np.ma.masked_where(area_fluxes_valid > (RLC.nSig * 0.0002), area_fluxes_valid).mask
-
-    # Create a mask to search for nearest edge point on this side of the ridge point
-    phi_mask = np.ma.masked_outside(phi, ridge_phi, phi_prev).mask          # search between ridge_phi and phi_prev
-    r_mask = np.ma.masked_outside(r, 0, 2*r_prev).mask                      # search up to 2 times distance to previous edge point
-    search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, r_mask), jet_mask)  # search outside the jet
-
-    # Find the smallest r value in the search area
-    r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
-    r_min = np.amin(r_search)
-
-    # Test whether the ridgeline has turned round and, if so, stop ridge calculations.
-    if r_min > r_prev:
-        stop_finding_edge_points = True
-
-    if not stop_finding_edge_points:
-
-        # Find the co-ordinates of the first point in r_search with this value. This is the first edge point.
-        edge_coord1 = np.where(r_search = r_min)[0][0]              ##LW## will equality test work??
-
-        # Assume the phi of the opposite edge is at phi+pi radians
-        phi_edge2 = PiRange(phi[edge_coord1[0], edge_coord1[1]] + pi)
-
-        # Mask a small phi range around phi_edge2, outside the jet
-        search_phi_range1 = PiRange(phi_edge2 - (pi*5/180))       # +/- 5 degrees
-        search_phi_range2 = PiRange(phi_edge2 + (pi*5/180))
-        if 3 <= CheckQuadrant(search_phi_range2) <= 4 and 1 <= CheckQuadrant(search_phi_range1) <= 2:
-            phi_range_mask = np.ma.masked_inside(phi, search_phi_range2, search_phi_range1).mask
-        else:
-            phi_range_mask = np.ma.masked_outside(phi, search_phi_range1, search_phi_range2).mask
-        phi_nearest_mask = np.ma.mask_or(phi_range_mask, jet_mask)
-
-        # Find the phi value closest to phi_edge2. 
-        phi_nearest = np.ma.masked_array(phi, mask = phi_nearest_mask, copy = True)
-        nearest_phi_edge2 = phi_nearest.flat[np.abs(phi_nearest - phi_edge2).argmin()]
-
-        # Search for the edge point at this phi
-        search_mask = np.ma.masked_where(phi_nearest != nearest_phi_edge2, phi_nearest).mask       ##LW## will equality test work??
-        r_search = np.ma.masked_array(r, mask = search_mask)
-        r_min = np.amin(r_search)
-
-        # Find the co-ordinates of the first point in r_search with this value. This is the second edge point.
-        edge_coord2 = np.where(r_search = r_min)[0][0]              ##LW## will equality test work??
-
-        # Add to the edge points array in order of x co-ordinate
-        if edge_coord1[0] < edge_coord2[0]:
-            edge_points = np.concatenate((edge_coord1, edge_coord2), axis=0)
-        else:
-            edge_points = np.concatenate((edge_coord2, edge_coord1), axis=0)
-
-    return stop_finding_edge_points, edge_points
-
-#############################################
-
-def FindInitEdgePoints(area_fluxes, ridge_point, ridge_phi):
-
-    """
-    Returns edge points, on either side of the jet, corresponding to
-    the closest distance to that edge from the initial ridge point.
-
-    Parameters
-    -----------
-    area_fluxes - 2D array,
-                  raw image array
-
-    ridge_point - 1D array, shape(2, )
-                  ridge point along the ridge line
-
-    ridge_phi - float,
-                angular direction of the next ridge point
-    
-    Constants
-    ---------
-
-    Returns
-    -----------
-
-    edge_points - 1D array, shape(4,)
-                  Points on either side of the jet, corresponding to the 
-                  closest distance to that edge from the initial ridge point.
-                  (x1,y1,x2,y2)
-
-    Notes
-    -----------
-
-    """
-
-    # Initialise edge_points array
-    edge_points = np.full(4, np.nan)
-
-    # Get polar coordinates for area_fluxes, around the ridge point
-    r, phi = PolarCoordinates(area_fluxes, ridge_point)
-
-    # Fill invalid (nan) values with zeroes in area_fluxes
-    area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
-
-    # Mask the jet - where flux values are above (RLC.nSig * rms)
-    jet_mask = np.ma.masked_where(area_fluxes_valid > (RLC.nSig * 0.0002), area_fluxes_valid).mask
-
-    # Create a mask to search for nearest edge point on one side of the ridge point
-    plus_95degs = PiRange(ridge_phi + (pi*95/180))
-    if 3 <= CheckQuadrant(plus_95degs) <= 4 and 1 <= CheckQuadrant(ridge_phi) <= 2:
-        phi_mask = np.ma.masked_inside(phi, plus_95degs, ridge_phi).mask    # search between ridge_phi and ridge_phi + (pi* 95/180)
-    else:
-        phi_mask = np.ma.masked_outside(phi, ridge_phi, plus_95degs).mask
-    search_mask = np.ma.mask_or(phi_mask, jet_mask)                         # search outside the jet
-
-    # Find the smallest r value in the search area on this side
-    r_search_side1 = np.ma.masked_array(r, mask = search_mask, copy = True)
-    r_min_side1 = np.amin(r_search_side1)
-
-    # Create a mask to search for nearest edge point on the other side of the ridge point
-    minus_95degs = PiRange(ridge_phi - (pi*95/180))
-    if 3 <= CheckQuadrant(ridge_phi) <= 4 and 1 <= CheckQuadrant(minus_95degs) <= 2:
-        phi_mask = np.ma.masked_inside(phi, ridge_phi, minus_95degs).mask    # search between ridge_phi and ridge_phi - (pi* 95/180)
-    else:
-        phi_mask = np.ma.masked_outside(phi, minus_95degs, ridge_phi).mask
-    search_mask = np.ma.mask_or(phi_mask, jet_mask)                          # search outside the jet
-
-    # Find the smallest r value in this search area on the other side
-    r_search_side2 = np.ma.masked_array(r, mask = search_mask, copy = True)
-    r_min_side2 = np.amin(r_search_side2)
-
-    # Find the closest side
-    if r_min_side1 < r_min_side2:
-        r_min = r_min_side1
-        r_search = r_search_side1
-    else:
-        r_min = r_min_side2
-        r_search = r_search_side2
-
-    # Find the co-ordinates of the first point in r_search with this value. This is the first edge point.
-    edge_coord1 = np.where(r_search = r_min)[0][0]              ##LW## will equality test work??
-
-    # Assume the phi of the opposite edge is at phi+pi radians
-    phi_edge2 = PiRange(phi[edge_coord1[0], edge_coord1[1]] + pi)
-
-    # Mask a small phi range around phi_edge2, outside the jet
-    search_phi_range1 = PiRange(phi_edge2 - (pi*5/180))       # +/- 5 degrees
-    search_phi_range2 = PiRange(phi_edge2 + (pi*5/180))
-    if 3 <= CheckQuadrant(search_phi_range2) <= 4 and 1 <= CheckQuadrant(search_phi_range1) <= 2:
-        phi_range_mask = np.ma.masked_inside(phi, search_phi_range2, search_phi_range1).mask
-    else:
-        phi_range_mask = np.ma.masked_outside(phi, search_phi_range1, search_phi_range2).mask
-    phi_nearest_mask = np.ma.mask_or(phi_range_mask, jet_mask)
-
-    # Find the phi value closest to phi_edge2. 
-    phi_nearest = np.ma.masked_array(phi, mask = phi_nearest_mask, copy = True)
-    nearest_phi_edge2 = phi_nearest.flat[np.abs(phi_nearest - phi_edge2).argmin()]
-
-    # Search for the edge point at this phi
-    search_mask = np.ma.masked_where(phi_nearest != nearest_phi_edge2, phi_nearest).mask       ##LW## will equality test work??
-    r_search = np.ma.masked_array(r, mask = search_mask)
-    r_min = np.amin(r_search)
-
-    # Find the co-ordinates of the first point in r_search with this value. This is the second edge point.
-    edge_coord2 = np.where(r_search = r_min)[0][0]              ##LW## will equality test work??
-
-    # Add to the edge points array in order of x co-ordinate
-    if edge_coord1[0] < edge_coord2[0]:
-        edge_points = np.concatenate((edge_coord1, edge_coord2), axis=0)
-    else:
-        edge_points = np.concatenate((edge_coord2, edge_coord1), axis=0)
-
-    return edge_points
 
 #############################################

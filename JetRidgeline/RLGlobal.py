@@ -9,3 +9,5 @@ global sName    # source name
 global sRA      # source RA
 global sDEC     # source Dec
 global sSize    # source size in pixels (one side of containing square)
+global bgRMS    # background flux RMS value
+global rShift   # red shift

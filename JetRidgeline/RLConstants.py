@@ -44,7 +44,16 @@ MaxLen = 0.95 ##  Multiplier of Source size to determine max RL length
 ipit = 6  ##  Max number of iterations in the initial point search for directions
 
 ## FindEdgePoints
-EPFlag = True  ## Find edge points for a jet
+EPFlag = True   ## Find edge points for a jet
+MaxRFactor = 3  ## Maximum factor for increase of step size before re-initialising edgepoint algorithm 
+MinIntpolFactor = 1.5    ## Minimum length factor for an edgeline for an edgepoint to be added
+MaxIntpolSections = 6    ## Maximum number of interpolated points along an edgeline
+
+## Jet Parameters
+MinSectionsPerArm = 18   ## Minimum number of merged sections per arm of the jet
+MaxSectionsPerArm = 25   ## Maximum number of merged sections per arm of the jet
+MaxMergeIterations = 10  ## Maximum number of iterations to merge sections to within required number
+PercChangeInMaxFlux = 10 ## Percentage change in max flux for each merge iteration
 
 ##  FloodFill, GetAvailableSources, CreateCutOutCat
 #rdel  ## See function init_maptype_specific_constants
@@ -77,7 +86,7 @@ optcount = 26569141 ##  The number of optical sources in the catalogue
 catarea =  11431476680.687202  ##  The area of the catalogue in arcseconds squared (424 x 3600 x 3600 for LOFAR)
 
 ##  Cutout Creation
-rsize = 1/60  #  The distance away along the RA in degrees to form the sub-catalogue
+rsize = 1/60   #  The distance away along the RA in degrees to form the sub-catalogue
 dsize = 1/120  #  The distance away along the DEC in degrees to form the sub-catalogue
 
 ##  LikelihoodRatios
@@ -89,37 +98,53 @@ LRAd = 160.0 # float, degrees, RA down the lower value of RA of the Optical sky 
 LRAu = 232.0 # float, degrees, RA up the upper value of RA of the Optical sky area
 LDECd = 42.0 # float, degrees, DEC down the lower value of DEC of the Optical sky area
 LDECu = 62.0 # float, degrees, DEC up the upper value of the DEC of the Optical sky area
-bw = 0.2  # Bandwidth of KDE
-SigLC = 0.1 # Lofar centre distribution
-Lth = 0.0 # Threshold for declaring a PossFail
+bw = 0.2     # Bandwidth of KDE
+SigLC = 0.1  # Lofar centre distribution
+Lth = 0.0    # Threshold for declaring a PossFail
 meancol = 1.9
+
+## Cosmological Constants
+H0 = 70                 # Hubble constants in km/s/Mpc
+SLight = 299792458      # Speed of light in m/s
 
 def init_maptype_specific_constants(map_type):
     # Initialise constants specific to the map type
 
-    global R    ## Step size of Ridgeline (size of beam in arcsecs)
-    global rdel ## The equivalent pixel value for RA in FITS file in degrees
-    global ddel ## The equivalent pixel value for DEC in FITS file in degrees
-    global nSig ## The multiple of sigma for the RMS reduction
+    global R        ## Step size of Ridgeline in pixels
+    global rdel     ## The equivalent pixel value for RA in FITS file in degrees
+    global ddel     ## The equivalent pixel value for DEC in FITS file in degrees
+    global nSig     ## The multiple of sigma for the RMS reduction
+    global beamsize ## Beam size in arcsecs
+    global beamarea ## Beam area in pixels
 
     if map_type == 'VLA':
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
         nSig = 12.0
+        beamsize = 5
+        beamarea = 16.76195591180468
     elif map_type == 'LOFAR-DR1':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667
         nSig = 4.0
+        beamsize = 5
+        beamarea = 16.76195591180468
     elif map_type == 'LOFAR-DR2':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667
         nSig = 4.0
+        beamsize = 5
+        beamarea = 16.76195591180468
     elif map_type == 'MEERKAT':
         R = 5
         rdel = -0.000305556; ddel = 0.000305556
         nSig = 4.0
+        beamsize = 5
+        beamarea = 16.76195591180468
     else:
         # VLA
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
-        nSig = 4.0
+        nSig = 12.0
+        beamsize = 5
+        beamarea = 16.76195591180468

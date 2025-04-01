@@ -30,7 +30,7 @@ def Setup(map_file, map_type):
     print (map_type)
 
     # Intialise required directories under working directory. 
-    newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','problematic','cutouts']
+    newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','edgepoints','problematic','cutouts']
     path = os.getcwd()
     for d in newdirs:
         newd=path + '/' + d
@@ -39,7 +39,11 @@ def Setup(map_file, map_type):
         except:
             # Directory already exists. Empty it.
             print ("Directory", newd, "already exists, cleaning it out")
-            os.system("rm " + newd + "/*")
+            if "win" not in sys.platform.lower():
+                os.system("rm " + newd + "/*")
+            else:
+                newd = newd.replace('\\', '/')
+                os.system("del /Q \"" + newd + "\\*\"")
         else:
             # Directory doesn't exist. Create it.
             print ("Made directory ", newd)
@@ -54,8 +58,8 @@ def Setup(map_file, map_type):
     RLG.sRA = float(hdr['CRVAL1'])      # Source RA
     RLG.sDec = float(hdr['CRVAL2'])     # Source Dec
     RLG.sSize = 456                     # source size in pixels (from map)
-    rms = 0.0002                        # rms noise in Jy/beam (from map)
-    ##LW##flux = row['Peak_flux']
+    RLG.bgRMS = 0.0002                  # rms noise in Jy/beam (from map)
+    RLG.rShift = 0.0169                 # Source red shift
 
     # Create flattened 2D cutout of source. This will work, even if input map file is already 2D.
     flag = get_fits(map_file, RLG.sRA, RLG.sDec, RLG.sName, RLG.sSize*RLC.ddel)     # pass size in degrees
@@ -65,8 +69,8 @@ def Setup(map_file, map_type):
         cutout = str(RLF.fits) + RLG.sName + '.fits'
         nlhdu = fits.open(cutout) 
         d = nlhdu[0].data
-        ##LW##thres = (1e-3) * RLC.nSig * rms     ##LW## Why does it times by 1e-3
-        thres = RLC.nSig * rms
+        #thres = (1e-3) * RLC.nSig * RLG.bgRMS
+        thres = RLC.nSig * RLG.bgRMS
 
         d[d<thres] = np.nan
         print ("Max val of thresholded array is:", np.nanmax(d))
