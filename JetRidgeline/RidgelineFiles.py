@@ -43,10 +43,8 @@ EP1 = indir+'/edgepoints/%s_edgepoint1.txt'
 EP2 = indir+'/edgepoints/%s_edgepoint2.txt'
 SP1 = indir+'/edgepoints/%s_sectionparameters1.txt'
 SP2 = indir+'/edgepoints/%s_sectionparameters2.txt'
-JP1 = indir+'/edgepoints/%s_jetparameters1.txt'
-JP2 = indir+'/edgepoints/%s_jetparameters2.txt'
 EPimage = indir+'/edgepoints/%s_edgepoints%d.png'
-JPimage = indir+'/edgepoints/%s_jetparameters%d.png'
+SCimage = indir+'/edgepoints/%s_sections%d.png'
 
 # SourceSearch
 coc = indir+'/CutOutCats/Cutout_Catalogue-%s.txt'

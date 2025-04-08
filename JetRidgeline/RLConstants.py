@@ -44,12 +44,11 @@ MaxLen = 0.95 ##  Multiplier of Source size to determine max RL length
 ipit = 6  ##  Max number of iterations in the initial point search for directions
 
 ## FindEdgePoints
-EPFlag = True   ## Find edge points for a jet
 MaxRFactor = 3  ## Maximum factor for increase of step size before re-initialising edgepoint algorithm 
 MinIntpolFactor = 1.5    ## Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6    ## Maximum number of interpolated points along an edgeline
 
-## Jet Parameters
+## Jet Sections
 MinSectionsPerArm = 18   ## Minimum number of merged sections per arm of the jet
 MaxSectionsPerArm = 25   ## Maximum number of merged sections per arm of the jet
 MaxMergeIterations = 10  ## Maximum number of iterations to merge sections to within required number
@@ -103,10 +102,6 @@ SigLC = 0.1  # Lofar centre distribution
 Lth = 0.0    # Threshold for declaring a PossFail
 meancol = 1.9
 
-## Cosmological Constants
-H0 = 70                 # Hubble constants in km/s/Mpc
-SLight = 299792458      # Speed of light in m/s
-
 def init_maptype_specific_constants(map_type):
     # Initialise constants specific to the map type
 
@@ -115,36 +110,30 @@ def init_maptype_specific_constants(map_type):
     global ddel     ## The equivalent pixel value for DEC in FITS file in degrees
     global nSig     ## The multiple of sigma for the RMS reduction
     global beamsize ## Beam size in arcsecs
-    global beamarea ## Beam area in pixels
 
     if map_type == 'VLA':
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
         nSig = 12.0
         beamsize = 5
-        beamarea = 16.76195591180468
     elif map_type == 'LOFAR-DR1':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667
         nSig = 4.0
         beamsize = 5
-        beamarea = 16.76195591180468
     elif map_type == 'LOFAR-DR2':
         R = 5
         rdel = -0.0004166667; ddel = 0.0004166667
         nSig = 4.0
         beamsize = 5
-        beamarea = 16.76195591180468
     elif map_type == 'MEERKAT':
         R = 5
         rdel = -0.000305556; ddel = 0.000305556
         nSig = 4.0
         beamsize = 5
-        beamarea = 16.76195591180468
     else:
         # VLA
         R = 5
         rdel = -0.0003611111024; ddel = 0.0003611111024
         nSig = 12.0
         beamsize = 5
-        beamarea = 16.76195591180468

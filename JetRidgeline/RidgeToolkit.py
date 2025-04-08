@@ -553,8 +553,7 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                 
             else:
 
-                if RLC.EPFlag:
-                    init_edge_points = ETK.FindInitEdgePoints(area_fluxes, init_point, phi_val1, ridge_R = 0)      # Find initial edge points
+                init_edge_points = ETK.FindInitEdgePoints(area_fluxes, init_point, phi_val1, ridge_R = 0)      # Find initial edge points
                 
                 chain_mask1 = larger_cone1.mask
                 chain_mask2 = larger_cone2.mask
@@ -562,7 +561,7 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                 new_point1, new_phi1, chain_mask1, RFNew1 = GetFirstPoint(new_fluxes, \
                                                                   init_point, cone1, chain_mask1, R)
                 ridge1 = np.vstack((init_point, new_point1))
-                if RLC.EPFlag and not np.isnan(new_phi1):
+                if not np.isnan(new_phi1):
                     try:
                         stop_finding_edge_points1, new_edge_points1 = ETK.FindEdgePoints(area_fluxes, new_point1, new_phi1, RFNew1, init_edge_points) # Find edge points 1
                     except:
@@ -574,7 +573,7 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                 new_point2, new_phi2, chain_mask2, RFNew2 = GetFirstPoint(new_fluxes, \
                                                                   init_point, cone2, chain_mask2, R)
                 ridge2 = np.vstack((init_point, new_point2))
-                if RLC.EPFlag and not np.isnan(new_phi2):
+                if not np.isnan(new_phi2):
                     try:
                         stop_finding_edge_points2, new_edge_points2 = ETK.FindEdgePoints(area_fluxes, new_point2, new_phi2, RFNew2, init_edge_points) # Find edge points 2
                     except:
@@ -632,7 +631,7 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                             break
 
                         # Find edge points
-                        if RLC.EPFlag and not stop_finding_edge_points1:
+                        if not stop_finding_edge_points1:
                             try:
                                 if RNew1 < (RLC.MaxRFactor * R):    # Test whether the last step size has increased by too much
                                     stop_finding_edge_points1, new_edge_points1 = ETK.FindEdgePoints(area_fluxes, new_point1, new_phi1, Rtot1, prev_edge_points = edge_points1[-1])
@@ -669,7 +668,7 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                             break
 
                         # Find edge points
-                        if RLC.EPFlag and not stop_finding_edge_points2:
+                        if not stop_finding_edge_points2:
                             try:
                                 if RNew2 < (RLC.MaxRFactor * R):    # Test whether the last step size has increased by too much
                                     stop_finding_edge_points2, new_edge_points2 = ETK.FindEdgePoints(area_fluxes, new_point2, new_phi2, Rtot2, prev_edge_points = edge_points2[-1])
@@ -1893,25 +1892,20 @@ def TrialSeries(R, dphi):
         ridge1, edge_points1, phi_val1, Rlen1, \
         ridge2, edge_points2, phi_val2, Rlen2, Error = FindRidges(area_fluxes, init_point, R, dphi, lmsize)
 
-        if RLC.EPFlag:
-            try:
-                # Interpolate extra edge points at points in the jet where significant flux is cut off
-                edge_points1 = ETK.AddEdgePoints(area_fluxes, edge_points1)
-                edge_points2 = ETK.AddEdgePoints(area_fluxes, edge_points2)
-            except:
-                print('Error occurred interpolating extra edge points')
+        try:
+            # Interpolate extra edge points at points in the jet where significant flux is cut off
+            print('Adding extra edge points')
+            edge_points1 = ETK.AddEdgePoints(area_fluxes, edge_points1)
+            edge_points2 = ETK.AddEdgePoints(area_fluxes, edge_points2)
+        except:
+            print('Error occurred interpolating extra edge points')
 
-            try:
-                # Get sections and section parameters (distance from source, flux, volume) of the jet
-                section_parameters1, section_parameters2 = ETK.GetJetSections(area_fluxes, edge_points1, edge_points2)
-            except:
-                print('Error occurred computing section parameters')
-
-            try:
-                # Get parameter values along each arm of the jet
-                jet_parameters1, jet_parameters2 = ETK.GetJetParameters(section_parameters1, section_parameters2)
-            except:
-                print('Error occurred computing jet parameters')
+        try:
+            # Get sections and section parameters (distance from source, flux, volume) of the jet
+            print('Getting jet sections')
+            section_parameters1, section_parameters2 = ETK.GetJetSections(area_fluxes, edge_points1, edge_points2)
+        except:
+            print('Error occurred computing section parameters')
                     
     except (ValueError, UnboundLocalError):# TypeError, 
             
@@ -2057,10 +2051,8 @@ def TrialSeries(R, dphi):
                 fig.savefig(RLF.Rimage %(source_name, dphi))
                 plt.close(fig)
 
-                if RLC.EPFlag: 
-                    ETK.SaveEdgepointFiles(source_name, edge_points1, edge_points2, \
-                                           section_parameters1, section_parameters2, jet_parameters1, jet_parameters2)
-                    ETK.PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, section_parameters1, section_parameters2)
+                ETK.SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_parameters1, section_parameters2)
+                ETK.PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, section_parameters1, section_parameters2)
 
     # save the list of problematic sources in problematic_sources_list.txt
     # with source names separated from the problem type with a space.
@@ -2068,6 +2060,8 @@ def TrialSeries(R, dphi):
     # content of each column
 
     np.savetxt(str(RLF.psl), problem_names, fmt='%s', delimiter=' ')
+
+    return section_parameters1, section_parameters2
         
 #############################################
 

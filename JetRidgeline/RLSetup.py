@@ -25,9 +25,6 @@ def Setup(map_file, map_type):
     
     # Initialise constants, specific to the map type
     RLC.init_maptype_specific_constants(map_type)
-    print (RLC.R); print(RLC.rdel); print(RLC.ddel); print(RLC.nSig)
-    print (map_file)
-    print (map_type)
 
     # Intialise required directories under working directory. 
     newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','edgepoints','problematic','cutouts']

@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8dd7fec3-01fa-404f-9d8a-88e003db1e6d}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>JetModelling_Main.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+    <Name>JetModelling</Name>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="JetParameters\JetParameterFiles.py" />
+    <Compile Include="JetParameters\JetParameters.py" />
+    <Compile Include="JetParameters\JetParameterToolkit.py" />
+    <Compile Include="JetParameters\JPConstants.py" />
+    <Compile Include="JetParameters\JPGlobal.py" />
+    <Compile Include="JetParameters\JPSetup.py" />
+    <Compile Include="JetRidgeline\EdgeToolkit.py" />
+    <Compile Include="JetRidgeline\RidgelineFiles.py" />
+    <Compile Include="JetRidgeline\Ridgelines.py" />
+    <Compile Include="JetRidgeline\RidgeToolkit.py" />
+    <Compile Include="JetRidgeline\RLConstants.py" />
+    <Compile Include="JetRidgeline\RLGlobal.py" />
+    <Compile Include="JetRidgeline\RLSetup.py" />
+    <Compile Include="JetRidgeline\sizeflux_tools.py" />
+    <Compile Include="JetRidgeline\subim.py" />
+    <Compile Include="JetModelling_Main.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="JetRidgeline" />
+    <Folder Include="JetParameters\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>
