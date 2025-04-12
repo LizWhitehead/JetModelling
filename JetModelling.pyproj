@@ -26,20 +26,94 @@
     <Compile Include="JetParameters\JPConstants.py" />
     <Compile Include="JetParameters\JPGlobal.py" />
     <Compile Include="JetParameters\JPSetup.py" />
+    <Compile Include="JetParameters\JPSynchro.py" />
     <Compile Include="JetRidgeline\EdgeToolkit.py" />
+    <Compile Include="JetRidgeline\LotssCatalogue\sizeflux_tools.py" />
+    <Compile Include="JetRidgeline\LotssCatalogue\subim.py" />
     <Compile Include="JetRidgeline\RidgelineFiles.py" />
     <Compile Include="JetRidgeline\Ridgelines.py" />
     <Compile Include="JetRidgeline\RidgeToolkit.py" />
     <Compile Include="JetRidgeline\RLConstants.py" />
     <Compile Include="JetRidgeline\RLGlobal.py" />
     <Compile Include="JetRidgeline\RLSetup.py" />
-    <Compile Include="JetRidgeline\sizeflux_tools.py" />
-    <Compile Include="JetRidgeline\subim.py" />
     <Compile Include="JetModelling_Main.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="JetModellingC\" />
+    <Folder Include="JetModellingC\Synch\" />
+    <Folder Include="JetModellingC\Synch\.vs\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\FileContentIndex\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\v17\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\v17\ipch\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\v17\ipch\AutoPCH\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\v17\ipch\AutoPCH\96ca94d0a7eb6494\" />
+    <Folder Include="JetModellingC\Synch\.vs\Synch\v17\ipch\AutoPCH\ab2e44e2f79aaebe\" />
+    <Folder Include="JetModellingC\Synch\x64\" />
+    <Folder Include="JetModellingC\Synch\x64\Debug\" />
+    <Folder Include="JetModellingC\Synch\x64\Debug\Synch.tlog\" />
+    <Folder Include="JetModellingC\Synch\x64\Release\" />
+    <Folder Include="JetModellingC\Synch\x64\Release\Synch.tlog\" />
     <Folder Include="JetRidgeline" />
     <Folder Include="JetParameters\" />
+    <Folder Include="JetRidgeline\LotssCatalogue\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="JetModellingC\Synch\.vs\Synch\FileContentIndex\0d62ce67-1898-491b-a9fa-3d523b14dab1.vsidx" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\FileContentIndex\cdeee44c-e099-47c8-9adb-7f671abe5bed.vsidx" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\.suo" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\Browse.VC.db" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\DocumentLayout.backup.json" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\DocumentLayout.json" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\ipch\AutoPCH\96ca94d0a7eb6494\SYNCHMODULE3.ipch" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\ipch\AutoPCH\ab2e44e2f79aaebe\SYNCHMODULE3.ipch" />
+    <Content Include="JetModellingC\Synch\.vs\Synch\v17\Solution.VC.db" />
+    <Content Include="JetModellingC\Synch\Synch.vcxproj" />
+    <Content Include="JetModellingC\Synch\Synch.vcxproj.filters" />
+    <Content Include="JetModellingC\Synch\Synch.vcxproj.user" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.log" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.pdb" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\CL.command.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\CL.read.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\CL.write.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\link.command.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\link.read.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\link.read.2.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\link.write.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\Synch.lastbuildstate" />
+    <Content Include="JetModellingC\Synch\x64\Debug\Synch.tlog\unsuccessfulbuild" />
+    <Content Include="JetModellingC\Synch\x64\Debug\synchmodule3.obj" />
+    <Content Include="JetModellingC\Synch\x64\Debug\vc143.idb" />
+    <Content Include="JetModellingC\Synch\x64\Debug\vc143.pdb" />
+    <Content Include="JetModellingC\Synch\x64\Release\gsl.dll" />
+    <Content Include="JetModellingC\Synch\x64\Release\gslcblas.dll" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.Build.CppClean.log" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.iobj" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.ipdb" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.lib" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.log" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.pyd.recipe" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\CL.command.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\Cl.items.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\CL.read.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\CL.write.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\link.command.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\link.read.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\link.secondary.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\link.write.1.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\Synch.lastbuildstate" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.tlog\Synch.write.1u.tlog" />
+    <Content Include="JetModellingC\Synch\x64\Release\Synch.vcxproj.FileListAbsolute.txt" />
+    <Content Include="JetModellingC\Synch\x64\Release\synchmodule3.obj" />
+    <Content Include="JetModellingC\Synch\x64\Release\vc143.pdb" />
+    <Content Include="JetModellingC\Synch\x64\Release\vcpkg.applocal.log" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="JetModellingC\Synch\Synch.vcxproj">
+      <Name>Synch</Name>
+      <Project>{901c0752-fd1e-4851-b756-bd6388b03b57}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

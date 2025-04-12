@@ -10,7 +10,7 @@ Modified by:    LizWhitehead 13/11/2024 to run on a map of single AGN.
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 import JetRidgeline.RLGlobal as RLG
-from JetRidgeline.subim import extract_subim
+from JetRidgeline.LotssCatalogue.subim import extract_subim
 import numpy as np
 import sys
 import os

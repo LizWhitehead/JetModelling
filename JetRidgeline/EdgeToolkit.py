@@ -1160,7 +1160,6 @@ def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_paramete
 
     Returns
     -----------
-    None
 
     Notes
     -----------
@@ -1185,8 +1184,6 @@ def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_paramete
         np.savetxt(RLF.SP2 %source_name, fileSP2, delimiter=' ')
     except Exception as e:
         print('Error occurred saving section parameters files')
-
-    return None
 
 #############################################
 
@@ -1228,7 +1225,6 @@ def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, s
 
     Returns
     -----------
-    None
 
     Notes
     -----------
@@ -1326,8 +1322,6 @@ def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, s
         plt.close(fig)
     except:
         print('Error occurred plotting edgepoints')
-
-    return None
 
 #############################################
 

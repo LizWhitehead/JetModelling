@@ -10,7 +10,7 @@ import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 import JetRidgeline.RLGlobal as RLG
 import JetRidgeline.EdgeToolkit as ETK
-from JetRidgeline.sizeflux_tools import Flood,Mask
+from JetRidgeline.LotssCatalogue.sizeflux_tools import Flood,Mask
 from astropy.io import fits
 from astropy.table import Table
 from astropy import units as u

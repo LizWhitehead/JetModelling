@@ -9,11 +9,8 @@ Created by LizWhitehead - 08/04/2025
 import JetParameters.JetParameterFiles as JPF
 import JetParameters.JPConstants as JPC
 import JetParameters.JPGlobal as JPG
-import matplotlib.pyplot as plt
 import numpy as np
-from math import tan, atan2, pow
-from numpy import pi, sin, cos, dot
-import copy
+from numpy import pi
 
 #############################################
 
@@ -46,8 +43,8 @@ def GetJetParameters(section_parameters1, section_parameters2):
     jet_parameters1 = np.empty((0,3)); jet_parameters2 = np.empty((0,3))
 
     # Update flux, volume and distance along the jet and to have required units
-    section_parameters1 = SetRequiredUnits(section_parameters1)
-    section_parameters2 = SetRequiredUnits(section_parameters2)
+    # section_parameters1 = SetRequiredUnits(section_parameters1)
+    # section_parameters2 = SetRequiredUnits(section_parameters2)
 
     # Loop through section parameters array for one arm of the jet
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters1:
@@ -139,7 +136,6 @@ def SaveParameterFiles(jet_parameters1, jet_parameters2):
 
     Returns
     -----------
-    None
 
     Notes
     -----------
@@ -152,8 +148,6 @@ def SaveParameterFiles(jet_parameters1, jet_parameters2):
         np.savetxt(JPF.JP2 %JPG.sName, fileJP2, delimiter=' ')
     except Exception as e:
         print('Error occurred saving jet parameters files')
-
-    return None
 
 #############################################
 
