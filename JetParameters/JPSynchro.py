@@ -113,7 +113,7 @@ class SynchSource(object):
         elif self.spectrum=='aged':
             synch.setage(self.age,self.ageb)
         else:
-            raise NotImplementedError('spectrum '+spectrum)
+            raise NotImplementedError('spectrum '+self.spectrum)
             
     def emiss(self,freq):
         self._setsynch()
@@ -191,7 +191,7 @@ class SynchSource(object):
                     bmin=bfield
 
             if (i==maxiter):
-                print('*** Warning: maxiter reached in normalization loop ***\n*** Check your results carefully                   ***\n')
+                print('*** Warning: maxiter reached in normalization loop ***\n*** Check your results carefully ***\n')
 
             self.B=bfield
             self.synchnorm=norm
