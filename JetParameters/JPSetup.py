@@ -7,26 +7,15 @@ Created by LizWhitehead - 08/04/2025
 """
 
 import JetParameters.JPConstants as JPC
-import JetParameters.JPGlobal as JPG
 import sys
 import os
 from astropy.io import fits
 
-def Setup(source_name, map_type):
+def Setup():
 
     """
     Compute jet parameters for each arm of the jet.
-
-    Parameters
-    -----------
-    source_name - string
-
-    map_type - string
-
     """
-    
-    # Initialise constants, specific to the map type
-    JPC.init_maptype_specific_constants(map_type)
 
     # Intialise required directories under working directory. 
     newdirs = ['parameters']
@@ -46,8 +35,3 @@ def Setup(source_name, map_type):
         else:
             # Directory doesn't exist. Create it.
             print ("Made directory ", newd)
-
-    # Set globals
-    JPG.sName = source_name
-    JPG.sSize = 456                     # source size in pixels (from map)
-    JPG.rShift = 0.0169                 # Source red shift

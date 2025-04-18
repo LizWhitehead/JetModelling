@@ -9,17 +9,17 @@
 # Imports
 
 import time
+import JetModelling_MapSetup as JMS
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 import JetRidgeline.RLSetup as RLS
-import JetRidgeline.RLGlobal as RLG
 from JetRidgeline.RidgeToolkit import CreateCutouts, TrialSeries
 from warnings import resetwarnings
 
-def CreateRidgelinesAndSections(map_file, map_type):
+def CreateRidgelinesAndSections():
     
     # Set up the directory structure for ridgeline processing. Produce 2D flattened map and thresholded npy cutout.
-    RLS.Setup(map_file, map_type)
+    RLS.Setup()
 
     print('Creating cutouts')
     start_time = time.time()
@@ -32,5 +32,5 @@ def CreateRidgelinesAndSections(map_file, map_type):
     print('Time taken for ridgelines and sections to draw = ' + str((time.time()-start_time)/(60*60)),'h')
     resetwarnings()
 
-    return RLG.sName, section_parameters1, section_parameters2
+    return section_parameters1, section_parameters2
 

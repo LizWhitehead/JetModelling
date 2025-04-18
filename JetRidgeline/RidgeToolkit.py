@@ -6,9 +6,9 @@
 # Modified to work on a single source radio map by Liz
 
 from ast import While
+import JetModelling_MapSetup as JMS
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
-import JetRidgeline.RLGlobal as RLG
 import JetRidgeline.EdgeToolkit as ETK
 from JetRidgeline.LotssCatalogue.sizeflux_tools import Flood,Mask
 from astropy.io import fits
@@ -189,21 +189,21 @@ def CreateCutouts():
     
     """
     
-    centre_pos = SkyCoord(RLG.sRA*u.deg,RLG.sDec*u.deg,frame='fk5')
-    lmsize = RLG.sSize          # size in pixels
-    print('Making cutout for source',RLG.sName,'with size',lmsize,'pixels')
-    hdu = DefineHDU(RLG.sName)
+    centre_pos = SkyCoord(JMS.sRA*u.deg,JMS.sDec*u.deg,frame='fk5')
+    lmsize = JMS.sSize          # size in pixels
+    print('Making cutout for source',JMS.sName,'with size',lmsize,'pixels')
+    hdu = DefineHDU(JMS.sName)
     data = hdu[0].data
     size = (2 * lmsize, 2 * lmsize)
     wcs = WCS(hdu[0].header)    # Keep world coordinate system
     cutout = Cutout2D(data, centre_pos, size, wcs = wcs)
     hdu[0].data = cutout.data
     hdu[0].header.update(cutout.wcs.to_header())
-    hdu[0].writeto(str(RLF.fitsfile) + RLG.sName + '-cutout.fits', overwrite = True)
+    hdu[0].writeto(str(RLF.fitsfile) + JMS.sName + '-cutout.fits', overwrite = True)
         
-    flux_array = GetFluxArray(RLG.sName)
+    flux_array = GetFluxArray(JMS.sName)
     cutout2 = Cutout2D(flux_array, centre_pos, size, wcs=wcs)
-    np.save(str(RLF.npyfile) + RLG.sName + '-cutout.npy', cutout2.data)
+    np.save(str(RLF.npyfile) + JMS.sName + '-cutout.npy', cutout2.data)
         
 #############################################
 
@@ -1861,10 +1861,10 @@ def TrialSeries(R, dphi):
     problem_names = np.array([str('#Source_Name'), str('Problem_Type')])
     Error = 'N/A'
         
-    source_name = RLG.sName
-    Lra = RLG.sRA
-    Ldec = RLG.sDec
-    lmsize = RLG.sSize  # pixels
+    source_name = JMS.sName
+    Lra = JMS.sRA
+    Ldec = JMS.sDec
+    lmsize = JMS.sSize  # pixels
     flux_array = GetCutoutArray(source_name)
         
     optical_pos = (float(lmsize), float(lmsize))

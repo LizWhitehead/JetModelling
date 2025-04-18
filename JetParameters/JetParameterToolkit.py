@@ -6,9 +6,11 @@ Toolkit for calculating parameters along a jet.
 Created by LizWhitehead - 08/04/2025
 """
 
+import JetModelling_MapSetup as JMS
 import JetParameters.JetParameterFiles as JPF
 import JetParameters.JPConstants as JPC
-import JetParameters.JPGlobal as JPG
+##from JetParameters.JPSynchro import SynchSource
+from astropy.cosmology import FlatLambdaCDM
 import numpy as np
 from numpy import pi
 
@@ -48,7 +50,13 @@ def GetJetParameters(section_parameters1, section_parameters2):
 
     # Loop through section parameters array for one arm of the jet
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters1:
-        R_section = (R_section_start + R_section_end) / 2       # Mid-point of section
+        R_section = (R_section_start + R_section_end) / 2           # Mid-point of section
+
+        # equivSphereR = pow((volume_section / (pi * 4/3)), 1/3.0)    # Radius of equivalent sphere with volume of section
+        # cosmo = FlatLambdaCDM(H0=70, Om0=0.3)                       # Cosmology
+        # s=SynchSource(type='sphere', gmin=1, gmax=1e5, z=JMS.rShift, injection=2.0, spectrum='powerlaw', cosmology=cosmo, asph=equivSphereR, verbose=True)
+        # s.normalize(4.525e9,144.42, method='equipartition', brange=(1e-10,1e-7))
+
         jet_parameters1 = np.vstack((jet_parameters1, np.array([R_section, flux_section, volume_section])))
 
     # Loop through section parameters array for other arm of the jet
@@ -58,6 +66,9 @@ def GetJetParameters(section_parameters1, section_parameters2):
 
     # Save the jet parameter values to a file
     SaveParameterFiles(jet_parameters1, jet_parameters2)
+
+    # Distance to the source in kpc
+    # # source_r = JMS.rShift * JPC.SLight / JPC.H0
 
 #############################################
 
@@ -91,20 +102,15 @@ def SetRequiredUnits(section_parameters):
 
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters:
         
-        # Distance to the source in kpc
-        source_r = JPG.rShift * JPC.SLight / JPC.H0
-
-        # Distance along the jet in kpc
-        R_section_start_rdns = R_section_start * JPC.ddel * pi/180
-        R_section_start  = R_section_start_rdns * source_r
-        R_section_end_rdns = R_section_end * JPC.ddel * pi/180
-        R_section_end  = R_section_end_rdns * source_r
+        # Distance along the jet in arcsec
+        R_section_start_= R_section_start * JMS.ddel * 3600
+        R_section_end = R_section_end * JMS.ddel * 3600
 
         # Flux in Janskys (rather than Jy/beam)
-        flux_section = flux_section / JPC.beamarea
+        flux_section = flux_section / JMS.beamarea
 
-        # Volume in kpc cubed
-        volume_section = volume_section * pow((JPC.ddel * pi/180 * source_r), 3)
+        # Volume in arcsec cubed
+        volume_section = volume_section * pow((JMS.ddel * 3600), 3)
 
         updated_section_parameters = np.vstack((updated_section_parameters, \
                     np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section])))
@@ -120,9 +126,6 @@ def SaveParameterFiles(jet_parameters1, jet_parameters2):
 
     Parameters
     -----------
-    source_name - str,
-                  the name of the source
-
     jet_parameters1 - 2D array, shape(n,12)
                       Array for one arm of the jet, with distance from source 
                       and computed parameters
@@ -144,8 +147,8 @@ def SaveParameterFiles(jet_parameters1, jet_parameters2):
     try:
         fileJP1 = np.column_stack((jet_parameters1[:,0], jet_parameters1[:,1], jet_parameters1[:,2]))
         fileJP2 = np.column_stack((jet_parameters2[:,0], jet_parameters2[:,1], jet_parameters2[:,2]))
-        np.savetxt(JPF.JP1 %JPG.sName, fileJP1, delimiter=' ')
-        np.savetxt(JPF.JP2 %JPG.sName, fileJP2, delimiter=' ')
+        np.savetxt(JPF.JP1 %JMS.sName, fileJP1, delimiter=' ')
+        np.savetxt(JPF.JP2 %JMS.sName, fileJP2, delimiter=' ')
     except Exception as e:
         print('Error occurred saving jet parameters files')
 

@@ -11,17 +11,13 @@ import JetParameters.JPSetup as JPS
 from JetParameters.JetParameterToolkit import GetJetParameters
 from warnings import resetwarnings
 
-def ComputeJetParameters(map_type, source_name, section_parameters1, section_parameters2):
+def ComputeJetParameters(section_parameters1, section_parameters2):
 
     """
     Compute jet parameters for each arm of the jet.
 
     Parameters
     -----------
-    map_type - string
-
-    source_name - string
-
     section_parameters1 - 2D array, shape(n,12)
                           Array with section points (x,y * 4), distance from source
                           and computed parameters for one arm of the jet
@@ -32,7 +28,7 @@ def ComputeJetParameters(map_type, source_name, section_parameters1, section_par
     """
     
     # Set up the directory structure for jet parameters computation
-    JPS.Setup(source_name, map_type)
+    JPS.Setup()
 
     print('Starting jet parameters computation.')
 

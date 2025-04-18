@@ -61,48 +61,7 @@ NLRI = indir+'/MagnitudeColour/Nearest30InfoLR-%s.txt'
 LRI = indir+'/MagnitudeColour/30InfoLR-%s.txt'
 MagCO = indir+'/MagCutOutCats/Cutout_Catalogue-%s.txt'
 
-# Table Columns
-SSN = 'Source_Name'  # Source catalogue Source Name
-STF = 'Total_flux'  # Source catalogue total flux column
-SRA = 'RA'  # Source catalogue position RA
-SRAE = 'E_RA'  # Source catalogue RA error
-SDEC = 'DEC'  # Source catalogue position DEC
-SDECE = 'E_DEC'  # Source catalogue DEC error
-SASS = 'Assoc'  # Source catalogue number of component associations column
-CSN = 'Parent_Source'  # Component catalogue Source Name
-CCN = 'Component_Name'  # Component catalogue Component Name
-CTF = 'Total_flux'  # Component catalogue total flux column
-CRA = 'RA'  # Component catalogue position RA
-CDEC = 'DEC'  # Component catalogue position DEC
-CMAJ = 'Maj'  # Component Major axis column
-CMIN = 'Min'  # Component Minor axis column
-CPA = 'PA'  # Component rotational angle column
-OptMagA = 'MAG_W1'  # Magnitude from AllWISE
-MagAErr = ''
-OptMagP = 'MAG_R'  # Magnitude from PanSTARRS
-MagPErr = ''
-PossRA = 'RA'  # Possible Optical counterpart RA
-PossDEC = 'DEC'  # Possible Optical counterpart DEC
-PRAErr = 0.2  # Error on possible Optical counterpart RA
-PDECErr = 0.2  # Error on possible Optical counterpart DEC
-IDW = 'UNWISE_OBJID' # WISE ID
-IDP = 'UID_L' # PS ID - Unique ID Legacy
-ID3 = 'UNWISE_OBJID' # ID to be taken one or the other of WISE or Legacy
-LRMA = 'LRMagA'
-LRMP = 'LRMagR'
-LRMC = 'LRMagBoth'
-LSN = 'Source_Name'  # Column of the LOFAR ID
-LRA = 'RA'  # LOFAR catalogue position RA
-LDEC = 'DEC'  # LOFAR catalogue position DEC
-LredZ = 'z_best'
-All = 'AllWISE'
-OID = 'objID'
-LMS = 'LM_size'
-
 # Magnitude and Colour Likelihood Ratio
-#Odata = '/beegfs/lofar/jcroston/surveys/dr2_hosts/pwfull.txt' # Original DR1 optical txt file [not needed?]
-DR1Hosts = '/beegfs/lofar/jcroston/surveys/dr2_hosts/testing/HostMagnitude_Info.txt'
-DR1HostsFull = '/beegfs/lofar/jcroston/surveys/dr2_hosts/testing/HostMagnitude_InfoFull.txt'
 MCLR = indir+'/MagnitudeColour/Nearest30AllLRW1band-%s.txt'
 LR = indir+'/MagnitudeColour/AllLRW1bandLR-%s.txt'
 

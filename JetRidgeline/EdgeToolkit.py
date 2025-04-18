@@ -6,9 +6,9 @@ Toolkit for edge-point finding in a source
 Created by LizWhitehead - Jan 2025
 """
 
+import JetModelling_MapSetup as JMS
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
-import JetRidgeline.RLGlobal as RLG
 import matplotlib.pyplot as plt
 from skimage.draw import polygon2mask
 import numpy as np
@@ -106,8 +106,8 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     # Fill invalid (nan) values with zeroes in area_fluxes
     area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
 
-    # Mask the jet - where flux values are above (RLC.nSig * rms)
-    jet_mask = np.ma.masked_where(area_fluxes_valid > (RLC.nSig * RLG.bgRMS), area_fluxes_valid).mask
+    # Mask the jet - where flux values are above (JMS.nSig * rms)
+    jet_mask = np.ma.masked_where(area_fluxes_valid > (JMS.nSig * JMS.bgRMS), area_fluxes_valid).mask
 
     # Create a mask to search for nearest edge point on one side of the ridge point
     min_phi = min(ridge_phi, phi_prev1); max_phi = max(ridge_phi, phi_prev1)
@@ -261,8 +261,8 @@ def FindInitEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R):
     # Fill invalid (nan) values with zeroes in area_fluxes
     area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
 
-    # Mask the jet - where flux values are above (RLC.nSig * rms)
-    jet_mask = np.ma.masked_where(area_fluxes_valid > (RLC.nSig * RLG.bgRMS), area_fluxes_valid).mask
+    # Mask the jet - where flux values are above (JMS.nSig * rms)
+    jet_mask = np.ma.masked_where(area_fluxes_valid > (JMS.nSig * JMS.bgRMS), area_fluxes_valid).mask
 
     # Search for an edge at right angles to the ridge direction
     search_phi_range1 = PiRange(ridge_phi + (pi*90/180) - (pi*5/180))     # +/- 5 degrees
@@ -344,8 +344,8 @@ def AddEdgePoints(area_fluxes, edge_points):
     # Fill invalid (nan) values with zeroes in area_fluxes
     area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
 
-    # Mask the jet - where flux values are above (RLC.nSig * rms)
-    jet_mask = np.ma.masked_where(area_fluxes_valid > (RLC.nSig * RLG.bgRMS), area_fluxes_valid).mask
+    # Mask the jet - where flux values are above (JMS.nSig * rms)
+    jet_mask = np.ma.masked_where(area_fluxes_valid > (JMS.nSig * JMS.bgRMS), area_fluxes_valid).mask
 
     # Loop for each side of the jet
     jet_side = 1
@@ -635,7 +635,7 @@ def LargerThanBeamSize(section_coords):
     # Initialise return flag
     larger = False
 
-    beam_size_pixels = RLC.beamsize / 3600 / RLC.ddel
+    beam_size_pixels = JMS.beamsize / 3600 / JMS.ddel
 
     # Test the length of each side of the section
     if section_coords[6] == -1:
@@ -1234,7 +1234,7 @@ def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, s
         palette = plt.cm.cividis
         palette = copy.copy(plt.cm.get_cmap("cividis"))
         palette.set_bad('k',0.0)
-        lmsize = RLG.sSize  # pixels
+        lmsize = JMS.sSize  # pixels
         optical_pos = (float(lmsize), float(lmsize))
 
         y, x = np.mgrid[slice((0),(area_fluxes.shape[0]),1), slice((0),(area_fluxes.shape[1]),1)]

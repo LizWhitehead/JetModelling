@@ -10,7 +10,7 @@ Modified by:    LizWhitehead 12/11/2024 to set global maptype specific constants
 debug = True
 
 ## R and dphi sizes
-#R  ## See function init_maptype_specific_constants
+R = 5 ## Step size of Ridgeline in pixels
 dphi = 60  ## Half angle of cone
 
 ##  AreaFluxes
@@ -101,39 +101,3 @@ bw = 0.2     # Bandwidth of KDE
 SigLC = 0.1  # Lofar centre distribution
 Lth = 0.0    # Threshold for declaring a PossFail
 meancol = 1.9
-
-def init_maptype_specific_constants(map_type):
-    # Initialise constants specific to the map type
-
-    global R        ## Step size of Ridgeline in pixels
-    global rdel     ## The equivalent pixel value for RA in FITS file in degrees
-    global ddel     ## The equivalent pixel value for DEC in FITS file in degrees
-    global nSig     ## The multiple of sigma for the RMS reduction
-    global beamsize ## Beam size in arcsecs
-
-    if map_type == 'VLA':
-        R = 5
-        rdel = -0.0003611111024; ddel = 0.0003611111024
-        nSig = 12.0
-        beamsize = 5
-    elif map_type == 'LOFAR-DR1':
-        R = 5
-        rdel = -0.0004166667; ddel = 0.0004166667
-        nSig = 4.0
-        beamsize = 5
-    elif map_type == 'LOFAR-DR2':
-        R = 5
-        rdel = -0.0004166667; ddel = 0.0004166667
-        nSig = 4.0
-        beamsize = 5
-    elif map_type == 'MEERKAT':
-        R = 5
-        rdel = -0.000305556; ddel = 0.000305556
-        nSig = 4.0
-        beamsize = 5
-    else:
-        # VLA
-        R = 5
-        rdel = -0.0003611111024; ddel = 0.0003611111024
-        nSig = 12.0
-        beamsize = 5

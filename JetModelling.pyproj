@@ -20,11 +20,11 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="JetModelling_MapSetup.py" />
     <Compile Include="JetParameters\JetParameterFiles.py" />
     <Compile Include="JetParameters\JetParameters.py" />
     <Compile Include="JetParameters\JetParameterToolkit.py" />
     <Compile Include="JetParameters\JPConstants.py" />
-    <Compile Include="JetParameters\JPGlobal.py" />
     <Compile Include="JetParameters\JPSetup.py" />
     <Compile Include="JetParameters\JPSynchro.py" />
     <Compile Include="JetRidgeline\EdgeToolkit.py" />
@@ -34,7 +34,6 @@
     <Compile Include="JetRidgeline\Ridgelines.py" />
     <Compile Include="JetRidgeline\RidgeToolkit.py" />
     <Compile Include="JetRidgeline\RLConstants.py" />
-    <Compile Include="JetRidgeline\RLGlobal.py" />
     <Compile Include="JetRidgeline\RLSetup.py" />
     <Compile Include="JetModelling_Main.py" />
   </ItemGroup>
