@@ -108,8 +108,8 @@
     <Content Include="JetModellingC\Synch\x64\Release\vcpkg.applocal.log" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="JetModellingC\Synch\Synch.vcxproj">
-      <Name>Synch</Name>
+    <ProjectReference Include="JetModellingC\synch\synch.vcxproj">
+      <Name>synch</Name>
       <Project>{901c0752-fd1e-4851-b756-bd6388b03b57}</Project>
       <Private>True</Private>
     </ProjectReference>

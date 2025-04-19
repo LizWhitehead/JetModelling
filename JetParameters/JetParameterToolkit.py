@@ -9,7 +9,7 @@ Created by LizWhitehead - 08/04/2025
 import JetModelling_MapSetup as JMS
 import JetParameters.JetParameterFiles as JPF
 import JetParameters.JPConstants as JPC
-##from JetParameters.JPSynchro import SynchSource
+from JetParameters.JPSynchro import SynchSource
 from astropy.cosmology import FlatLambdaCDM
 import numpy as np
 from numpy import pi

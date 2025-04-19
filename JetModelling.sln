@@ -5,7 +5,7 @@ VisualStudioVersion = 17.12.35728.132
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "JetModelling", "JetModelling.pyproj", "{8DD7FEC3-01FA-404F-9D8A-88E003DB1E6D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Synch", "JetModellingC\Synch\Synch.vcxproj", "{901C0752-FD1E-4851-B756-BD6388B03B57}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "synch", "JetModellingC\synch\synch.vcxproj", "{901C0752-FD1E-4851-B756-BD6388B03B57}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ksynch", "JetModellingC\Ksynch\Ksynch.vcxproj", "{8D63B9C4-E547-451F-B701-51145CE57E48}"
 EndProject
