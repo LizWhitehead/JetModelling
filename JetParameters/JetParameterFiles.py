@@ -13,4 +13,4 @@ indir = os.getcwd()            # Windows
 # Jet parameters files
 JP1 = indir+'/parameters/%s_jetparameters1.txt'
 JP2 = indir+'/parameters/%s_jetparameters2.txt'
-JPimage = indir+'/parameters/%s_jetparameters%d.png'
+JPimage = indir+'/parameters/%s_jetparameters.png'

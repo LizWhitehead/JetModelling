@@ -1187,7 +1187,7 @@ def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_paramete
 
 #############################################
 
-def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, section_parameters1, section_parameters2):
+def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section_parameters1, section_parameters2):
 
     """
     Plots the edge points on the source.
@@ -1200,9 +1200,6 @@ def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, s
 
     source_name - str,
                   the name of the source
-
-    dphi - float,
-           1/2 of the value of the ridgepoint cone opening angle
 
     edge_points1 - 2D array, shape(n,4)
                    Points on one arm of the jet, corresponding to the 
@@ -1295,7 +1292,7 @@ def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, s
         ax.set_xlim(xplotmin, xplotmax)
         ax.set_ylim(yplotmin, yplotmax)
     
-        fig.savefig(RLF.EPimage %(source_name, dphi))
+        fig.savefig(RLF.EPimage %source_name)
         plt.close(fig)
 
         # Plot jet sections
@@ -1318,7 +1315,7 @@ def PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, s
         ax.set_xlim(xplotmin, xplotmax)
         ax.set_ylim(yplotmin, yplotmax)
     
-        fig.savefig(RLF.SCimage %(source_name, dphi))
+        fig.savefig(RLF.SCimage %source_name)
         plt.close(fig)
     except:
         print('Error occurred plotting edgepoints')

@@ -2052,7 +2052,7 @@ def TrialSeries(R, dphi):
                 plt.close(fig)
 
                 ETK.SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_parameters1, section_parameters2)
-                ETK.PlotEdgePoints(area_fluxes, source_name, dphi, edge_points1, edge_points2, section_parameters1, section_parameters2)
+                ETK.PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section_parameters1, section_parameters2)
 
     # save the list of problematic sources in problematic_sources_list.txt
     # with source names separated from the problem type with a space.
