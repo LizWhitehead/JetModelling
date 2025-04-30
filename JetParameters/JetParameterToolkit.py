@@ -120,7 +120,7 @@ def GetParametersForJetArm(section_parameters):
         cosmo = FlatLambdaCDM(H0=70, Om0=0.3)                       # Cosmology
         eIndex = (2 * 0.55) + 1                                     # Electron energy ("injection") index
         s = SynchSource(type='sphere', gmin=10, gmax=1e4, z=JMS.rShift, injection=eIndex, spectrum='powerlaw', cosmology=cosmo, asph=equivSphereR)
-        s.normalize(freq=1.4e9, flux=flux_section, method='equipartition', brange=(1e-11,1e-7))
+        s.normalize(freq=JMS.freq, flux=flux_section, method='equipartition', brange=(1e-11,1e-7))
 
         R_section_m = R_section * arcsec_to_kpc * JPC.kpc_to_m                          # section distance from source (m)
         R_section_kpc = R_section * arcsec_to_kpc                                       # section distance from source (kpc)

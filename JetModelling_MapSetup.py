@@ -15,6 +15,7 @@ def setup_map_specific_parameters():
     global nSig     ## The multiple of sigma for the RMS reduction
     global beamsize ## Beam size in arcsecs
     global beamarea ## Beam area in pixels
+    global freq     ## Observation frequency
     global sName    ## source name
     global sRA      ## source RA
     global sDec     ## source Dec
@@ -27,6 +28,7 @@ def setup_map_specific_parameters():
     nSig = 12.0
     beamsize = 5
     beamarea = 16.76195591180468
+    freq = 1.636e9
     sName = '3C31'
     sRA = 16.8217500000
     sDec = 32.4255277778
