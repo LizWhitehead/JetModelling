@@ -9,7 +9,6 @@ from ast import While
 import JetModelling_MapSetup as JMS
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
-import JetRidgeline.EdgeToolkit as ETK
 from JetRidgeline.LotssCatalogue.sizeflux_tools import Flood,Mask
 from astropy.io import fits
 from astropy.table import Table
@@ -408,8 +407,7 @@ def ErodedMaxima(area_fluxes):
 def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
 
     """
-    Returns numpy arrays with ridge point coordinates in two
-    directions, numpy arrays with edge point coordinates 
+    Returns numpy arrays with ridge point coordinates in two directions
     and separate numpy arrays containing the angular directions and
     length along the ridgeline associated with these points. The use
     of Rtot in the loops allows for the summation of the step sizes
@@ -449,15 +447,9 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
 
     Returns
     -------
-
     ridge1 - 2D array,
              array of ridge point coordinate values found
              for direction 1, in the form of [x_coord, y_coord]
-
-    edge_points1 - 2D array,
-                   array of edge point coordinate values found
-                   for direction 1, in the form of 
-                   [x_coord1, y_coord1, x_coord2, y_coord2]
 
     phival1 - 1D array,
               array of angular directions associated with each
@@ -471,11 +463,6 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
     ridge2 - 2D array,
              array of ridge point coordinate values found
              for direction 2, in the form of [x_coord, y_coord]
-
-    edge_points2 - 2D array,
-                   array of edge point coordinate values found
-                   for direction 2, in the form of 
-                   [x_coord1, y_coord1, x_coord2, y_coord2]
 
     phival2 - 1D array,
               array of angular directions associated with each
@@ -503,7 +490,6 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
     #print(float(lmsize))
     #print(0.75 * float(lmsize))
     
-    edge_points1 = edge_points2 = np.array([np.nan, np.nan, np.nan, np.nan])    # Initialise edge point arrays
     Error = 'N/A'
     try:
         maxima, maxima_array, eroded = ErodedMaxima(area_fluxes)
@@ -516,9 +502,6 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
         new_fluxes = area_fluxes
         #new_fluxes = np.ma.masked_array(area_fluxes, \
         #mask=np.ma.masked_equal(eroded, 0).mask, copy=True)
-
-        # Initialise flags to indicate that edge points determination should stop
-        stop_finding_edge_points1 = False; stop_finding_edge_points2 = False
 
         if RLC.debug == True:
             print('Initial Cones')
@@ -533,7 +516,6 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
         if (np.isnan(phi_val1) and np.isnan(phi_val2)):
 
             ridge1 = ridge2 = np.array([np.nan, np.nan])
-            edge_points1 = edge_points2 = np.array([np.nan, np.nan, np.nan, np.nan])
             Rlen1 = np.array([np.nan, np.nan])
             Rlen2 = np.array([np.nan, np.nan])
 
@@ -546,41 +528,22 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
             if type(larger_cone1) == np.ndarray or type(larger_cone2) == np.ndarray:
 
                 ridge1 = ridge2 = np.array([np.nan, np.nan])
-                edge_points1 = edge_points2 = np.array([np.nan, np.nan, np.nan, np.nan])
                 Error = 'Unable_to_Find_Initial_Directions'
                 Rlen1 = np.array([np.nan, np.nan])
                 Rlen2 = np.array([np.nan, np.nan])
                 
             else:
 
-                init_edge_points = ETK.FindInitEdgePoints(area_fluxes, init_point, phi_val1, ridge_R = 0)      # Find initial edge points
-                
                 chain_mask1 = larger_cone1.mask
                 chain_mask2 = larger_cone2.mask
     
                 new_point1, new_phi1, chain_mask1, RFNew1 = GetFirstPoint(new_fluxes, \
                                                                   init_point, cone1, chain_mask1, R)
                 ridge1 = np.vstack((init_point, new_point1))
-                if not np.isnan(new_phi1):
-                    try:
-                        stop_finding_edge_points1, new_edge_points1 = ETK.FindEdgePoints(area_fluxes, new_point1, new_phi1, RFNew1, init_edge_points) # Find edge points 1
-                    except:
-                        stop_finding_edge_points1 = True
-                    else:
-                        if not np.isnan(new_edge_points1).any(): 
-                            edge_points1 = np.vstack((init_edge_points, new_edge_points1))
 
                 new_point2, new_phi2, chain_mask2, RFNew2 = GetFirstPoint(new_fluxes, \
                                                                   init_point, cone2, chain_mask2, R)
                 ridge2 = np.vstack((init_point, new_point2))
-                if not np.isnan(new_phi2):
-                    try:
-                        stop_finding_edge_points2, new_edge_points2 = ETK.FindEdgePoints(area_fluxes, new_point2, new_phi2, RFNew2, init_edge_points) # Find edge points 2
-                    except:
-                        stop_finding_edge_points2 = True
-                    else:
-                        if not np.isnan(new_edge_points2).any(): 
-                            edge_points2 = np.vstack((init_edge_points, new_edge_points2))
                 
                 #print('RFNew1 = ' + str(RFNew1))
                 #print('RFNew2 = ' + str(RFNew2))
@@ -593,15 +556,14 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                           'Further source analysis is aborted.')
                     ridge1 = ridge2 = np.array([np.nan,np.nan])
                     #ridge2 = np.full_like(init_point, np.nan)
-                    edge_points1 = edge_points2 = np.array([np.nan, np.nan, np.nan, np.nan])
                     Error = 'Unable_to_Find_First_Ridge_Point'
                     Rlen1 = np.array([np.nan, np.nan])
                     Rlen2 = np.array([np.nan, np.nan])                
     
                 else:
                     
-                    phi_val1 = np.array([0, new_phi1])
-                    phi_val2 = np.array([0, new_phi2])
+                    phi_val1 = np.array([phi_val1, new_phi1])
+                    phi_val2 = np.array([phi_val2, new_phi2])
                     Rmax = RLC.MaxLen * float(lmsize)
     
                     if RLC.debug == True:
@@ -629,19 +591,6 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                         
                         if np.isnan(new_phi1):
                             break
-
-                        # Find edge points
-                        if not stop_finding_edge_points1:
-                            try:
-                                if RNew1 < (RLC.MaxRFactor * R):    # Test whether the last step size has increased by too much
-                                    stop_finding_edge_points1, new_edge_points1 = ETK.FindEdgePoints(area_fluxes, new_point1, new_phi1, Rtot1, prev_edge_points = edge_points1[-1])
-                                else:
-                                    new_edge_points1 = ETK.FindInitEdgePoints(area_fluxes, new_point1, new_phi1, Rtot1)      # Re-initialise edge points algorithm
-                            except:
-                                stop_finding_edge_points1 = True
-                            else:
-                                if not np.isnan(new_edge_points1).any(): 
-                                    edge_points1 = np.vstack((edge_points1, new_edge_points1))
                     
                     if RLC.debug == True:
                         print('Tracing second ridgeline')
@@ -666,23 +615,10 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                         
                         if np.isnan(new_phi2):
                             break
-
-                        # Find edge points
-                        if not stop_finding_edge_points2:
-                            try:
-                                if RNew2 < (RLC.MaxRFactor * R):    # Test whether the last step size has increased by too much
-                                    stop_finding_edge_points2, new_edge_points2 = ETK.FindEdgePoints(area_fluxes, new_point2, new_phi2, Rtot2, prev_edge_points = edge_points2[-1])
-                                else:
-                                    new_edge_points2 = ETK.FindInitEdgePoints(area_fluxes, new_point2, new_phi2, Rtot2)      # Re-initialise edge points algorithm
-                            except:
-                                stop_finding_edge_points2 = True
-                            else:
-                                if not np.isnan(new_edge_points2).any(): 
-                                    edge_points2 = np.vstack((edge_points2, new_edge_points2))
                 
                 #print('Rtot1 = ' + str(Rtot1))
                 #print('Rtot2 = ' + str(Rtot2))
-        return ridge1, edge_points1, phi_val1, Rlen1, ridge2, edge_points2, phi_val2, Rlen2, Error
+        return ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2, Error
 
 #############################################
 
@@ -1855,7 +1791,7 @@ def TrialSeries(R, dphi):
     """
 
     palette = plt.cm.cividis
-    palette = copy.copy(plt.cm.get_cmap("cividis"))
+    palette = copy.copy(plt.get_cmap("cividis"))
     palette.set_bad('k',0.0)
 
     problem_names = np.array([str('#Source_Name'), str('Problem_Type')])
@@ -1886,26 +1822,11 @@ def TrialSeries(R, dphi):
     else:
         if RLC.debug: print('Init point is',init_point)
 
-    # Find ridge point, edge point and angular direction, in both directions, at each step
+    # Find ridge point and angular direction in both directions, at each step
     if RLC.debug: print(str(source_name) + ' Ridgeline')
     try:
-        ridge1, edge_points1, phi_val1, Rlen1, \
-        ridge2, edge_points2, phi_val2, Rlen2, Error = FindRidges(area_fluxes, init_point, R, dphi, lmsize)
-
-        try:
-            # Interpolate extra edge points at points in the jet where significant flux is cut off
-            print('Adding extra edge points')
-            edge_points1 = ETK.AddEdgePoints(area_fluxes, edge_points1)
-            edge_points2 = ETK.AddEdgePoints(area_fluxes, edge_points2)
-        except:
-            print('Error occurred interpolating extra edge points')
-
-        try:
-            # Get sections and section parameters (distance from source, flux, volume) of the jet
-            print('Getting jet sections')
-            section_parameters1, section_parameters2 = ETK.GetJetSections(area_fluxes, edge_points1, edge_points2)
-        except:
-            print('Error occurred computing section parameters')
+        ridge1, phi_val1, Rlen1, \
+        ridge2, phi_val2, Rlen2, Error = FindRidges(area_fluxes, init_point, R, dphi, lmsize)
                     
     except (ValueError, UnboundLocalError):# TypeError, 
             
@@ -2051,9 +1972,6 @@ def TrialSeries(R, dphi):
                 fig.savefig(RLF.Rimage %(source_name, dphi))
                 plt.close(fig)
 
-                ETK.SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_parameters1, section_parameters2)
-                ETK.PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section_parameters1, section_parameters2)
-
     # save the list of problematic sources in problematic_sources_list.txt
     # with source names separated from the problem type with a space.
     # the file has a header beginning with a hash # which describes the
@@ -2061,7 +1979,7 @@ def TrialSeries(R, dphi):
 
     np.savetxt(str(RLF.psl), problem_names, fmt='%s', delimiter=' ')
 
-    return section_parameters1, section_parameters2
+    return area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
         
 #############################################
 

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EdgeToolkit.py
+JetSectionToolkit.py
 Toolkit for edge-point finding in a source
 Created by LizWhitehead - Jan 2025
 """
 
 import JetModelling_MapSetup as JMS
-import JetRidgeline.RidgelineFiles as RLF
+import JetSections.JetSectionFiles as JSF
+import JetSections.JSConstants as JSC
 import JetRidgeline.RLConstants as RLC
 import matplotlib.pyplot as plt
 from skimage.draw import polygon2mask
@@ -367,10 +368,10 @@ def AddEdgePoints(area_fluxes, edge_points):
 
                 R_diff = ridge_R - lastpts[4]   # change in R since last edgepoint
 
-                if dist > (RLC.MinIntpolFactor * RLC.R):
+                if dist > (JSC.MinIntpolFactor * RLC.R):
                     # Distance is long enough to have cut off some flux.
                     # Work out the number of sections to divide the length between last 2 points.
-                    num_sections = max( min(np.floor(dist/RLC.R + 1).astype('int'), RLC.MaxIntpolSections), 2)
+                    num_sections = max( min(np.floor(dist/RLC.R + 1).astype('int'), JSC.MaxIntpolSections), 2)
 
                     R_per_section = R_diff / num_sections                               # change in R per section
 
@@ -541,17 +542,17 @@ def MergeSections(section_parameters):
 
     # Iterate, up to a maximum number of times to try to get the number of merged sections to the required value
     iteration_count = 0
-    while ((np.size(section_params_merged, 0) < RLC.MinSectionsPerArm) or \
-           (np.size(section_params_merged, 0) > RLC.MaxSectionsPerArm)) and iteration_count < RLC.MaxMergeIterations:
+    while ((np.size(section_params_merged, 0) < JSC.MinSectionsPerArm) or \
+           (np.size(section_params_merged, 0) > JSC.MaxSectionsPerArm)) and iteration_count < JSC.MaxMergeIterations:
         iteration_count += 1
 
         # Set the max flux per merged section for this iteration
-        if np.size(section_params_merged, 0) < RLC.MinSectionsPerArm:
+        if np.size(section_params_merged, 0) < JSC.MinSectionsPerArm:
             # Reduce maximum flux by % for each iteration
-            max_flux = first_section_flux - (first_section_flux * (iteration_count-1) * RLC.PercChangeInMaxFlux/100)
+            max_flux = first_section_flux - (first_section_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
         else:
             # Increase maximum flux by % for each iteration
-            max_flux = first_section_flux + (first_section_flux * (iteration_count-1) * RLC.PercChangeInMaxFlux/100)
+            max_flux = first_section_flux + (first_section_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
 
         section_params_merged = np.empty((0,12))                            # Re-initialise merged section parameters array
         last_merged_sections = np.full((1,12), np.nan)                      # Initialise last merged sections array
@@ -1102,6 +1103,13 @@ def Setup4PointPolygon(polypoints):
     if (top_points[1,0] - base_points[1,0]) > 0:
         top_points[1,0] -= np.abs(top_points[1,0]-base_points[1,0]) * 2
 
+    # If the sides of the polygon are less than 1 degree from the vertical, move the   
+    # top co-ordinates to make the sides 1 degree from the vertical
+    if atan2(top_points[0,0], top_points[0,1]) < pi*1/180:
+        top_points[0,0] = top_points[0,1] * tan(pi*1/180)
+    if atan2((base_points[1,0] - top_points[1,0]), top_points[1,1]) < pi*1/180:
+        top_points[1,0] = base_points[1,0] - (top_points[1,1] * tan(pi*1/180))
+
     # Make an approximation. Move the top co-ordinates such that the gradient of the shortest
     # side is the same (although opposite) as that of the longest side.
     length_side1 = np.sqrt( (top_points[0,0]-base_points[0,0])**2 + (top_points[0,1]-base_points[0,1])**2 )
@@ -1116,12 +1124,6 @@ def Setup4PointPolygon(polypoints):
         base_points[1,1] = 0.0                                      # Ensure second base point lies exactly on the X axis
     else:
         base_points[1,0] = top_points[1,0] - ( (top_points[1,1]-base_points[1,1]) / (- grad_side1) )
-
-    # If the sides of the polygon are less than 1 degree from the vertical, move the   
-    # top co-ordinates to make the sides 1 degree from the vertical
-    if atan2(top_points[0,0], top_points[0,1]) < pi*1/180:
-        top_points[0,0] = top_points[0,1] * tan(pi*1/180)
-        top_points[1,0] = base_points[1,0] - (top_points[1,1] * tan(pi*1/180))
 
     return base_points, top_points
 
@@ -1168,8 +1170,8 @@ def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_paramete
     try:
         fileEP1 = np.column_stack((edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], edge_points1[:,4]))
         fileEP2 = np.column_stack((edge_points2[:,0], edge_points2[:,1], edge_points2[:,2], edge_points2[:,3], edge_points2[:,4]))
-        np.savetxt(RLF.EP1 %source_name, fileEP1, delimiter=' ')
-        np.savetxt(RLF.EP2 %source_name, fileEP2, delimiter=' ')
+        np.savetxt(JSF.EP1 %source_name, fileEP1, delimiter=' ')
+        np.savetxt(JSF.EP2 %source_name, fileEP2, delimiter=' ')
     except Exception as e:
         print('Error occurred saving edgepoint files')
 
@@ -1180,8 +1182,8 @@ def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_paramete
         fileSP2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
                                    section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
                                    section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10], section_parameters2[:,11]))
-        np.savetxt(RLF.SP1 %source_name, fileSP1, delimiter=' ')
-        np.savetxt(RLF.SP2 %source_name, fileSP2, delimiter=' ')
+        np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ')
+        np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ')
     except Exception as e:
         print('Error occurred saving section parameters files')
 
@@ -1229,7 +1231,7 @@ def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section
 
     try:
         palette = plt.cm.cividis
-        palette = copy.copy(plt.cm.get_cmap("cividis"))
+        palette = copy.copy(plt.get_cmap("cividis"))
         palette.set_bad('k',0.0)
         lmsize = JMS.sSize  # pixels
         optical_pos = (float(lmsize), float(lmsize))
@@ -1243,10 +1245,10 @@ def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section
         ymin = np.ma.min(y)
         ymax = np.ma.max(y)
                         
-        x_source_min = float(optical_pos[0]) - RLC.ImSize * float(lmsize)
-        x_source_max = float(optical_pos[0]) + RLC.ImSize * float(lmsize)
-        y_source_min = float(optical_pos[1]) - RLC.ImSize * float(lmsize)
-        y_source_max = float(optical_pos[1]) + RLC.ImSize * float(lmsize)
+        x_source_min = float(optical_pos[0]) - float(lmsize)
+        x_source_max = float(optical_pos[0]) + float(lmsize)
+        y_source_min = float(optical_pos[1]) - float(lmsize)
+        y_source_max = float(optical_pos[1]) + float(lmsize)
                         
         if x_source_min < xmin:
             xplotmin = xmin
@@ -1288,11 +1290,10 @@ def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section
             x_values = np.array([ep[0], ep[2]])
             y_values = np.array([ep[1], ep[3]])
             ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
-        ax.legend()
         ax.set_xlim(xplotmin, xplotmax)
         ax.set_ylim(yplotmin, yplotmax)
     
-        fig.savefig(RLF.EPimage %source_name)
+        fig.savefig(JSF.EPimage %source_name)
         plt.close(fig)
 
         # Plot jet sections
@@ -1311,11 +1312,10 @@ def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section
             x_values = np.array([ep[0], ep[2]])
             y_values = np.array([ep[1], ep[3]])
             ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
-        ax.legend()
         ax.set_xlim(xplotmin, xplotmax)
         ax.set_ylim(yplotmin, yplotmax)
     
-        fig.savefig(RLF.SCimage %source_name)
+        fig.savefig(JSF.SCimage %source_name)
         plt.close(fig)
     except:
         print('Error occurred plotting edgepoints')

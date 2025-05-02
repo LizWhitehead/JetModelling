@@ -19,12 +19,12 @@ def ComputeJetParameters(section_parameters1, section_parameters2):
     Parameters
     -----------
     section_parameters1 - 2D array, shape(n,12)
-                          Array with section points (x,y * 4), distance from source
-                          and computed parameters for one arm of the jet
+                          Array with section points (x,y * 4), distance from source,
+                          flux and volume for one arm of the jet
 
     section_parameters2 - 2D array, shape(n,12)
-                          Array with section points (x,y * 4), distance from source
-                          and computed parameters for other arm of the jet
+                          Array with section points (x,y * 4), distance from source,
+                          flux and volume for other arm of the jet
     """
     
     # Set up the directory structure for jet parameters computation

@@ -38,14 +38,6 @@ R2 = indir+'/ridges/%s_ridge2.txt'
 Rimage = indir+'/ridges/%s_ridges%d.png'
 psl = indir+'/problematic/problematic_sources_listWorkingSet.txt'
 
-# EdgePoints
-EP1 = indir+'/edgepoints/%s_edgepoint1.txt'
-EP2 = indir+'/edgepoints/%s_edgepoint2.txt'
-SP1 = indir+'/edgepoints/%s_sectionparameters1.txt'
-SP2 = indir+'/edgepoints/%s_sectionparameters2.txt'
-EPimage = indir+'/edgepoints/%s_edgepoints.png'
-SCimage = indir+'/edgepoints/%s_sections.png'
-
 # SourceSearch
 coc = indir+'/CutOutCats/Cutout_Catalogue-%s.txt'
 #Dists = 'Catalogue/DistancesFull/distances-%s.txt'

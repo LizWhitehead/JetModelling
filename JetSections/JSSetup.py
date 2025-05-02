@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JPSetup.py
-Sets up the directory structure for JetParameter processing.
-Created by LizWhitehead - 08/04/2025
+JSSetup.py
+Sets up the directory structure for JetSection processing.
+Created by LizWhitehead - 01/05/2025
 """
 
 import sys
@@ -12,11 +12,11 @@ import os
 def Setup():
 
     """
-    # Sets up the directory structure for JetParameter processing.
+    # Sets up the directory structure for JetSection processing.
     """
 
     # Initialise required directories under working directory. 
-    newdirs = ['parameters']
+    newdirs = ['sections']
     path = os.getcwd()
     for d in newdirs:
         newd=path + '/' + d

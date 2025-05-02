@@ -9,6 +9,7 @@ Author: LizWhitehead 12/11/2024
 """
 import JetModelling_MapSetup as JMS
 import JetRidgeline.Ridgelines as RL
+import JetSections.JetSections as JS
 import JetParameters.JetParameters as JP
 from warnings import simplefilter
 simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
@@ -16,7 +17,10 @@ simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
 JMS.setup_map_specific_parameters()
 
 # Create the jet ridgelines and sections
-section_parameters1, section_parameters2 = RL.CreateRidgelinesAndSections()
+area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
+
+# Divide the jet into sections by finding edge points
+section_parameters1, section_parameters2 = JS.CreateJetSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
 
 # Compute parameters along the jet
 JP.ComputeJetParameters(section_parameters1, section_parameters2)

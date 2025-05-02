@@ -27,7 +27,6 @@
     <Compile Include="JetParameters\JPConstants.py" />
     <Compile Include="JetParameters\JPSetup.py" />
     <Compile Include="JetParameters\JPSynchro.py" />
-    <Compile Include="JetRidgeline\EdgeToolkit.py" />
     <Compile Include="JetRidgeline\LotssCatalogue\sizeflux_tools.py" />
     <Compile Include="JetRidgeline\LotssCatalogue\subim.py" />
     <Compile Include="JetRidgeline\RidgelineFiles.py" />
@@ -36,6 +35,11 @@
     <Compile Include="JetRidgeline\RLConstants.py" />
     <Compile Include="JetRidgeline\RLSetup.py" />
     <Compile Include="JetModelling_Main.py" />
+    <Compile Include="JetSections\JetSectionFiles.py" />
+    <Compile Include="JetSections\JetSections.py" />
+    <Compile Include="JetSections\JetSectionToolkit.py" />
+    <Compile Include="JetSections\JSConstants.py" />
+    <Compile Include="JetSections\JSSetup.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="JetModellingC\" />
@@ -56,6 +60,7 @@
     <Folder Include="JetRidgeline" />
     <Folder Include="JetParameters\" />
     <Folder Include="JetRidgeline\LotssCatalogue\" />
+    <Folder Include="JetSections\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="JetModellingC\Synch\.vs\Synch\FileContentIndex\0d62ce67-1898-491b-a9fa-3d523b14dab1.vsidx" />

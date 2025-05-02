@@ -24,7 +24,7 @@ def Setup():
     # Sets up the directory structure for ridgeline processing. Produces thresholded npy cutout.
 
     # Initialise required directories under working directory. 
-    newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','edgepoints','parameters','problematic','cutouts']
+    newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','problematic','cutouts']
     path = os.getcwd()
     for d in newdirs:
         newd=path + '/' + d

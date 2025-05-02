@@ -16,7 +16,7 @@ import JetRidgeline.RLSetup as RLS
 from JetRidgeline.RidgeToolkit import CreateCutouts, TrialSeries
 from warnings import resetwarnings
 
-def CreateRidgelinesAndSections():
+def CreateRidgelines():
     
     # Set up the directory structure for ridgeline processing. Produce 2D flattened map and thresholded npy cutout.
     RLS.Setup()
@@ -26,11 +26,11 @@ def CreateRidgelinesAndSections():
     CreateCutouts()
     print('Time taken to make cutout = ' + str((time.time()-start_time)/(60*60)),'h')
 
-    print('Starting ridgeline/edgepoint drawing process.')
+    print('Starting ridgeline drawing process.')
     start_time = time.time()
-    section_parameters1, section_parameters2 = TrialSeries(RLC.R, RLC.dphi)
-    print('Time taken for ridgelines and sections to draw = ' + str((time.time()-start_time)/(60*60)),'h')
+    area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = TrialSeries(RLC.R, RLC.dphi)
+    print('Time taken for ridgelines to draw = ' + str((time.time()-start_time)/(60*60)),'h')
     resetwarnings()
 
-    return section_parameters1, section_parameters2
+    return area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
 
