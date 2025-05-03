@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 JetParametersToolkit.py
-Toolkit for calculating parameters along a jet.
+Toolkit for computing parameters along a jet.
 Created by LizWhitehead - 08/04/2025
 """
 
@@ -207,13 +207,10 @@ def SaveParameterFiles(jet_parameters1, jet_parameters2):
     -----------
     """
 
-    try:
-        fileJP1 = np.column_stack((jet_parameters1[:,0], jet_parameters1[:,1], jet_parameters1[:,2], jet_parameters1[:,3], jet_parameters1[:,4]))
-        fileJP2 = np.column_stack((jet_parameters2[:,0], jet_parameters2[:,1], jet_parameters2[:,2], jet_parameters2[:,3], jet_parameters2[:,4]))
-        np.savetxt(JPF.JP1 %JMS.sName, fileJP1, delimiter=' ')
-        np.savetxt(JPF.JP2 %JMS.sName, fileJP2, delimiter=' ')
-    except Exception as e:
-        print('Error occurred saving jet parameters files')
+    fileJP1 = np.column_stack((jet_parameters1[:,0], jet_parameters1[:,1], jet_parameters1[:,2], jet_parameters1[:,3], jet_parameters1[:,4]))
+    fileJP2 = np.column_stack((jet_parameters2[:,0], jet_parameters2[:,1], jet_parameters2[:,2], jet_parameters2[:,3], jet_parameters2[:,4]))
+    np.savetxt(JPF.JP1 %JMS.sName, fileJP1, delimiter=' ')
+    np.savetxt(JPF.JP2 %JMS.sName, fileJP2, delimiter=' ')
 
 #############################################
 

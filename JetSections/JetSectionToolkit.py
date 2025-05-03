@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 JetSectionToolkit.py
-Toolkit for edge-point finding in a source
+Toolkit for sections processing
 Created by LizWhitehead - Jan 2025
 """
 
@@ -16,6 +16,145 @@ import numpy as np
 from math import tan, atan2, pow
 from numpy import pi, sin, cos, dot
 import copy
+
+def GetEdgepointsAndSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
+
+    """
+    Divide both arms of the jet into sections by finding edge points.
+
+    Parameters
+    -----------
+    area_fluxes - 2D array,
+                  raw image array
+
+    ridge1 - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for one arm of the jet
+    
+    ridge2 - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for other arm of the jet
+
+    phi_val1 - 1D array of ridgeline angles for each ridgepoint on
+               one arm of the jet
+    
+    phi_val2 - 1D array of ridgeline angles for each ridgepoint on
+               other arm of the jet
+
+    Rlen1 - 1D array of distance from source for each ridgepoint on
+            one arm of the jet
+    
+    Rlen2 - 1D array of distance from source for each ridgepoint on
+            other arm of the jet
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    section_parameters1 - 2D array, shape(n,12)
+                          Array with section points (x,y * 4), distance from source,
+                          flux and volume for one arm of the jet
+
+    section_parameters2 - 2D array, shape(n,12)
+                          Array with section points (x,y * 4), distance from source
+                          flux and volume for other arm of the jet
+
+    Notes
+    -----------
+    """
+
+    # Loop through the ridge points and find the corresponding edgepoints
+    if not np.all(np.isnan(ridge1)) and not np.all(np.isnan(ridge2)):
+
+        print('Finding edge points')
+
+        # Find initial edge points
+        init_edge_points = FindInitEdgePoints(area_fluxes, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
+
+        # Find all edgepoints for each arm of the jet
+        edge_points1 = FindAllEdgePointsForJetArm(area_fluxes, init_edge_points, ridge1, phi_val1, Rlen1)
+        edge_points2 = FindAllEdgePointsForJetArm(area_fluxes, init_edge_points, ridge2, phi_val2, Rlen2)
+
+        # Interpolate extra edge points at points in the jet where significant flux is cut off
+        print('Adding extra edge points')
+        edge_points1 = AddEdgePoints(area_fluxes, edge_points1)
+        edge_points2 = AddEdgePoints(area_fluxes, edge_points2)
+
+        # Get sections and section parameters (distance from source, flux, volume) of the jet
+        print('Getting jet sections')
+        section_parameters1, section_parameters2 = GetJetSections(area_fluxes, edge_points1, edge_points2)
+
+        # Save files and plot data
+        SaveEdgepointAndSectionFiles(JMS.sName, edge_points1, edge_points2, section_parameters1, section_parameters2)
+        PlotEdgePointsAndSections(area_fluxes, JMS.sName, edge_points1, edge_points2, section_parameters1, section_parameters2)
+
+    return section_parameters1, section_parameters2
+
+#############################################
+
+def FindAllEdgePointsForJetArm(area_fluxes, init_edge_points, ridge, phi_val, Rlen):
+
+    """
+    Find all edge points for one arm of the jet
+
+    Parameters
+    -----------
+    area_fluxes - 2D array,
+                  raw image array
+
+    init_edge_points - 2D array, shape(1,5)
+                       Points on either side of the jet, corresponding to the 
+                       closest distance to that edge from the initial ridge point,
+                       and their distance from source.
+                       (x1,y1,x2,y2,R)
+
+    ridge - 2D array, shape(n,2)
+            Array of ridgepoint co-ordinates for one arm of the jet
+
+    phi_val - 1D array of ridgeline angles for each ridgepoint on
+              one arm of the jet
+
+    Rlen - 1D array of distance from source for each ridgepoint on
+            one arm of the jet
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    edge_points - 2D array, shape(n,5)
+                  Points on either side of the jet, corresponding to the 
+                  closest distance to that edge from the initial ridge point,
+                  and their distance from source.
+                  (x1,y1,x2,y2,R)
+
+    Notes
+    -----------
+    """
+
+    edge_points = np.empty((0,5))                               # Initialise edge point array
+    edge_points = np.vstack((edge_points, init_edge_points))    # Add the initial edge points
+
+    # Loop through the ridge points and find the corresponding edgepoints
+    if not np.all(np.isnan(ridge)):
+
+        # Find edgepoints for one arm of the jet
+        ridge_count = 1; ridge_total = len(ridge)
+        while ridge_count < ridge_total:
+
+            if np.isnan(phi_val[ridge_count]):
+                break
+
+            if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JSC.MaxRFactor * RLC.R):  # Test whether the last step size has increased by too much
+                new_edge_points = FindEdgePoints(area_fluxes, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
+            else:
+                new_edge_points = FindInitEdgePoints(area_fluxes, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])  # Re-initialise edge points algorithm
+
+            if not np.isnan(new_edge_points).any(): 
+                edge_points = np.vstack((edge_points, new_edge_points))
+
+            ridge_count += 1
+
+    return edge_points
 
 #############################################
 
@@ -39,7 +178,7 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     ridge_R - float,
               distance from the source along the jet in pixels
 
-    prev_edge_points - 1D array, shape(5,)
+    prev_edge_points - 2D array, shape(1,5)
                        edge points corresponding to
                        previous ridge point and distance from source
                        (x1,y1,x2,y2,R)
@@ -49,9 +188,7 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
 
     Returns
     -----------
-    stop_finding_edge_points - flag for no further edge points to be located
-
-    edge_points - 1D array, shape(5,)
+    edge_points - 2D array, shape(1,5)
                   Points on either side of the jet, corresponding to the 
                   closest distance to that edge from the corresonding ridge point,
                   and distance from source
@@ -60,9 +197,6 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     Notes
     -----------
     """
-
-    # Initialise flag to indicate that edge points determination should stop
-    stop_finding_edge_points = False
 
     # Initialise edge_points array
     edge_points = np.full((1,5), np.nan)
@@ -214,7 +348,7 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
         else:
             edge_points = np.array([edge_coord2[0], edge_coord2[1], edge_coord1[0], edge_coord1[1], ridge_R])
 
-    return stop_finding_edge_points, edge_points
+    return edge_points
 
 #############################################
 
@@ -243,7 +377,7 @@ def FindInitEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R):
 
     Returns
     -----------
-    edge_points - 2D array, shape(5)
+    edge_points - 2D array, shape(1,5)
                   Points on either side of the jet, corresponding to the 
                   closest distance to that edge from the initial ridge point,
                   and their distance from source.
@@ -1129,10 +1263,10 @@ def Setup4PointPolygon(polypoints):
 
 #############################################
 
-def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_parameters1, section_parameters2):
+def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, section_parameters1, section_parameters2):
 
     """
-    Saves the edge point file for each arm of the jet
+    Saves the edge point and section files for each arm of the jet
 
     Parameters
     -----------
@@ -1167,33 +1301,26 @@ def SaveEdgepointFiles(source_name, edge_points1, edge_points2, section_paramete
     -----------
     """
 
-    try:
-        fileEP1 = np.column_stack((edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], edge_points1[:,4]))
-        fileEP2 = np.column_stack((edge_points2[:,0], edge_points2[:,1], edge_points2[:,2], edge_points2[:,3], edge_points2[:,4]))
-        np.savetxt(JSF.EP1 %source_name, fileEP1, delimiter=' ')
-        np.savetxt(JSF.EP2 %source_name, fileEP2, delimiter=' ')
-    except Exception as e:
-        print('Error occurred saving edgepoint files')
+    fileEP1 = np.column_stack((edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], edge_points1[:,4]))
+    fileEP2 = np.column_stack((edge_points2[:,0], edge_points2[:,1], edge_points2[:,2], edge_points2[:,3], edge_points2[:,4]))
+    np.savetxt(JSF.EP1 %source_name, fileEP1, delimiter=' ')
+    np.savetxt(JSF.EP2 %source_name, fileEP2, delimiter=' ')
 
-    try:
-        fileSP1 = np.column_stack((section_parameters1[:,0], section_parameters1[:,1], section_parameters1[:,2], section_parameters1[:,3], \
-                                   section_parameters1[:,4], section_parameters1[:,5], section_parameters1[:,6], section_parameters1[:,7], \
-                                   section_parameters1[:,8], section_parameters1[:,9], section_parameters1[:,10], section_parameters1[:,11]))
-        fileSP2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
-                                   section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
-                                   section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10], section_parameters2[:,11]))
-        np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ')
-        np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ')
-    except Exception as e:
-        print('Error occurred saving section parameters files')
+    fileSP1 = np.column_stack((section_parameters1[:,0], section_parameters1[:,1], section_parameters1[:,2], section_parameters1[:,3], \
+                               section_parameters1[:,4], section_parameters1[:,5], section_parameters1[:,6], section_parameters1[:,7], \
+                               section_parameters1[:,8], section_parameters1[:,9], section_parameters1[:,10], section_parameters1[:,11]))
+    fileSP2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
+                               section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
+                               section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10], section_parameters2[:,11]))
+    np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ')
+    np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ')
 
 #############################################
 
-def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section_parameters1, section_parameters2):
+def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_points2, section_parameters1, section_parameters2):
 
     """
-    Plots the edge points on the source.
-    Plots the jet sections on the source.
+    Plots the edge points and jet sections on the source.
 
     Parameters
     -----------
@@ -1227,98 +1354,95 @@ def PlotEdgePoints(area_fluxes, source_name, edge_points1, edge_points2, section
 
     Notes
     -----------
-    """
+"""
 
-    try:
-        palette = plt.cm.cividis
-        palette = copy.copy(plt.get_cmap("cividis"))
-        palette.set_bad('k',0.0)
-        lmsize = JMS.sSize  # pixels
-        optical_pos = (float(lmsize), float(lmsize))
+    palette = plt.cm.cividis
+    palette = copy.copy(plt.get_cmap("cividis"))
+    palette.set_bad('k',0.0)
+    lmsize = JMS.sSize  # pixels
+    optical_pos = (float(lmsize), float(lmsize))
 
-        y, x = np.mgrid[slice((0),(area_fluxes.shape[0]),1), slice((0),(area_fluxes.shape[1]),1)]
-        y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes).mask)
-        x = np.ma.masked_array(x, mask=np.ma.masked_invalid(area_fluxes).mask)
+    y, x = np.mgrid[slice((0),(area_fluxes.shape[0]),1), slice((0),(area_fluxes.shape[1]),1)]
+    y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes).mask)
+    x = np.ma.masked_array(x, mask=np.ma.masked_invalid(area_fluxes).mask)
                         
-        xmin = np.ma.min(x)
-        xmax = np.ma.max(x)
-        ymin = np.ma.min(y)
-        ymax = np.ma.max(y)
+    xmin = np.ma.min(x)
+    xmax = np.ma.max(x)
+    ymin = np.ma.min(y)
+    ymax = np.ma.max(y)
                         
-        x_source_min = float(optical_pos[0]) - float(lmsize)
-        x_source_max = float(optical_pos[0]) + float(lmsize)
-        y_source_min = float(optical_pos[1]) - float(lmsize)
-        y_source_max = float(optical_pos[1]) + float(lmsize)
+    x_source_min = float(optical_pos[0]) - float(lmsize)
+    x_source_max = float(optical_pos[0]) + float(lmsize)
+    y_source_min = float(optical_pos[1]) - float(lmsize)
+    y_source_max = float(optical_pos[1]) + float(lmsize)
                         
-        if x_source_min < xmin:
-            xplotmin = xmin
-        else:
-            xplotmin = x_source_min
+    if x_source_min < xmin:
+        xplotmin = xmin
+    else:
+        xplotmin = x_source_min
                                 
-        if x_source_max < xmax:
-            xplotmax = x_source_max
-        else:
-            xplotmax = xmax
+    if x_source_max < xmax:
+        xplotmax = x_source_max
+    else:
+        xplotmax = xmax
                         
-        if y_source_min < ymin:
-            yplotmin = ymin
-        else:
-            yplotmin = y_source_min
+    if y_source_min < ymin:
+        yplotmin = ymin
+    else:
+        yplotmin = y_source_min
                                 
-        if y_source_max < ymax:
-            yplotmax = y_source_max
-        else:
-            yplotmax = ymax
+    if y_source_max < ymax:
+        yplotmax = y_source_max
+    else:
+        yplotmax = ymax
 
-        # Plot edge points
-        fig, ax = plt.subplots(figsize=(10,10))
-        fig.suptitle('Source: %s' %source_name)
-        fig.subplots_adjust(top=0.9)
-        ax.set_aspect('equal', 'datalim')
+    # Plot edge points
+    fig, ax = plt.subplots(figsize=(10,10))
+    fig.suptitle('Source: %s' %source_name)
+    fig.subplots_adjust(top=0.9)
+    ax.set_aspect('equal', 'datalim')
     
-        A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
-        ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
-        ax.plot(edge_points1[:,0], edge_points1[:,1], 'r-', linewidth=0.6) # Edge lines
-        ax.plot(edge_points1[:,2], edge_points1[:,3], 'r-', linewidth=0.6)
-        ax.plot(edge_points2[:,0], edge_points2[:,1], 'r-', linewidth=0.6)
-        ax.plot(edge_points2[:,2], edge_points2[:,3], 'r-', linewidth=0.6)
-        for ep in edge_points1:
-            x_values = np.array([ep[0], ep[2]])
-            y_values = np.array([ep[1], ep[3]])
-            ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
-        for ep in edge_points2:
-            x_values = np.array([ep[0], ep[2]])
-            y_values = np.array([ep[1], ep[3]])
-            ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
-        ax.set_xlim(xplotmin, xplotmax)
-        ax.set_ylim(yplotmin, yplotmax)
+    A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
+    ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
+    ax.plot(edge_points1[:,0], edge_points1[:,1], 'r-', linewidth=0.6) # Edge lines
+    ax.plot(edge_points1[:,2], edge_points1[:,3], 'r-', linewidth=0.6)
+    ax.plot(edge_points2[:,0], edge_points2[:,1], 'r-', linewidth=0.6)
+    ax.plot(edge_points2[:,2], edge_points2[:,3], 'r-', linewidth=0.6)
+    for ep in edge_points1:
+        x_values = np.array([ep[0], ep[2]])
+        y_values = np.array([ep[1], ep[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
+    for ep in edge_points2:
+        x_values = np.array([ep[0], ep[2]])
+        y_values = np.array([ep[1], ep[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
+    ax.set_xlim(xplotmin, xplotmax)
+    ax.set_ylim(yplotmin, yplotmax)
     
-        fig.savefig(JSF.EPimage %source_name)
-        plt.close(fig)
+    fig.savefig(JSF.EPimage %source_name)
+    plt.close(fig)
 
-        # Plot jet sections
-        fig, ax = plt.subplots(figsize=(10,10))
-        fig.suptitle('Source: %s' %source_name)
-        fig.subplots_adjust(top=0.9)
-        ax.set_aspect('equal', 'datalim')
+    # Plot jet sections
+    fig, ax = plt.subplots(figsize=(10,10))
+    fig.suptitle('Source: %s' %source_name)
+    fig.subplots_adjust(top=0.9)
+    ax.set_aspect('equal', 'datalim')
     
-        A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
-        ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
-        for ep in section_parameters1:
-            x_values = np.array([ep[0], ep[2]])
-            y_values = np.array([ep[1], ep[3]])
-            ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
-        for ep in section_parameters2:
-            x_values = np.array([ep[0], ep[2]])
-            y_values = np.array([ep[1], ep[3]])
-            ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
-        ax.set_xlim(xplotmin, xplotmax)
-        ax.set_ylim(yplotmin, yplotmax)
+    A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
+    ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
+    for ep in section_parameters1:
+        x_values = np.array([ep[0], ep[2]])
+        y_values = np.array([ep[1], ep[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
+    for ep in section_parameters2:
+        x_values = np.array([ep[0], ep[2]])
+        y_values = np.array([ep[1], ep[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
+    ax.set_xlim(xplotmin, xplotmax)
+    ax.set_ylim(yplotmin, yplotmax)
     
-        fig.savefig(JSF.SCimage %source_name)
-        plt.close(fig)
-    except:
-        print('Error occurred plotting edgepoints')
+    fig.savefig(JSF.SCimage %source_name)
+    plt.close(fig)
 
 #############################################
 

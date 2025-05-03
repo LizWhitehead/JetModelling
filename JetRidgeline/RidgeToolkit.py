@@ -1805,7 +1805,6 @@ def TrialSeries(R, dphi):
         
     optical_pos = (float(lmsize), float(lmsize))
         
-    print('-------------------------------------------')
     print('Source %s under ridgeline analysis' %source_name)
         
     if RLC.debug: print(str(source_name) + ' Convolution')

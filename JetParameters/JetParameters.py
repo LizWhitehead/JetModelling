@@ -30,17 +30,13 @@ def ComputeJetParameters(section_parameters1, section_parameters2):
     # Set up the directory structure for jet parameters computation
     JPS.Setup()
 
-    print('Starting jet parameters computation.')
+    print('Starting jet parameters computation')
+    print('-------------------------------------------')
+    start_time = time.time()
 
-    try:
-        start_time = time.time()
+    # Get parameter values along each arm of the jet
+    GetJetParameters(section_parameters1, section_parameters2)
 
-        # Get parameter values along each arm of the jet
-        GetJetParameters(section_parameters1, section_parameters2)
-
-        print('Time taken to compute jet parameters = ' + str((time.time()-start_time)/(60*60)),'h')
-    except:
-        print('Error occurred computing jet parameters')
-
+    print('Time taken to compute jet parameters = ' + str((time.time()-start_time)/(60*60)),'h')
     resetwarnings()
 

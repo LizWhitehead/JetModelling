@@ -26,9 +26,12 @@ def CreateRidgelines():
     CreateCutouts()
     print('Time taken to make cutout = ' + str((time.time()-start_time)/(60*60)),'h')
 
-    print('Starting ridgeline drawing process.')
+    print('Starting ridgeline drawing process')
+    print('-------------------------------------------')
     start_time = time.time()
+
     area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = TrialSeries(RLC.R, RLC.dphi)
+
     print('Time taken for ridgelines to draw = ' + str((time.time()-start_time)/(60*60)),'h')
     resetwarnings()
 
