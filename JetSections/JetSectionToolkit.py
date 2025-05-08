@@ -315,7 +315,7 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
         diff = max_phi - min_phi
         if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: phi_diff = np.abs(phi_diff - 2*pi)
 
-        if r_coord1 < r_last_edge2 or phi_diff < (pi*20/180):       # Test whether we think the edge points are on the same side of the jet     
+        if r_coord1 < r_last_edge2 or phi_diff < (pi*30/180):       # Test whether we think the edge points are on the same side of the jet     
             # Reduce the angle of search by 10 degrees
             phi_start_minus10 = PiRange(start_phi - (pi*10/180))          # Try taking away
             phi_diff_start_minus10 = np.abs(phi_start_minus10 - phi_prev2)
@@ -1506,16 +1506,19 @@ def CheckQuadrant(angle):
                quadrant, in which the angle is located.
     """
 
-    if 0 <= angle <= pi/2.:
+    angle_round = np.round(angle,3)
+    pi_round = np.round(pi,3)
+
+    if 0 <= angle_round <= pi_round/2.:
         quadrant = 1
 
-    elif pi/2. <= angle <= pi:
+    elif pi_round/2. <= angle_round <= pi_round:
         quadrant = 2
 
-    elif -pi <= angle <= -pi/2.:
+    elif -pi_round <= angle_round <= -pi_round/2.:
         quadrant = 3
 
-    elif -pi/2. <= angle <= 0:
+    elif -pi_round/2. <= angle_round <= 0:
         quadrant = 4
 
     return quadrant
