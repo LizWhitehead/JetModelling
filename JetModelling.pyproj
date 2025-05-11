@@ -20,6 +20,7 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="JetModelling_Constants.py" />
     <Compile Include="JetModelling_MapSetup.py" />
     <Compile Include="JetParameters\JetParameterFiles.py" />
     <Compile Include="JetParameters\JetParameters.py" />

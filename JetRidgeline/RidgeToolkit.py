@@ -142,16 +142,19 @@ def CheckQuadrant(angle):
                quadrant, in which the angle is located.
     """
 
-    if 0 <= angle <= pi/2.:
+    angle_round = np.round(angle,3)
+    pi_round = np.round(pi,3)
+
+    if 0 <= angle_round <= pi_round/2.:
         quadrant = 1
 
-    elif pi/2. <= angle <= pi:
+    elif pi_round/2. <= angle_round <= pi_round:
         quadrant = 2
 
-    elif -pi <= angle <= -pi/2.:
+    elif -pi_round <= angle_round <= -pi_round/2.:
         quadrant = 3
 
-    elif -pi/2. <= angle <= 0:
+    elif -pi_round/2. <= angle_round <= 0:
         quadrant = 4
 
     return quadrant

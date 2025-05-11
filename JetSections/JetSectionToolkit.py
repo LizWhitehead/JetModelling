@@ -293,7 +293,7 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
 
         # Compare the distance between this edge point and the first edge point, with the distance 
         # between this edge point and the last corresponding edge point.
-        r2, phi2 = PolarCoordinates(area_fluxes, np.array([edge_coord2_yx[1],edge_coord2_yx[0]]))       # polar coordinates around the second edge point
+        r2, phi2 = PolarCoordinates(area_fluxes, np.array([edge_coord2_yx[1] + 0.5,edge_coord2_yx[0] + 0.5]))       # polar coordinates around the second edge point
         r_coord1 = r2[edge_coord1_yx]
         if phi_prev1 == phi_prev_coord1:
             r_last_edge2 = r2[prev_edge_pix[3], prev_edge_pix[2]]
@@ -304,9 +304,9 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
         # From here, look at the difference in angles of the first and and second edge points.
         # This will be small if the edge points are on the same side of the jet.
         if phi_prev1 == phi_prev_coord1:
-            r3, phi3 = PolarCoordinates(area_fluxes, np.array([prev_edge_pix[0], prev_edge_pix[1]]))    # polar coordinates around the last edge point 1
+            r3, phi3 = PolarCoordinates(area_fluxes, np.array([prev_edge_points[0], prev_edge_points[1]]))    # polar coordinates around the last edge point 1
         else:
-            r3, phi3 = PolarCoordinates(area_fluxes, np.array([prev_edge_pix[2], prev_edge_pix[3]]))
+            r3, phi3 = PolarCoordinates(area_fluxes, np.array([prev_edge_points[2], prev_edge_points[3]]))
         phi_last_edge1_coord1 = phi3[edge_coord1_yx]
         phi_last_edge1_coord2 = phi3[edge_coord2_yx]
         phi_diff = np.abs(phi_last_edge1_coord1 - phi_last_edge1_coord2)
@@ -475,6 +475,7 @@ def AddEdgePoints(area_fluxes, edge_points):
 
     # Initialise edgepoints array
     edge_points_updated = edge_points
+    lastpts = np.empty((0,5))
 
     # Fill invalid (nan) values with zeroes in area_fluxes
     area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
@@ -491,95 +492,100 @@ def AddEdgePoints(area_fluxes, edge_points):
         for [x_side1, y_side1, x_side2, y_side2, ridge_R] in edge_points_updated:
             point_count += 1
 
-            x_side1_floor = np.floor(x_side1); y_side1_floor = np.floor(y_side1)
-            x_side2_floor = np.floor(x_side2); y_side2_floor = np.floor(y_side2)
-
             if point_count > 1:
-                if jet_side == 1:
-                    dist = np.sqrt( (x_side1_floor - lastpts[0])**2 + (y_side1_floor - lastpts[1])**2 ) # distance between last 2 points on this side
-                else:
-                    dist = np.sqrt( (x_side2_floor - lastpts[2])**2 + (y_side2_floor - lastpts[3])**2 ) # distance between last 2 points on this side
+                if (ridge_R - lastpts[4]) < (JSC.MaxRFactor * RLC.R):   # Test whether the last step size has increased by too much
 
-                R_diff = ridge_R - lastpts[4]   # change in R since last edgepoint
+                    if jet_side == 1:
+                        dist = np.sqrt( (x_side1 - lastpts[0])**2 + (y_side1 - lastpts[1])**2 ) # distance between last 2 points on this side
+                    else:
+                        dist = np.sqrt( (x_side2 - lastpts[2])**2 + (y_side2 - lastpts[3])**2 ) # distance between last 2 points on this side
 
-                if dist > (JSC.MinIntpolFactor * RLC.R):
-                    # Distance is long enough to have cut off some flux.
-                    # Work out the number of sections to divide the length between last 2 points.
-                    num_sections = max( min(np.floor(dist/RLC.R + 1).astype('int'), JSC.MaxIntpolSections), 2)
+                    R_diff = ridge_R - lastpts[4]   # change in R since last edgepoint
 
-                    R_per_section = R_diff / num_sections                               # change in R per section
+                    if dist > (JSC.MinIntpolFactor * RLC.R):
+                        # Distance is long enough to have cut off some flux.
+                        # Work out the number of sections to divide the length between last 2 points.
+                        num_sections = max( min(np.floor(dist/RLC.R + 1).astype('int'), JSC.MaxIntpolSections), 2)
 
-                    # Interpolate the new edgepoint for each section
-                    section_x1_length = (x_side1_floor - lastpts[0]) / num_sections     # x section length on one side of the jet
-                    section_y1_length = (y_side1_floor - lastpts[1]) / num_sections     # y section length on one side of the jet
-                    section_x2_length = (x_side2_floor - lastpts[2]) / num_sections     # x section length on other side of the jet
-                    section_y2_length = (y_side2_floor - lastpts[3]) / num_sections     # y section length on other side of the jet
+                        R_per_section = R_diff / num_sections                               # change in R per section
 
-                    last_sect_x1 = lastpts[0]; last_sect_y1 = lastpts[1]
-                    last_sect_x2 = lastpts[2]; last_sect_y2 = lastpts[3]
-                    sect = 1
-                    while sect <= (num_sections-1):
-                        R_section = lastpts[4] + (R_per_section * sect)                 # R for this section
+                        # Interpolate the new edgepoint for each section
+                        section_x1_length = (x_side1 - lastpts[0]) / num_sections     # x section length on one side of the jet
+                        section_y1_length = (y_side1 - lastpts[1]) / num_sections     # y section length on one side of the jet
+                        section_x2_length = (x_side2 - lastpts[2]) / num_sections     # x section length on other side of the jet
+                        section_y2_length = (y_side2 - lastpts[3]) / num_sections     # y section length on other side of the jet
 
-                        x1_float = last_sect_x1 + section_x1_length; y1_float = last_sect_y1 + section_y1_length
-                        x2_float = last_sect_x2 + section_x2_length; y2_float = last_sect_y2 + section_y2_length
+                        last_sect_x1 = lastpts[0]; last_sect_y1 = lastpts[1]
+                        last_sect_x2 = lastpts[2]; last_sect_y2 = lastpts[3]
+                        stop_section_edgepoints = False
+                        sect = 1
+                        while sect <= (num_sections-1) and not stop_section_edgepoints:
+                            R_section = lastpts[4] + (R_per_section * sect)           # R for this section
 
-                        if section_x1_length >= 0: x1 = np.floor(x1_float).astype('int')
-                        else: x1 = np.ceil(x1_float).astype('int')                          # x section co-ord on one side of the jet
-                        if section_y1_length >= 0: y1 = np.floor(y1_float).astype('int')
-                        else: y1 = np.ceil(y1_float).astype('int')                          # y section co-ord on one side of the jet
-                        if section_x2_length >= 0: x2 = np.floor(x2_float).astype('int')
-                        else: x2 = np.ceil(x2_float).astype('int')                          # x section co-ord on other side of the jet
-                        if section_y2_length >= 0: y2 = np.floor(y2_float).astype('int')
-                        else: y2 = np.ceil(y2_float).astype('int')                          # y section co-ord on other side of the jet
+                            x1 = last_sect_x1 + section_x1_length                     # x section co-ord on one side of the jet
+                            y1 = last_sect_y1 + section_y1_length                     # y section co-ord on one side of the jet
+                            x2 = last_sect_x2 + section_x2_length                     # x section co-ord on other side of the jet
+                            y2 = last_sect_y2 + section_y2_length                     # y section co-ord on other side of the jet
 
-                        x_mean_float = (x1_float + x2_float) / 2; y_mean_float = (y1_float + y2_float) / 2
-                        x_mean = np.floor(x_mean_float).astype('int')   # x co-ord of centre of the points on either side of the jet
-                        y_mean = np.floor(y_mean_float).astype('int')   # y co-ord of centre of the points on either side of the jet
+                            x_mean = (x1 + x2) / 2                                    # x co-ord of centre of the points on either side of the jet
+                            y_mean = (y1 + y2) / 2                                    # y co-ord of centre of the points on either side of the jet
 
-                        r, phi = PolarCoordinates(area_fluxes, np.array([x_mean,y_mean])) # polar co-ordinates around centre point
+                            r, phi = PolarCoordinates(area_fluxes, np.array([x_mean,y_mean])) # polar co-ordinates around centre point
 
-                        # Set up the start and end of the phi range around the section point
-                        if jet_side == 1:
-                            x_start = np.floor(x1_float - section_x1_length/2).astype('int'); y_start = np.floor(y1_float - section_y1_length/2).astype('int')
-                            x_end = np.floor(x1_float + section_x1_length/2).astype('int'); y_end = np.floor(y1_float + section_y1_length/2).astype('int')
-                            phi_start = phi[y_start,x_start]
-                            phi_end = phi[y_end,x_end]
-                        else:
-                            x_start = np.floor(x2_float - section_x2_length/2).astype('int'); y_start = np.floor(y2_float - section_y2_length/2).astype('int')
-                            x_end = np.floor(x2_float + section_x2_length/2).astype('int'); y_end = np.floor(y2_float + section_y2_length/2).astype('int')
-                            phi_start = phi[y_start,x_start]
-                            phi_end = phi[y_end,x_end]
+                            # Set up the start and end of the phi range around the section point
+                            if jet_side == 1:
+                                x_start = np.floor(x1 - section_x1_length/2).astype('int'); y_start = np.floor(y1 - section_y1_length/2).astype('int')
+                                x_end = np.floor(x1 + section_x1_length/2).astype('int'); y_end = np.floor(y1 + section_y1_length/2).astype('int')
+                                phi_start = phi[y_start,x_start]
+                                phi_end = phi[y_end,x_end]
+                            else:
+                                x_start = np.floor(x2 - section_x2_length/2).astype('int'); y_start = np.floor(y2 - section_y2_length/2).astype('int')
+                                x_end = np.floor(x2 + section_x2_length/2).astype('int'); y_end = np.floor(y2 + section_y2_length/2).astype('int')
+                                phi_start = phi[y_start,x_start]
+                                phi_end = phi[y_end,x_end]
 
-                        min_phi = min(phi_start, phi_end); max_phi = max(phi_start, phi_end)
-                        quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-                        diff = max_phi - min_phi
-                        if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-                            phi_mask = np.ma.masked_inside(phi, phi_start, phi_end).mask    # search between phi_start and phi_end
-                        else:
-                            phi_mask = np.ma.masked_outside(phi, phi_start, phi_end).mask
-                        search_mask = np.ma.mask_or(phi_mask, jet_mask)                     # search outside the jet
+                            min_phi = min(phi_start, phi_end); max_phi = max(phi_start, phi_end)
+                            quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+                            diff = max_phi - min_phi
+                            if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
+                                phi_mask = np.ma.masked_inside(phi, phi_start, phi_end).mask    # search between phi_start and phi_end
+                            else:
+                                phi_mask = np.ma.masked_outside(phi, phi_start, phi_end).mask
+                            search_mask = np.ma.mask_or(phi_mask, jet_mask)                     # search outside the jet
 
-                        # Find the co-ordinate of the smallest r value in the search area - the interpolated point
-                        r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
-                        edgepoint_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
+                            # Find the co-ordinate of the smallest r value in the search area - the interpolated point
+                            r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
+                            edgepoint_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
 
-                        # Add interpolated edge points to the array
-                        if jet_side == 1:
-                            added_edgepoint_coords = np.array([edgepoint_yx[1] + 0.5,edgepoint_yx[0] + 0.5, x2 + 0.5, y2 + 0.5, R_section])
-                        else:
-                            added_edgepoint_coords = np.array([x1 + 0.5, y1 + 0.5, edgepoint_yx[1] + 0.5, edgepoint_yx[0] + 0.5, R_section])
-                        edge_points_side = np.vstack((edge_points_side, added_edgepoint_coords))
+                            # Add interpolated edge points to the array
+                            if jet_side == 1:
+                                added_edgepoint_coords = np.array([edgepoint_yx[1] + 0.5,edgepoint_yx[0] + 0.5, x2, y2, R_section])
+                                r, phi = PolarCoordinates(area_fluxes, np.array([x2,y2]))
+                                jet_width = r[edgepoint_yx[0], edgepoint_yx[1]]
+                            else:
+                                added_edgepoint_coords = np.array([x1, y1, edgepoint_yx[1] + 0.5, edgepoint_yx[0] + 0.5, R_section])
+                                r, phi = PolarCoordinates(area_fluxes, np.array([x1,y1]))
+                                jet_width = r[edgepoint_yx[0], edgepoint_yx[1]]
 
-                        last_sect_x1 = last_sect_x1 + section_x1_length; last_sect_y1 = last_sect_y1 + section_y1_length
-                        last_sect_x2 = last_sect_x2 + section_x2_length; last_sect_y2 = last_sect_y2 + section_y2_length
-                        sect += 1
+                            # Check that the jet width has not increased too much since the last edge points.
+                            # If so, stop adding edgepoints into this section.
+                            if jet_width > (last_jet_width * 1.5):
+                                stop_section_edgepoints = True
+                            else:
+                                last_jet_width = jet_width
+                                edge_points_side = np.vstack((edge_points_side, added_edgepoint_coords))
+
+                            last_sect_x1 = last_sect_x1 + section_x1_length; last_sect_y1 = last_sect_y1 + section_y1_length
+                            last_sect_x2 = last_sect_x2 + section_x2_length; last_sect_y2 = last_sect_y2 + section_y2_length
+                            sect += 1
 
                 edge_points_side = np.vstack((edge_points_side, np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])))
             else:
                 edge_points_side = np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])
 
-            lastpts = np.array([x_side1_floor, y_side1_floor, x_side2_floor, y_side2_floor, ridge_R])
+            r, phi = PolarCoordinates(area_fluxes, np.array([x_side1,y_side1]))
+            last_jet_width = r[np.floor(y_side2).astype('int'), np.floor(x_side2).astype('int')]    # the last jet width
+            lastpts = np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])
 
         edge_points_updated = edge_points_side
         jet_side += 1
@@ -694,7 +700,7 @@ def MergeSections(section_parameters):
 
         # Loop around all sections and merge while total flux is less than the 
         # maximum value (the flux of the first section)
-        sect_count = 0
+        sect_count = 0; last_R_section_end = 0.0
         for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters:
             sect_count += 1
 
@@ -708,10 +714,12 @@ def MergeSections(section_parameters):
                 merged_section_coords = np.array([last_merged_sections[0],last_merged_sections[1], 
                                                   last_merged_sections[2],last_merged_sections[3], x3,y3, x4,y4])
 
+            # Test whether we have jumped over too large a gap. Don't merge across the gap. Otherwise ...
             # Test whether maximum flux achieved.
             # Take the first section separately, as this is used for the initial maximum flux value.
             # But the merged section must ALWAYS be larger than the beam size.
-            if (merged_flux >= max_flux or sect_count == 1) and LargerThanBeamSize(merged_section_coords):
+            if ( (R_section_start - last_R_section_end) > (JSC.MaxRFactor * RLC.R) ) or \
+               ( (merged_flux >= max_flux or sect_count == 1) and LargerThanBeamSize(merged_section_coords) ):
                 # Adding in this section flux would exceed the maximum flux
                 if np.isnan(last_merged_sections).any():
                     # This section on its own exceeds the maximum flux. Add to the merged section parameters array.
@@ -736,6 +744,8 @@ def MergeSections(section_parameters):
                     last_merged_sections = np.array([last_merged_sections[0],last_merged_sections[1], last_merged_sections[2],last_merged_sections[3], \
                                                 x3,y3, x4,y4, last_merged_sections[8], R_section_end, merged_flux, merged_volume])
                 last_merged_flux_section = merged_flux; last_merged_volume_section = merged_volume      # Update last merged flux/volume values
+
+            last_R_section_end = R_section_end
 
             # Last section. Add to the merged section parameters array if necessary
             if (sect_count + 1 > np.size(section_parameters, 0)) and not np.isnan(last_merged_sections).any():
@@ -893,27 +903,32 @@ def GetSectionPolygons(edge_points):
 
         if point_count > 1:
 
-            # Create the array of section points
-            x1_diff = np.abs(x1 - lastpts[0]); y1_diff = np.abs(y1 - lastpts[1])
-            x2_diff = np.abs(x2 - lastpts[2]); y2_diff = np.abs(y2 - lastpts[3])
+            if (R_section - last_R_section) < (JSC.MaxRFactor * RLC.R): # Test whether the last step size has increased by too much
 
-            # Check that there are no duplicate co-ordinates
-            if x1_diff < 0.1 and y1_diff < 0.1 and x2_diff < 0.1 and y2_diff < 0.1:
-                # Ignore duplicate points
-                None
-            else:
-                # Determine whether the section has 3 or 4 vertices
-                if x1_diff < 0.1 and y1_diff < 0.1:
-                    current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, -1,-1, last_R_section, R_section])
-                elif x2_diff < 0.1 and y2_diff < 0.1:
-                    current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x1,y1, -1,-1, last_R_section, R_section])
+                # Create the array of section points
+                x1_diff = np.abs(x1 - lastpts[0]); y1_diff = np.abs(y1 - lastpts[1])
+                x2_diff = np.abs(x2 - lastpts[2]); y2_diff = np.abs(y2 - lastpts[3])
+
+                # Check that there are no duplicate co-ordinates
+                if x1_diff < 0.1 and y1_diff < 0.1 and x2_diff < 0.1 and y2_diff < 0.1:
+                    # Ignore duplicate points
+                    None
                 else:
-                    current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, x1,y1, last_R_section, R_section])
+                    # Determine whether the section has 3 or 4 vertices
+                    if x1_diff < 0.1 and y1_diff < 0.1:
+                        current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, -1,-1, last_R_section, R_section])
+                    elif x2_diff < 0.1 and y2_diff < 0.1:
+                        current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x1,y1, -1,-1, last_R_section, R_section])
+                    else:
+                        current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, x1,y1, last_R_section, R_section])
 
-                # Add section co-ordinates and parameters to the array
-                polygon_points = np.vstack((polygon_points, current_polygon_points))
+                    # Add section co-ordinates and parameters to the array
+                    polygon_points = np.vstack((polygon_points, current_polygon_points))
 
+                    last_R_section = R_section
+            else:
                 last_R_section = R_section
+                point_count = 1     # We have jumped too large a gap. Reset the count.
 
         lastpts = np.array([x1, y1, x2, y2])
 
@@ -1330,13 +1345,15 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
     source_name - str,
                   the name of the source
 
-    edge_points1 - 2D array, shape(n,4)
+    edge_points1 - 2D array, shape(n,5)
                    Points on one arm of the jet, corresponding to the 
-                   closest distance to that edge from the corresponding ridge point.
+                   closest distance to that edge from the corresponding ridge point,
+                   and their distance from source.
 
-    edge_points2 - 2D array, shape(n,4)
+    edge_points2 - 2D array, shape(n,5)
                    Points on the other arm of the jet, corresponding to the 
-                   closest distance to that edge from the corresponding ridge point.
+                   closest distance to that edge from the corresponding ridge point,
+                   and their distance from source.
 
     section_parameters1 - 2D array, shape(n,12)
                           Array for one arm of the jet, with section points (x/y * 4), 
@@ -1404,18 +1421,43 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
     
     A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
     ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
-    ax.plot(edge_points1[:,0], edge_points1[:,1], 'r-', linewidth=0.6) # Edge lines
-    ax.plot(edge_points1[:,2], edge_points1[:,3], 'r-', linewidth=0.6)
-    ax.plot(edge_points2[:,0], edge_points2[:,1], 'r-', linewidth=0.6)
-    ax.plot(edge_points2[:,2], edge_points2[:,3], 'r-', linewidth=0.6)
+
+    epcount = 0
     for ep in edge_points1:
+        epcount += 1
         x_values = np.array([ep[0], ep[2]])
         y_values = np.array([ep[1], ep[3]])
-        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)              # Edge point segment separators
+        if epcount > 1:
+            if (ep[4] - last_ep[4]) < (JSC.MaxRFactor * RLC.R):       # if gap is too big don't draw edge lines 
+                x_values = np.array([ep[0], last_ep[0]])
+                y_values = np.array([ep[1], last_ep[1]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 1
+                x_values = np.array([ep[2], last_ep[2]])
+                y_values = np.array([ep[3], last_ep[3]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
+            else:
+                ep_count = 1    # reset counter
+        last_ep = ep
+
+    epcount = 0
     for ep in edge_points2:
+        epcount += 1
         x_values = np.array([ep[0], ep[2]])
         y_values = np.array([ep[1], ep[3]])
-        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Edge point segment separators
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)              # Edge point segment separators
+        if epcount > 1:
+            if (ep[4] - last_ep[4]) < (JSC.MaxRFactor * RLC.R):       # if gap is too big don't draw edge lines 
+                x_values = np.array([ep[0], last_ep[0]])
+                y_values = np.array([ep[1], last_ep[1]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 1
+                x_values = np.array([ep[2], last_ep[2]])
+                y_values = np.array([ep[3], last_ep[3]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
+            else:
+                ep_count = 1    # reset counter
+        last_ep = ep
+
     ax.set_xlim(xplotmin, xplotmax)
     ax.set_ylim(yplotmin, yplotmax)
     
@@ -1430,14 +1472,29 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
     
     A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
     ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
-    for ep in section_parameters1:
-        x_values = np.array([ep[0], ep[2]])
-        y_values = np.array([ep[1], ep[3]])
-        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
-    for ep in section_parameters2:
-        x_values = np.array([ep[0], ep[2]])
-        y_values = np.array([ep[1], ep[3]])
-        ax.plot(x_values, y_values, 'y-', linewidth=0.6)               # Segment separators
+
+    spcount = 0
+    for sp in section_parameters1:
+        spcount += 1
+        x_values = np.array([sp[0], sp[2]])
+        y_values = np.array([sp[1], sp[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):             # if gap is too big plot last separator
+            ax.plot(np.array([last_sp[4], last_sp[6]]), np.array([last_sp[5], last_sp[7]]), 'y-', linewidth=0.6)
+        last_sp = sp
+    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'y-', linewidth=0.6)    # Plot last separator
+
+    spcount = 0
+    for sp in section_parameters2:
+        spcount += 1
+        x_values = np.array([sp[0], sp[2]])
+        y_values = np.array([sp[1], sp[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):          # if gap is too big plot last separator
+            ax.plot(np.array([last_sp[4], last_sp[6]]), np.array([last_sp[5], last_sp[7]]), 'y-', linewidth=0.6)
+        last_sp = sp
+    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'y-', linewidth=0.6)    # Plot last separator
+
     ax.set_xlim(xplotmin, xplotmax)
     ax.set_ylim(yplotmin, yplotmax)
     
