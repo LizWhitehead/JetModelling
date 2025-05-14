@@ -13,7 +13,7 @@ import JetRidgeline.RLConstants as RLC
 import matplotlib.pyplot as plt
 from skimage.draw import polygon2mask
 import numpy as np
-from math import tan, atan2, pow
+from math import tan, atan2, atan, pow
 from numpy import pi, sin, cos, dot
 import copy
 
@@ -201,6 +201,15 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     # Initialise edge_points array
     edge_points = np.full((1,5), np.nan)
 
+    # Initialise the search angle from the previous edge point
+    search_angle = pi*40/180
+
+    # Fill invalid (nan) values with zeroes in area_fluxes
+    area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
+
+    # Mask the jet - where flux values are above (JMS.nSig * rms)
+    jet_mask = np.ma.masked_where(area_fluxes_valid > (JMS.nSig * JMS.bgRMS), area_fluxes_valid).mask
+
     # Get polar coordinates for area_fluxes, around the ridge point
     r, phi = PolarCoordinates(area_fluxes, ridge_point)
 
@@ -209,49 +218,34 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     phi_prev_coord1 = phi[prev_edge_pix[1], prev_edge_pix[0]]; phi_prev_coord2 = phi[prev_edge_pix[3], prev_edge_pix[2]]
     r_prev_coord1 = r[prev_edge_pix[1], prev_edge_pix[0]]; r_prev_coord2 = r[prev_edge_pix[3], prev_edge_pix[2]]
 
-    # Get the angle quadrants
-    quad_ridge_phi = CheckQuadrant(ridge_phi)
-    quad_phi_coord1 = CheckQuadrant(phi_prev_coord1)
-    quad_phi_coord2 = CheckQuadrant(phi_prev_coord2)
-
-    # Find the difference between phi of the ridge point and that of each previous edge point
-    phi_diff1 = np.abs(phi_prev_coord1 - ridge_phi)
-    min_phi = min(phi_prev_coord1, ridge_phi); max_phi = max(phi_prev_coord1, ridge_phi)
-    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-    diff = max_phi - min_phi
-    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: phi_diff1 = np.abs(phi_diff1 - 2*pi)
-    phi_diff2 = np.abs(phi_prev_coord2 - ridge_phi)
-    min_phi = min(phi_prev_coord2, ridge_phi); max_phi = max(phi_prev_coord2, ridge_phi)
-    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-    diff = max_phi - min_phi
-    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: phi_diff2 = np.abs(phi_diff2 - 2*pi)
-
     # Start looking for the edge point at the side closest to the ridge point
     if r_prev_coord1 < r_prev_coord2:
-        r_prev1 = r_prev_coord1; r_prev2 = r_prev_coord2
         phi_prev1 = phi_prev_coord1; phi_prev2 = phi_prev_coord2
-        quad_phi_prev1 = quad_phi_coord1; quad_phi_prev2 = quad_phi_coord2
-        phi_diff_ridge_prev1 = phi_diff1; phi_diff_ridge_prev2 = phi_diff2
     else:
-        r_prev1 = r_prev_coord2; r_prev2 = r_prev_coord1
         phi_prev1 = phi_prev_coord2; phi_prev2 = phi_prev_coord1
-        quad_phi_prev1 = quad_phi_coord2; quad_phi_prev2 = quad_phi_coord1
-        phi_diff_ridge_prev1 = phi_diff2; phi_diff_ridge_prev2 = phi_diff1
 
-    # Fill invalid (nan) values with zeroes in area_fluxes
-    area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
-
-    # Mask the jet - where flux values are above (JMS.nSig * rms)
-    jet_mask = np.ma.masked_where(area_fluxes_valid > (JMS.nSig * JMS.bgRMS), area_fluxes_valid).mask
-
-    # Create a mask to search for nearest edge point on one side of the ridge point
+    # Search within a defined angle from the previous first edge point.
+    # The angle change should be in the same direction as that going
+    # from the previous first edge point to ridge_phi.
     min_phi = min(ridge_phi, phi_prev1); max_phi = max(ridge_phi, phi_prev1)
     quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
     diff = max_phi - min_phi
-    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-        phi_mask = np.ma.masked_inside(phi, ridge_phi, phi_prev1).mask              # search between ridge_phi and phi_prev1
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: diff -= 2*pi
+    if np.sign(ridge_phi - phi_prev1) == np.sign(diff):
+        phi_latest1 = PiRange(phi_prev1 + search_angle)
+        change1_positive = True
     else:
-        phi_mask = np.ma.masked_outside(phi, ridge_phi, phi_prev1).mask
+        phi_latest1 = PiRange(phi_prev1 - search_angle)
+        change1_positive = False
+
+    # Create a mask to search for nearest edge point on this side of the ridge point
+    min_phi = min(phi_latest1, phi_prev1); max_phi = max(phi_latest1, phi_prev1)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
+        phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask            # search between ridge_phi and phi_prev1
+    else:
+        phi_mask = np.ma.masked_outside(phi, phi_latest1, phi_prev1).mask
     prev_edge_mask = np.ma.masked_where(phi == phi_prev1, phi).mask                 # mask the previous edge point phi
     search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)  # search outside the jet
 
@@ -260,93 +254,36 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     edge_coord1_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
     edge_coord1 = np.array([edge_coord1_yx[1] + 0.5,edge_coord1_yx[0] + 0.5])
 
-    # If the ridge point is very close to an edge of the jet, the second edge point
-    # could be found on the same side of the jet. Reduce the angle of search until the
-    # second edge point is found on the other side of the jet.
+    # Search for the nearest edge point on the other side of the ridge point.
+    # Search within a defined angle from the previous second edge point.
+    # The angle change should be in the opposite direction to that going from
+    # the previous to the latest first edge points.
+    if change1_positive:
+        phi_latest2 = PiRange(phi_prev2 - search_angle)
+    else:
+        phi_latest2 = PiRange(phi_prev2 + search_angle)
 
-    edge_coord2 = np.full((1,2), np.nan)    # Initialise 2nd edge point array
-    start_phi = ridge_phi                   # Initialise the start search angle as ridge_phi
-    quad_start_phi = quad_ridge_phi
-    phi_diff_start_prev2 = phi_diff_ridge_prev2
+    # Create a mask to search for nearest edge point on the other side of the ridge point
+    min_phi = min(phi_latest2, phi_prev2); max_phi = max(phi_latest2, phi_prev2)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
+        phi_mask = np.ma.masked_inside(phi, phi_latest2, phi_prev2).mask               # search between phi_latest2 and phi_prev2
+    else:
+        phi_mask = np.ma.masked_outside(phi, phi_latest2, phi_prev2).mask
+    prev_edge_mask = np.ma.masked_where(phi == phi_prev2, phi).mask                    # mask the previous edge point phi
+    search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)     # search outside the jet
 
-    # Loop to find the second edge point. 
-    # Reduce the search angle by 10 degrees if not found on the other side of the jet.
-    while np.isnan(edge_coord2).any() and phi_diff_start_prev2 >= (pi*10/180):
+    # Find the co-ordinate of the smallest r value in the search area - the second edge point
+    r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
+    edge_coord2_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
+    edge_coord2 = np.array([edge_coord2_yx[1] + 0.5,edge_coord2_yx[0] + 0.5])
 
-        # Create a mask to search for nearest edge point on the other side of the ridge point
-        min_phi = min(start_phi, phi_prev2); max_phi = max(start_phi, phi_prev2)
-        quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-        diff = max_phi - min_phi
-        if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-            phi_mask = np.ma.masked_inside(phi, start_phi, phi_prev2).mask              # search between start_phi and phi_prev2
-        else:
-            phi_mask = np.ma.masked_outside(phi, start_phi, phi_prev2).mask
-        prev_edge_mask = np.ma.masked_where(phi == phi_prev2, phi).mask                 # mask the previous edge point phi
-        search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)  # search outside the jet
-
-        # Find the co-ordinate of the smallest r value in the search area - the second edge point
-        r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
-        edge_coord2_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
-        phi_coord2 = phi[edge_coord2_yx]
-
-        # Test if this is on the same side of the jet as the first edge point. 
-
-        # Compare the distance between this edge point and the first edge point, with the distance 
-        # between this edge point and the last corresponding edge point.
-        r2, phi2 = PolarCoordinates(area_fluxes, np.array([edge_coord2_yx[1] + 0.5,edge_coord2_yx[0] + 0.5]))       # polar coordinates around the second edge point
-        r_coord1 = r2[edge_coord1_yx]
-        if phi_prev1 == phi_prev_coord1:
-            r_last_edge2 = r2[prev_edge_pix[3], prev_edge_pix[2]]
-        else:
-            r_last_edge2 = r2[prev_edge_pix[1], prev_edge_pix[0]]
-        
-        # Take polar coordinates around the previous edge point, corresponding to the first found edge point.
-        # From here, look at the difference in angles of the first and and second edge points.
-        # This will be small if the edge points are on the same side of the jet.
-        if phi_prev1 == phi_prev_coord1:
-            r3, phi3 = PolarCoordinates(area_fluxes, np.array([prev_edge_points[0], prev_edge_points[1]]))    # polar coordinates around the last edge point 1
-        else:
-            r3, phi3 = PolarCoordinates(area_fluxes, np.array([prev_edge_points[2], prev_edge_points[3]]))
-        phi_last_edge1_coord1 = phi3[edge_coord1_yx]
-        phi_last_edge1_coord2 = phi3[edge_coord2_yx]
-        phi_diff = np.abs(phi_last_edge1_coord1 - phi_last_edge1_coord2)
-        min_phi = min(phi_prev_coord1, ridge_phi); max_phi = max(phi_prev_coord1, ridge_phi)
-        quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-        diff = max_phi - min_phi
-        if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: phi_diff = np.abs(phi_diff - 2*pi)
-
-        if r_coord1 < r_last_edge2 or phi_diff < (pi*30/180):       # Test whether we think the edge points are on the same side of the jet     
-            # Reduce the angle of search by 10 degrees
-            phi_start_minus10 = PiRange(start_phi - (pi*10/180))          # Try taking away
-            phi_diff_start_minus10 = np.abs(phi_start_minus10 - phi_prev2)
-            min_phi = min(phi_start_minus10, phi_prev2); max_phi = max(phi_start_minus10, phi_prev2)
-            quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-            diff = max_phi - min_phi
-            if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: phi_diff_start_minus10 = np.abs(phi_diff_start_minus10 - 2*pi)
-
-            if phi_diff_start_minus10 < phi_diff_start_prev2:
-                start_phi = phi_start_minus10                       # Angle successfully reduced
-                phi_diff_start_prev2 = phi_diff_start_minus10
-            else:
-                start_phi = PiRange(start_phi + (pi*10/180))              # Angle not reduced, so add
-                phi_diff_start_plus10 = np.abs(start_phi - phi_prev2)
-                min_phi = min(start_phi, phi_prev2); max_phi = max(start_phi, phi_prev2)
-                quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-                diff = max_phi - min_phi
-                if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: phi_diff_start_plus10 = np.abs(phi_diff_start_plus10 - 2*pi)
-                phi_diff_start_prev2 = phi_diff_start_plus10
-
-            quad_start_phi = CheckQuadrant(start_phi)
-        else:
-            # Second edge point has been found on the other side of the jet
-            edge_coord2 = np.array([edge_coord2_yx[1] + 0.5,edge_coord2_yx[0] + 0.5])
-
-    if not np.isnan(edge_coord2).any():
-        # Detemine which should be the first co-ordinate in the array.
-        if phi_prev1 == phi_prev_coord1:
-            edge_points = np.array([edge_coord1[0], edge_coord1[1], edge_coord2[0], edge_coord2[1], ridge_R])
-        else:
-            edge_points = np.array([edge_coord2[0], edge_coord2[1], edge_coord1[0], edge_coord1[1], ridge_R])
+    # Detemine which should be the first co-ordinate in the array.
+    if phi_prev1 == phi_prev_coord1:
+        edge_points = np.array([edge_coord1[0], edge_coord1[1], edge_coord2[0], edge_coord2[1], ridge_R])
+    else:
+        edge_points = np.array([edge_coord2[0], edge_coord2[1], edge_coord1[0], edge_coord1[1], ridge_R])
 
     return edge_points
 
@@ -1066,43 +1003,57 @@ def GetVolume(polypoints):
         cone_R = base_points[1,0] / 2                                           # Radius of cone base.
         cone_cotPhi = top_point[1] / top_point[0]                               # cot of cone half-angle.
         cone_H = cone_R * cone_cotPhi                                           # Height of cone.
-        cone_slant_m = top_point[1] / (base_points[1,0] - top_point[0])         # Gradient of slant plane.
-        cone_tanTheta = np.abs(cone_slant_m)                                    # Angle from horizontal of slant plane.
+        cone_slant_m = np.abs(top_point[1] / (base_points[1,0] - top_point[0])) # Gradient of slant plane.
+        cone_tanTheta = cone_slant_m                                            # Angle from horizontal of slant plane.
 
-        # Volume of top of the cone, from the vertex down to the slant plane
-        cone_volume_top = pi/3 * cone_R**2 * cone_H * \
-                          pow( ((cone_H - (cone_tanTheta * cone_R)) / (cone_H + (cone_tanTheta * cone_R))), 3/2)
+        # If theta >= (pi/2 - phi), the cone is very flat and the calculation becomes infinite.
+        # In this case, the volume is very small, so assume zero.
+        phi_rdns = atan(1.0/cone_cotPhi)
+        theta_rdns = atan(cone_tanTheta)
+        if theta_rdns < (pi/2 - phi_rdns):
+            # Volume of top of the cone, from the vertex down to the slant plane
+            cone_volume_top = pi/3 * cone_R**2 * cone_H * \
+                              pow( ((cone_H - (cone_tanTheta * cone_R)) / (cone_H + (cone_tanTheta * cone_R))), 3/2)
 
-        # Total volume of the cone
-        cone_volume = pi/3 * cone_R**2 * cone_H
+            # Total volume of the cone
+            cone_volume = pi/3 * cone_R**2 * cone_H
 
-        # Volume of the base of the cone, from the base up to the slant plane
-        cone_volume_base = cone_volume - cone_volume_top
+            # Volume of the base of the cone, from the base up to the slant plane
+            cone_volume_base = cone_volume - cone_volume_top
+        else:
+            cone_volume_base = 0.0
 
-        section_volume = cone_volume_base
+        section_volume = phi_rdns
 
     else:
         # 4 points in polygon
         base_points, top_points = Setup4PointPolygon(polypoints)
 
         # Calculate the volume
-        cone_R = base_points[1,0] / 2                                                               # Radius of cone base.
-        cone_cotPhi = top_points[0,1] / top_points[0,0]                                             # cot of cone half-angle.
-        cone_H = cone_R * cone_cotPhi                                                               # Height of cone.
-        cone_slant_m = (top_points[1,1] - top_points[0,1]) / (top_points[1,0] - top_points[0,0])    # Gradient of slant plane.
-        cone_tanTheta = np.abs(cone_slant_m)                                                        # Angle from horizontal of slant plane.
-        cone_h1 = ( cone_slant_m * (base_points[1,0] / 2) ) + top_points[0,1]                       # Distance of slant plane above
-                                                                                                    # the base, along the cone axis.
-        cone_h = cone_H - cone_h1                                                                   # Distance of slant plane from the
-                                                                                                    # vertex, along the cone axis.
+        cone_R = base_points[1,0] / 2                                                                       # Radius of cone base.
+        cone_cotPhi = top_points[0,1] / top_points[0,0]                                                     # cot of cone half-angle.
+        cone_H = cone_R * cone_cotPhi                                                                       # Height of cone.
+        cone_slant_m = np.abs((top_points[1,1] - top_points[0,1]) / (top_points[1,0] - top_points[0,0]))    # Gradient of slant plane.
+        cone_tanTheta = cone_slant_m                                                                        # Angle from horizontal of slant plane.
+        cone_h1 = ( cone_slant_m * (base_points[1,0] / 2) ) + top_points[0,1]                               # Distance of slant plane above
+                                                                                                            # the base, along the cone axis.
+        cone_h = cone_H - cone_h1                                                                           # Distance of slant plane from the
+                                                                                                            # vertex, along the cone axis.
+        # If theta >= (pi/2 - phi), the cone is very flat and the calculation becomes infinite.
+        # In this case, the volume is very small, so assume zero.
+        phi_rdns = atan(1.0/cone_cotPhi)
+        theta_rdns = atan(cone_tanTheta)
+        if theta_rdns < (pi/2 - phi_rdns):
         # Volume of top of the cone, from the vertex down to the slant plane
-        cone_volume_top = (pi/3 * pow(cone_h,3) * cone_cotPhi) / pow( (cone_cotPhi**2 - cone_tanTheta**2), 3/2)
+            cone_volume_top = (pi/3 * pow(cone_h,3) * cone_cotPhi) / pow( (cone_cotPhi**2 - cone_tanTheta**2), 3/2)
 
-        # Total volume of the cone
-        cone_volume = pi/3 * cone_R**2 * cone_H
+            # Total volume of the cone
+            cone_volume = pi/3 * cone_R**2 * cone_H
 
-        # Volume of the base of the cone, from the base up to the slant plane
-        cone_volume_base = cone_volume - cone_volume_top
+            # Volume of the base of the cone, from the base up to the slant plane
+            cone_volume_base = cone_volume - cone_volume_top
+        else:
+            cone_volume_base = 0.0
 
         section_volume = cone_volume_base
 
@@ -1482,7 +1433,7 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
         if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):             # if gap is too big plot last separator
             ax.plot(np.array([last_sp[4], last_sp[6]]), np.array([last_sp[5], last_sp[7]]), 'y-', linewidth=0.6)
         last_sp = sp
-    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'y-', linewidth=0.6)    # Plot last separator
+    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)    # Plot last separator
 
     spcount = 0
     for sp in section_parameters2:
@@ -1493,7 +1444,7 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
         if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):          # if gap is too big plot last separator
             ax.plot(np.array([last_sp[4], last_sp[6]]), np.array([last_sp[5], last_sp[7]]), 'y-', linewidth=0.6)
         last_sp = sp
-    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'y-', linewidth=0.6)    # Plot last separator
+    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)    # Plot last separator
 
     ax.set_xlim(xplotmin, xplotmax)
     ax.set_ylim(yplotmin, yplotmax)
