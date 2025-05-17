@@ -10,7 +10,7 @@ Created by LizWhitehead - 01/05/2025
 debug = True
 
 ## FindEdgePoints
-MaxRFactor = 3  ## Maximum factor for increase of step size before re-initialising edgepoint algorithm 
+MaxRFactor = 2  ## Maximum factor for increase of step size before re-initialising edgepoint algorithm 
 MinIntpolFactor = 1.5    ## Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6    ## Maximum number of interpolated points along an edgeline
 

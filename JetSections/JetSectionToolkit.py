@@ -68,11 +68,15 @@ def GetEdgepointsAndSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_v
         print('Finding edge points')
 
         # Find initial edge points
-        init_edge_points = FindInitEdgePoints(area_fluxes, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
+        init_edge_points1 = FindInitEdgePoints(area_fluxes, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
+
+        # The initial edge points were ordered relative to the ridge phi for the first arm. Re-order for the second arm.
+        init_edge_points2 = np.array([init_edge_points1[2], init_edge_points1[3], \
+                                      init_edge_points1[0], init_edge_points1[1], init_edge_points1[4]])
 
         # Find all edgepoints for each arm of the jet
-        edge_points1 = FindAllEdgePointsForJetArm(area_fluxes, init_edge_points, ridge1, phi_val1, Rlen1)
-        edge_points2 = FindAllEdgePointsForJetArm(area_fluxes, init_edge_points, ridge2, phi_val2, Rlen2)
+        edge_points1 = FindAllEdgePointsForJetArm(area_fluxes, init_edge_points1, ridge1, phi_val1, Rlen1)
+        edge_points2 = FindAllEdgePointsForJetArm(area_fluxes, init_edge_points2, ridge2, phi_val2, Rlen2)
 
         # Interpolate extra edge points at points in the jet where significant flux is cut off
         print('Adding extra edge points')
@@ -202,7 +206,7 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     edge_points = np.full((1,5), np.nan)
 
     # Initialise the search angle from the previous edge point
-    search_angle = pi*40/180
+    search_angle = pi*30/180
 
     # Fill invalid (nan) values with zeroes in area_fluxes
     area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
@@ -225,18 +229,11 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
         phi_prev1 = phi_prev_coord2; phi_prev2 = phi_prev_coord1
 
     # Search within a defined angle from the previous first edge point.
-    # The angle change should be in the same direction as that going
-    # from the previous first edge point to ridge_phi.
-    min_phi = min(ridge_phi, phi_prev1); max_phi = max(ridge_phi, phi_prev1)
-    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-    diff = max_phi - min_phi
-    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi: diff -= 2*pi
-    if np.sign(ridge_phi - phi_prev1) == np.sign(diff):
-        phi_latest1 = PiRange(phi_prev1 + search_angle)
-        change1_positive = True
-    else:
+    # The angle change should be in the same direction as ridge_phi.
+    if phi_prev1 == phi_prev_coord1:
         phi_latest1 = PiRange(phi_prev1 - search_angle)
-        change1_positive = False
+    else:
+        phi_latest1 = PiRange(phi_prev1 + search_angle)
 
     # Create a mask to search for nearest edge point on this side of the ridge point
     min_phi = min(phi_latest1, phi_prev1); max_phi = max(phi_latest1, phi_prev1)
@@ -246,22 +243,21 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
         phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask            # search between ridge_phi and phi_prev1
     else:
         phi_mask = np.ma.masked_outside(phi, phi_latest1, phi_prev1).mask
-    prev_edge_mask = np.ma.masked_where(phi == phi_prev1, phi).mask                 # mask the previous edge point phi
-    search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)  # search outside the jet
+    ##prev_edge_mask = np.ma.masked_where(phi == phi_prev1, phi).mask                 # mask the previous edge point phi
+    ##search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)  # search outside the jet
+    search_mask = np.ma.mask_or(phi_mask, jet_mask)  # search outside the jet
 
     # Find the co-ordinate of the smallest r value in the search area - the first edge point
     r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
     edge_coord1_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
     edge_coord1 = np.array([edge_coord1_yx[1] + 0.5,edge_coord1_yx[0] + 0.5])
 
-    # Search for the nearest edge point on the other side of the ridge point.
     # Search within a defined angle from the previous second edge point.
-    # The angle change should be in the opposite direction to that going from
-    # the previous to the latest first edge points.
-    if change1_positive:
-        phi_latest2 = PiRange(phi_prev2 - search_angle)
-    else:
+    # The angle change should be in the same direction as ridge_phi.
+    if phi_prev1 == phi_prev_coord1:
         phi_latest2 = PiRange(phi_prev2 + search_angle)
+    else:
+        phi_latest2 = PiRange(phi_prev2 - search_angle)
 
     # Create a mask to search for nearest edge point on the other side of the ridge point
     min_phi = min(phi_latest2, phi_prev2); max_phi = max(phi_latest2, phi_prev2)
@@ -271,8 +267,9 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
         phi_mask = np.ma.masked_inside(phi, phi_latest2, phi_prev2).mask               # search between phi_latest2 and phi_prev2
     else:
         phi_mask = np.ma.masked_outside(phi, phi_latest2, phi_prev2).mask
-    prev_edge_mask = np.ma.masked_where(phi == phi_prev2, phi).mask                    # mask the previous edge point phi
-    search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)     # search outside the jet
+    ##prev_edge_mask = np.ma.masked_where(phi == phi_prev2, phi).mask                    # mask the previous edge point phi
+    ##search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)     # search outside the jet
+    search_mask = np.ma.mask_or(phi_mask, jet_mask)     # search outside the jet
 
     # Find the co-ordinate of the smallest r value in the search area - the second edge point
     r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
@@ -339,7 +336,10 @@ def FindInitEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R):
     # Search for an edge at right angles to the ridge direction
     search_phi_range1 = PiRange(ridge_phi + (pi*90/180) - (pi*5/180))     # +/- 5 degrees
     search_phi_range2 = PiRange(ridge_phi + (pi*90/180) + (pi*5/180))
-    if CheckQuadrant(search_phi_range2) == 3 and CheckQuadrant(search_phi_range1) == 2:
+    min_phi = min(search_phi_range1, search_phi_range2); max_phi = max(search_phi_range1, search_phi_range2)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
         phi_range_mask = np.ma.masked_inside(phi, search_phi_range2, search_phi_range1).mask
     else:
         phi_range_mask = np.ma.masked_outside(phi, search_phi_range1, search_phi_range2).mask
@@ -356,7 +356,10 @@ def FindInitEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R):
     # Mask a small phi range around this.
     search_phi_range1 = PiRange(phi[edge_coord1_yx] + pi - (pi*5/180))  # +/- 5 degrees
     search_phi_range2 = PiRange(phi[edge_coord1_yx] + pi + (pi*5/180))
-    if CheckQuadrant(search_phi_range2) == 3 and CheckQuadrant(search_phi_range1) == 2:
+    min_phi = min(search_phi_range1, search_phi_range2); max_phi = max(search_phi_range1, search_phi_range2)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
         phi_range_mask = np.ma.masked_inside(phi, search_phi_range2, search_phi_range1).mask
     else:
         phi_range_mask = np.ma.masked_outside(phi, search_phi_range1, search_phi_range2).mask
@@ -372,11 +375,9 @@ def FindInitEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R):
     edge_coord2_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
     edge_coord2 = np.array([edge_coord2_yx[1] + 0.5,edge_coord2_yx[0] + 0.5])
 
-    # Add to the edge points array in order of phi value
-    if phi[edge_coord1_yx] < phi[edge_coord2_yx]:
-        edge_points = np.array([edge_coord1[0], edge_coord1[1], edge_coord2[0], edge_coord2[1], ridge_R])
-    else:
-        edge_points = np.array([edge_coord2[0], edge_coord2[1], edge_coord1[0], edge_coord1[1], ridge_R])
+    # Add to the edge points array, putting first the edge point on the left hand side of the jet,
+    # relative to the ridge phi direction.
+    edge_points = np.array([edge_coord1[0], edge_coord1[1], edge_coord2[0], edge_coord2[1], ridge_R])
 
     return edge_points
 
