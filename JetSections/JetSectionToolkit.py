@@ -9,6 +9,7 @@ Created by LizWhitehead - Jan 2025
 import JetModelling_MapSetup as JMS
 import JetSections.JetSectionFiles as JSF
 import JetSections.JSConstants as JSC
+import JetModelling_Constants as JMC
 import JetRidgeline.RLConstants as RLC
 import matplotlib.pyplot as plt
 from skimage.draw import polygon2mask
@@ -205,8 +206,8 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     # Initialise edge_points array
     edge_points = np.full((1,5), np.nan)
 
-    # Initialise the search angle from the previous edge point
-    search_angle = pi*30/180
+    # Initialise the search angle (radians) from the previous edge point
+    search_angle = JMC.search_angle * pi/180
 
     # Fill invalid (nan) values with zeroes in area_fluxes
     area_fluxes_valid = np.ma.filled(np.ma.masked_invalid(area_fluxes), 0)
@@ -240,12 +241,12 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
     diff = max_phi - min_phi
     if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-        phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask            # search between ridge_phi and phi_prev1
+        phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask        # search between ridge_phi and phi_prev1
     else:
         phi_mask = np.ma.masked_outside(phi, phi_latest1, phi_prev1).mask
     ##prev_edge_mask = np.ma.masked_where(phi == phi_prev1, phi).mask                 # mask the previous edge point phi
     ##search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)  # search outside the jet
-    search_mask = np.ma.mask_or(phi_mask, jet_mask)  # search outside the jet
+    search_mask = np.ma.mask_or(phi_mask, jet_mask)                             # search outside the jet
 
     # Find the co-ordinate of the smallest r value in the search area - the first edge point
     r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
@@ -264,12 +265,12 @@ def FindEdgePoints(area_fluxes, ridge_point, ridge_phi, ridge_R, prev_edge_point
     quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
     diff = max_phi - min_phi
     if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-        phi_mask = np.ma.masked_inside(phi, phi_latest2, phi_prev2).mask               # search between phi_latest2 and phi_prev2
+        phi_mask = np.ma.masked_inside(phi, phi_latest2, phi_prev2).mask        # search between phi_latest2 and phi_prev2
     else:
         phi_mask = np.ma.masked_outside(phi, phi_latest2, phi_prev2).mask
     ##prev_edge_mask = np.ma.masked_where(phi == phi_prev2, phi).mask                    # mask the previous edge point phi
     ##search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)     # search outside the jet
-    search_mask = np.ma.mask_or(phi_mask, jet_mask)     # search outside the jet
+    search_mask = np.ma.mask_or(phi_mask, jet_mask)                             # search outside the jet
 
     # Find the co-ordinate of the smallest r value in the search area - the second edge point
     r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
@@ -452,6 +453,15 @@ def AddEdgePoints(area_fluxes, edge_points):
                         section_y1_length = (y_side1 - lastpts[1]) / num_sections     # y section length on one side of the jet
                         section_x2_length = (x_side2 - lastpts[2]) / num_sections     # x section length on other side of the jet
                         section_y2_length = (y_side2 - lastpts[3]) / num_sections     # y section length on other side of the jet
+
+                        # If the distance between points on the other side of the jet is too small,
+                        # set to zero, so that the intermediate points are the same.
+                        if jet_side == 1:
+                            if abs(section_x2_length) < 0.1: section_x2_length = 0.0
+                            if abs(section_y2_length) < 0.1: section_y2_length = 0.0
+                        else:
+                            if abs(section_x1_length) < 0.1: section_x1_length = 0.0
+                            if abs(section_y1_length) < 0.1: section_y1_length = 0.0
 
                         last_sect_x1 = lastpts[0]; last_sect_y1 = lastpts[1]
                         last_sect_x2 = lastpts[2]; last_sect_y2 = lastpts[3]
@@ -662,7 +672,7 @@ def MergeSections(section_parameters):
                 if np.isnan(last_merged_sections).any():
                     # This section on its own exceeds the maximum flux. Add to the merged section parameters array.
                     section_params_merged = np.vstack((section_params_merged, \
-                                        np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section])))
+                                                       np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section])))
                     last_merged_sections = np.full((1,12), np.nan)                              # Reset last merged sections array
                     last_merged_flux_section = 0.0; last_merged_volume_section = 0.0            # Reset last merged flux/volume values
                 else:
@@ -680,7 +690,7 @@ def MergeSections(section_parameters):
                 else:
                     # Add to the last merged sections array
                     last_merged_sections = np.array([last_merged_sections[0],last_merged_sections[1], last_merged_sections[2],last_merged_sections[3], \
-                                                x3,y3, x4,y4, last_merged_sections[8], R_section_end, merged_flux, merged_volume])
+                                                     x3,y3, x4,y4, last_merged_sections[8], R_section_end, merged_flux, merged_volume])
                 last_merged_flux_section = merged_flux; last_merged_volume_section = merged_volume      # Update last merged flux/volume values
 
             last_R_section_end = R_section_end
@@ -689,7 +699,45 @@ def MergeSections(section_parameters):
             if (sect_count + 1 > np.size(section_parameters, 0)) and not np.isnan(last_merged_sections).any():
                 section_params_merged = np.vstack((section_params_merged, last_merged_sections))
 
-    return section_params_merged
+    return Reset3PointCoordinates(section_params_merged)
+
+#############################################
+
+def Reset3PointCoordinates(section_parameters):
+
+    """
+    Remove -1s for any 3-point sections
+
+    Parameters
+    -----------
+    section_parameters - 2D array, shape(n,12)
+                         Array with section points (x,y * 4), distance from source
+                         and computed parameters for one arm of the jet
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    section_params_reset - 2D array, shape(n,12)
+                           section_parameters array with -1s removed for 3-point sections
+
+    Notes
+    -----------
+    """
+
+    # Initialise reset section parameters array
+    section_params_reset = np.empty((0,12))
+
+    for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters:
+
+        # if a 3-point section, set the last point co-ordinates to be the same as those of the first point
+        if x4 == -1: x4 = x1; y4 = y1
+
+        next_section = np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section])
+        section_params_reset = np.vstack((section_params_reset, next_section))
+
+    return section_params_reset
 
 #############################################
 
@@ -847,15 +895,19 @@ def GetSectionPolygons(edge_points):
                 x1_diff = np.abs(x1 - lastpts[0]); y1_diff = np.abs(y1 - lastpts[1])
                 x2_diff = np.abs(x2 - lastpts[2]); y2_diff = np.abs(y2 - lastpts[3])
 
+                # Check the distance between current and previous points
+                r1_diff = np.sqrt(x1_diff**2 + y1_diff**2)
+                r2_diff = np.sqrt(x2_diff**2 + y2_diff**2)
+
                 # Check that there are no duplicate co-ordinates
                 if x1_diff < 0.1 and y1_diff < 0.1 and x2_diff < 0.1 and y2_diff < 0.1:
                     # Ignore duplicate points
                     None
                 else:
                     # Determine whether the section has 3 or 4 vertices
-                    if x1_diff < 0.1 and y1_diff < 0.1:
+                    if (x1_diff < 0.1 and y1_diff < 0.1) or (r1_diff < 0.5):
                         current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, -1,-1, last_R_section, R_section])
-                    elif x2_diff < 0.1 and y2_diff < 0.1:
+                    elif (x2_diff < 0.1 and y2_diff < 0.1) or (r2_diff < 0.5):
                         current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x1,y1, -1,-1, last_R_section, R_section])
                     else:
                         current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, x1,y1, last_R_section, R_section])
@@ -1024,7 +1076,7 @@ def GetVolume(polypoints):
         else:
             cone_volume_base = 0.0
 
-        section_volume = phi_rdns
+        section_volume = cone_volume_base
 
     else:
         # 4 points in polygon
