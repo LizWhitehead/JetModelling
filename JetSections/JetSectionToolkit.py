@@ -14,8 +14,10 @@ import JetRidgeline.RLConstants as RLC
 import matplotlib.pyplot as plt
 from skimage.draw import polygon2mask
 import numpy as np
-from math import tan, atan2, atan, pow
 from numpy import pi, sin, cos, dot
+from math import tan, atan2, atan, pow
+import shapely
+from shapely.geometry import LineString, Point
 import copy
 
 def GetEdgepointsAndSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
@@ -699,45 +701,7 @@ def MergeSections(section_parameters):
             if (sect_count + 1 > np.size(section_parameters, 0)) and not np.isnan(last_merged_sections).any():
                 section_params_merged = np.vstack((section_params_merged, last_merged_sections))
 
-    return Reset3PointCoordinates(section_params_merged)
-
-#############################################
-
-def Reset3PointCoordinates(section_parameters):
-
-    """
-    Remove -1s for any 3-point sections
-
-    Parameters
-    -----------
-    section_parameters - 2D array, shape(n,12)
-                         Array with section points (x,y * 4), distance from source
-                         and computed parameters for one arm of the jet
-    
-    Constants
-    ---------
-
-    Returns
-    -----------
-    section_params_reset - 2D array, shape(n,12)
-                           section_parameters array with -1s removed for 3-point sections
-
-    Notes
-    -----------
-    """
-
-    # Initialise reset section parameters array
-    section_params_reset = np.empty((0,12))
-
-    for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters:
-
-        # if a 3-point section, set the last point co-ordinates to be the same as those of the first point
-        if x4 == -1: x4 = x1; y4 = y1
-
-        next_section = np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section])
-        section_params_reset = np.vstack((section_params_reset, next_section))
-
-    return section_params_reset
+    return section_params_merged
 
 #############################################
 
@@ -899,6 +863,10 @@ def GetSectionPolygons(edge_points):
                 r1_diff = np.sqrt(x1_diff**2 + y1_diff**2)
                 r2_diff = np.sqrt(x2_diff**2 + y2_diff**2)
 
+                #####Test
+                ##lines_intersect = DoLinesIntersect(368.25,294.0,269.5,300.5,368.0,293.5,272.5,300.5)
+                ##lines_intersect = DoLinesIntersect(305.0,260.0,300.0,290.0,306.0,260.0,302.5,290.0)
+
                 # Check that there are no duplicate co-ordinates
                 if x1_diff < 0.1 and y1_diff < 0.1 and x2_diff < 0.1 and y2_diff < 0.1:
                     # Ignore duplicate points
@@ -923,6 +891,53 @@ def GetSectionPolygons(edge_points):
         lastpts = np.array([x1, y1, x2, y2])
 
     return polygon_points
+
+#############################################
+
+def DoLinesIntersect(line1_x1, line1_y1, line1_x2, line1_y2, line2_x1, line2_y1, line2_x2, line2_y2):
+
+    """
+    Returns the total flux in this section, sharing any overlap flux 
+    with adjacent sections.
+
+    Parameters
+    -----------
+    line1_x1, line1_y1 - co-ordinates of one end of line 1
+
+    line1_x2, line1_y2 - co-ordinates of other end of line 1
+
+    line2_x1, line2_y1 - co-ordinates of one end of line 2
+
+    line2_x2, line2_y2 - co-ordinates of other end of line 2
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    lines_intersect - boolean
+                      True if lines intersect
+
+    Notes
+    -----------
+    """
+
+    # Initialise intersect flag
+    lines_intersect = False
+
+    # Setup the lines
+    line1_point1 = (line1_x1, line1_y1)
+    line1_point2 = (line1_x2, line1_y2)
+    line2_point1 = (line2_x1, line2_y1)
+    line2_point2 = (line2_x2, line2_y2)
+    line1 = LineString([line1_point1, line1_point2])
+    line2 = LineString([line2_point1, line2_point2])
+
+    # Look for an intersection
+    int_pt = line1.intersection(line2)
+    lines_intersect = not int_pt.is_empty
+
+    return lines_intersect
 
 #############################################
 
@@ -1375,7 +1390,7 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
 
     Notes
     -----------
-"""
+    """
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
@@ -1484,9 +1499,9 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
         if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):             # if gap is too big plot last separator
-            ax.plot(np.array([last_sp[4], last_sp[6]]), np.array([last_sp[5], last_sp[7]]), 'y-', linewidth=0.6)
+            PlotLastSegment(ax, last_sp)
         last_sp = sp
-    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)    # Plot last separator
+    PlotLastSegment(ax, sp)                                                             # Plot last separator
 
     spcount = 0
     for sp in section_parameters2:
@@ -1494,16 +1509,44 @@ def PlotEdgePointsAndSections(area_fluxes, source_name, edge_points1, edge_point
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-        if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):          # if gap is too big plot last separator
-            ax.plot(np.array([last_sp[4], last_sp[6]]), np.array([last_sp[5], last_sp[7]]), 'y-', linewidth=0.6)
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):             # if gap is too big plot last separator
+            PlotLastSegment(ax, last_sp)
         last_sp = sp
-    ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)    # Plot last separator
+    PlotLastSegment(ax, sp)                                                             # Plot last separator
 
     ax.set_xlim(xplotmin, xplotmax)
     ax.set_ylim(yplotmin, yplotmax)
     
     fig.savefig(JSF.SCimage %source_name)
     plt.close(fig)
+
+#############################################
+
+def PlotLastSegment(ax, sp):
+
+    """
+    Plots the edge points and jet sections on the source.
+
+    Parameters
+    -----------
+    sp - 1D array, shape(12,)
+         section points (x/y * 4), distance from source 
+         and computed parameters for last segment
+
+    ax - plot axes
+    """
+
+    # Check if this is a 3-point segment
+    if sp[6] == -1:
+        # Look for the longer side to output
+        side1_len = np.sqrt( (sp[4] - sp[0])**2 + (sp[5] - sp[1])**2 )
+        side2_len = np.sqrt( (sp[4] - sp[2])**2 + (sp[5] - sp[3])**2 )
+        if side1_len > side2_len:
+            ax.plot(np.array([sp[4], sp[0]]), np.array([sp[5], sp[1]]), 'g-', linewidth=0.6)
+        else:
+            ax.plot(np.array([sp[4], sp[2]]), np.array([sp[5], sp[3]]), 'g-', linewidth=0.6)
+    else:
+        ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)
 
 #############################################
 
