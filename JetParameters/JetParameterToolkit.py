@@ -106,8 +106,9 @@ def GetParametersForJetArm(section_parameters):
     jet_parameters = np.empty((0,5))
 
     # Unit conversion values
-    source_R = JMS.rShift * JPC.SLight / JPC.H0                     # distance to source in kpc
-    arcsec_to_kpc = source_R * np.pi/180 / 3600                     # arcsec to kpc conversion
+    # source_R = JMS.rShift * JPC.SLight / JPC.H0
+    # arcsec_to_kpc = source_R * np.pi/180 / 3600
+    arcsec_to_kpc = JMS.angScale                                    # arcsec to kpc conversion
 
     # Loop through section parameters array for one arm of the jet
     ##################################################################################

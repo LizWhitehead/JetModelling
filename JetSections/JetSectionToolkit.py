@@ -456,15 +456,6 @@ def AddEdgePoints(area_fluxes, edge_points):
                         section_x2_length = (x_side2 - lastpts[2]) / num_sections     # x section length on other side of the jet
                         section_y2_length = (y_side2 - lastpts[3]) / num_sections     # y section length on other side of the jet
 
-                        # If the distance between points on the other side of the jet is too small,
-                        # set to zero, so that the intermediate points are the same.
-                        if jet_side == 1:
-                            if abs(section_x2_length) < 0.1: section_x2_length = 0.0
-                            if abs(section_y2_length) < 0.1: section_y2_length = 0.0
-                        else:
-                            if abs(section_x1_length) < 0.1: section_x1_length = 0.0
-                            if abs(section_y1_length) < 0.1: section_y1_length = 0.0
-
                         last_sect_x1 = lastpts[0]; last_sect_y1 = lastpts[1]
                         last_sect_x2 = lastpts[2]; last_sect_y2 = lastpts[3]
                         stop_section_edgepoints = False
@@ -846,7 +837,7 @@ def GetSectionPolygons(edge_points):
     # Initialise distance from source
     last_R_section = 0.0
 
-    # Loop through the edge points
+    # Loop through the edge points and create the polygon arrays.
     point_count = 0
     for [x1, y1, x2, y2, R_section] in edge_points:
         point_count += 1
@@ -855,7 +846,7 @@ def GetSectionPolygons(edge_points):
 
             if (R_section - last_R_section) < (JSC.MaxRFactor * RLC.R): # Test whether the last step size has increased by too much
 
-                # Create the array of section points
+                # Look at the lengths of the sides of the new polygon
                 x1_diff = np.abs(x1 - lastpts[0]); y1_diff = np.abs(y1 - lastpts[1])
                 x2_diff = np.abs(x2 - lastpts[2]); y2_diff = np.abs(y2 - lastpts[3])
 
@@ -863,22 +854,30 @@ def GetSectionPolygons(edge_points):
                 r1_diff = np.sqrt(x1_diff**2 + y1_diff**2)
                 r2_diff = np.sqrt(x2_diff**2 + y2_diff**2)
 
-                #####Test
-                ##lines_intersect = DoLinesIntersect(368.25,294.0,269.5,300.5,368.0,293.5,272.5,300.5)
-                ##lines_intersect = DoLinesIntersect(305.0,260.0,300.0,290.0,306.0,260.0,302.5,290.0)
-
                 # Check that there are no duplicate co-ordinates
                 if x1_diff < 0.1 and y1_diff < 0.1 and x2_diff < 0.1 and y2_diff < 0.1:
                     # Ignore duplicate points
                     None
                 else:
-                    # Determine whether the section has 3 or 4 vertices
-                    if (x1_diff < 0.1 and y1_diff < 0.1) or (r1_diff < 0.5):
-                        current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, -1,-1, last_R_section, R_section])
-                    elif (x2_diff < 0.1 and y2_diff < 0.1) or (r2_diff < 0.5):
-                        current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x1,y1, -1,-1, last_R_section, R_section])
+                    # Check if lines between previous edge points and between current edge points intersect
+                    if DoLinesIntersect(lastpts[0],lastpts[1],lastpts[2],lastpts[3],x1,y1,x2,y2):
+                        # Use a 3-vertex polygon - test which point to use as the 3rd vertex
+                        if r1_diff < r2_diff:
+                            current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, -1,-1, last_R_section, R_section])
+                            x1 = lastpts[0]; y1 = lastpts[1]
+                        else:
+                            current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x1,y1, -1,-1, last_R_section, R_section])
+                            x2 = lastpts[2]; y2 = lastpts[3]
                     else:
-                        current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, x1,y1, last_R_section, R_section])
+                        # Lines do not intersect. Determine whether the section has 3 or 4 vertices
+                        if (x1_diff < 0.1 and y1_diff < 0.1) or (r1_diff < 0.5):
+                            current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, -1,-1, last_R_section, R_section])
+                            x1 = lastpts[0]; y1 = lastpts[1]
+                        elif (x2_diff < 0.1 and y2_diff < 0.1) or (r2_diff < 0.5):
+                            current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x1,y1, -1,-1, last_R_section, R_section])
+                            x2 = lastpts[2]; y2 = lastpts[3]
+                        else:
+                            current_polygon_points = np.array([lastpts[0],lastpts[1], lastpts[2],lastpts[3], x2,y2, x1,y1, last_R_section, R_section])
 
                     # Add section co-ordinates and parameters to the array
                     polygon_points = np.vstack((polygon_points, current_polygon_points))
@@ -1022,15 +1021,18 @@ def GetFlux(area_fluxes, curr_polypoints, last_polypoints, next_polypoints):
     overlap_pixel_count = last_overlap_mask.sum() + next_overlap_mask.sum()
 
     # Sum the flux in this section, sharing any overlap flux with adjacent sections
-    flux_curr_polygon = np.ma.masked_array(area_fluxes, curr_flux_mask, copy = True).sum()
+    if (~curr_flux_mask).sum() > 0: 
+        flux_curr_polygon = np.ma.masked_array(area_fluxes, curr_flux_mask, copy = True).sum()
+    else: 
+        flux_curr_polygon = 0.0
     if last_overlap_mask.sum() > 0: 
         flux_last_overlap = np.ma.masked_array(area_fluxes, (~last_overlap_mask), copy = True).sum()
     else: 
-        flux_last_overlap = 0
+        flux_last_overlap = 0.0
     if next_overlap_mask.sum() > 0:
         flux_next_overlap = np.ma.masked_array(area_fluxes, (~next_overlap_mask), copy = True).sum()
     else:
-        flux_next_overlap = 0
+        flux_next_overlap = 0.0
     section_flux = flux_curr_polygon + ((flux_last_overlap + flux_next_overlap) / 2)
 
     return section_flux, polygon_pixel_count, overlap_pixel_count
