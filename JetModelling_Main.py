@@ -17,13 +17,13 @@ simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
 
 JMS.setup_map_specific_parameters()
 
-# Create the jet ridgelines and sections
-area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
+# Create the jet ridgelines
+flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
 
 if not JMC.ridgeline_only:
 
     # Divide the jet into sections by finding edge points
-    section_parameters1, section_parameters2 = JS.CreateJetSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
+    section_parameters1, section_parameters2 = JS.CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
 
     # Compute parameters along the jet
     JP.ComputeJetParameters(section_parameters1, section_parameters2)

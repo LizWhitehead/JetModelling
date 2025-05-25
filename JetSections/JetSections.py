@@ -15,15 +15,15 @@ from warnings import resetwarnings
 import numpy as np
 import time
 
-def CreateJetSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
+def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
 
     """
     Divide both arms of the jet into sections by finding edge points.
 
     Parameters
     -----------
-    area_fluxes - 2D array,
-                  raw image array
+    flux_array - 2D array,
+                 raw image array
 
     ridge1 - 2D array, shape(n,2)
              Array of ridgepoint co-ordinates for one arm of the jet
@@ -67,7 +67,7 @@ def CreateJetSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rl
     print('-------------------------------------------')
     start_time = time.time()
 
-    section_parameters1, section_parameters2 = GetEdgepointsAndSections(area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
+    section_parameters1, section_parameters2 = GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
 
     print('Time taken for jet sections processing = ' + str((time.time()-start_time)/(60*60)),'h')
     resetwarnings()

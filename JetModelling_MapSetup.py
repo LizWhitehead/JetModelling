@@ -27,7 +27,7 @@ def setup_map_specific_parameters():
 
     map_file = 'C:/Maps/3C31.HGEOM2Copy.FITS'
     rdel = -0.0003611111024; ddel = 0.0003611111024
-    nSig = 12
+    nSig = 13.5
     beamsize = 5
     beamarea = 16.76195591180468
     freq = 1.636e9

@@ -11,4 +11,4 @@ from encodings import search_function
 
 debug = True            # Turns on debug print statements if True
 ridgeline_only = False  # Run ridgeline code only
-search_angle = 30       # Edgepoint search angle in degrees
+search_angle = 20       # Edgepoint search angle in degrees

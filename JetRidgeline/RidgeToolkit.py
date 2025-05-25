@@ -1981,7 +1981,7 @@ def TrialSeries(R, dphi):
 
     np.savetxt(str(RLF.psl), problem_names, fmt='%s', delimiter=' ')
 
-    return area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
+    return ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
         
 #############################################
 

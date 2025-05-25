@@ -13,7 +13,7 @@ import JetModelling_MapSetup as JMS
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 import JetRidgeline.RLSetup as RLS
-from JetRidgeline.RidgeToolkit import CreateCutouts, TrialSeries
+from JetRidgeline.RidgeToolkit import CreateCutouts, TrialSeries, GetCutoutArray
 from warnings import resetwarnings
 
 def CreateRidgelines():
@@ -30,10 +30,11 @@ def CreateRidgelines():
     print('-------------------------------------------')
     start_time = time.time()
 
-    area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = TrialSeries(RLC.R, RLC.dphi)
+    ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = TrialSeries(RLC.R, RLC.dphi)
 
     print('Time taken for ridgelines to draw = ' + str((time.time()-start_time)/(60*60)),'h')
     resetwarnings()
 
-    return area_fluxes, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
+    flux_array = GetCutoutArray(JMS.sName)          # Return raw unconvolved data
+    return flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
 

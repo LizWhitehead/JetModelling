@@ -10,7 +10,7 @@ from math import isnan
 import numpy as np
 import time
 
-def GetFluxDistributionAlongLine(area_fluxes, start_point, end_point):
+def GetFluxDistributionAlongLine(flux_array, start_point, end_point):
 
     """
     Get the flux distribution along a line, at intervals of 0.5 pixels.
@@ -18,8 +18,8 @@ def GetFluxDistributionAlongLine(area_fluxes, start_point, end_point):
 
     Parameters
     -----------
-    area_fluxes - 2D array,
-                  raw image array
+    flux_array - 2D array,
+                 raw image array
 
     start_point - 1D array, shape (2)
                   Co-ordinates of line start point (x,y)
@@ -66,7 +66,7 @@ def GetFluxDistributionAlongLine(area_fluxes, start_point, end_point):
         map_y_coord = np.floor(y_coord + offset).astype('int')
         
         # Add the x and y values to the arrays
-        flux = area_fluxes[map_y_coord, map_x_coord]
+        flux = flux_array[map_y_coord, map_x_coord]
         if not np.isnan(flux):
             x_values.append(x_coord)
             y_values.append(flux)
