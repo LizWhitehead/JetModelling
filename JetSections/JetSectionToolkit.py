@@ -585,14 +585,16 @@ def GetJetSections(flux_array, edge_points1, edge_points2):
     section_parameters2 = GetSectionParameters(flux_array_valid, polygon_points2, initial_polygon_points = polygon_points1[0,0:8])
 
     # Merge sections to within a required count range for each arm of the jet
-    section_params_merged1 = MergeSections(section_parameters1)
-    section_params_merged2 = MergeSections(section_parameters2)
+    start_flux = np.max(section_parameters1[:,10])          # Take start flux as maximum arm value
+    section_params_merged1 = MergeSections(section_parameters1, start_flux)
+    start_flux = np.max(section_parameters2[:,10])          # Take start flux as maximum arm value
+    section_params_merged2 = MergeSections(section_parameters2, start_flux)
 
     return section_params_merged1, section_params_merged2
 
 #############################################
 
-def MergeSections(section_parameters):
+def MergeSections(section_parameters, start_flux):
 
     """
     Merge sections to a required number for one arm of the jet
@@ -602,6 +604,8 @@ def MergeSections(section_parameters):
     section_parameters - 2D array, shape(n,12)
                          Array with section points (x,y * 4), distance from source
                          and computed parameters for one arm of the jet
+
+    start_flux - initial interation start flux value
     
     Constants
     ---------
@@ -619,9 +623,6 @@ def MergeSections(section_parameters):
     # Initialise merged section parameters array
     section_params_merged = np.empty((0,12))
 
-    # Initialise the first section flux
-    first_section_flux = section_parameters[0,10]
-
     # Iterate, up to a maximum number of times to try to get the number of merged sections to the required value
     iteration_count = 0
     while ((np.size(section_params_merged, 0) < JSC.MinSectionsPerArm) or \
@@ -631,10 +632,10 @@ def MergeSections(section_parameters):
         # Set the max flux per merged section for this iteration
         if np.size(section_params_merged, 0) < JSC.MinSectionsPerArm:
             # Reduce maximum flux by % for each iteration
-            max_flux = first_section_flux - (first_section_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
+            max_flux = start_flux - (start_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
         else:
             # Increase maximum flux by % for each iteration
-            max_flux = first_section_flux + (first_section_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
+            max_flux = start_flux + (start_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
 
         section_params_merged = np.empty((0,12))                            # Re-initialise merged section parameters array
         last_merged_sections = np.full((1,12), np.nan)                      # Initialise last merged sections array

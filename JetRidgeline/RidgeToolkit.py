@@ -7,6 +7,8 @@
 
 from ast import While
 import JetModelling_MapSetup as JMS
+import JetModelling_Constants as JMC
+import JetModelling_MapAnalysis as JMA
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 from JetRidgeline.LotssCatalogue.sizeflux_tools import Flood,Mask
@@ -16,10 +18,9 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
-from math import atan2
+from math import atan2, isnan
 from numpy import pi, cos, sin, sqrt, absolute
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 import pyregion
 from scipy import ndimage
@@ -1913,6 +1914,10 @@ def TrialSeries(R, dphi):
                 plt.close(fig)
     
             else:
+
+                # Determine the source position and update all data to be relative to this position
+                sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2 = \
+                    SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2)
     
                 # save the output as a .txt file of the form:
                 # x_coord y_coord angle_dir (3 columns, space separated)
@@ -1965,6 +1970,7 @@ def TrialSeries(R, dphi):
                 ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
                 ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
                 ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
+                ax.plot(sCentre[0], sCentre[1], 'g-', marker='x')   # source centre
                 #ax.scatter(float(cat_pos[0]), float(cat_pos[1]), s=130, c='m', marker='x', label='LOFAR id')
                 #ax.scatter(float(init_point[0]), float(init_point[1]), s=130, c='c', marker='x', label='Initial point')
                 ax.legend()
@@ -2091,3 +2097,229 @@ def FindNoiseArea(source, hdu3):
     return mean, noise
 
 #############################################
+
+def SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2):
+        
+    """
+    Find the source position and update data relative to this centre
+    
+    Parameters
+    ----------
+    ridge1 - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for one arm of the jet
+
+    ridge2 - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for other arm of the jet
+
+    Rlen1 - 1D array of distance from source for each ridgepoint on
+             one arm of the jet
+
+    Rlen2 - 1D array of distance from source for each ridgepoint on
+            other arm of the jet
+
+    phi_val1 - 1D array of ridgeline angles for each ridgepoint on
+               one arm of the jet
+
+    phi_val2 - 1D array of ridgeline angles for each ridgepoint on
+               other arm of the jet
+    
+    Returns
+    -------
+    sCentre - 1D array, shape(2,)
+              Co-ordinates of source centre
+
+    ridge1_upd - 2D array, shape(n,2)
+                 Array of ridgepoint co-ordinates for one arm of the jet
+
+    ridge2_upd - 2D array, shape(n,2)
+                 Array of ridgepoint co-ordinates for other arm of the jet
+
+    Rlen1_upd - 1D array of distance from source for each ridgepoint on
+                one arm of the jet
+
+    Rlen2_upd - 1D array of distance from source for each ridgepoint on
+                other arm of the jet
+
+    phi_val1_upd - 1D array of ridgeline angles for each ridgepoint on
+                   one arm of the jet
+
+    phi_val2_upd - 1D array of ridgeline angles for each ridgepoint on
+                   other arm of the jet
+    
+    """
+
+    # Define points, several ridgepoints along, on either side of the jet
+    point_arm1_x = ridge1[JMC.ridge_centre_search_points, 0]
+    point_arm1_y = ridge1[JMC.ridge_centre_search_points, 1]
+    point_arm2_x = ridge2[JMC.ridge_centre_search_points, 0]
+    point_arm2_y = ridge2[JMC.ridge_centre_search_points, 1]
+
+    # Find the source position
+    if not isnan(JMS.sRadioRA) and not isnan(JMS.sRadioDec):
+
+        # Source position is known in degrees
+        sRA_from_mapcentre_deg = JMS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
+        sDec_from_mapcentre_deg = JMS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
+        sRA_from_mapcentre_pix = sRA_from_mapcentre_deg / JMS.ddel      # source RA relative to map centre RA in pixels
+        sDec_from_mapcentre_pix = sDec_from_mapcentre_deg / JMS.ddel    # source Dec relative to map centre Dec in pixels
+
+        map_centre_pixels_x = area_fluxes.shape[1] / 2.0
+        map_centre_pixels_y = area_fluxes.shape[0] / 2.0
+
+        sCentre_x = map_centre_pixels_x + sRA_from_mapcentre_pix        # source pixel x position
+        sCentre_y = map_centre_pixels_y + sDec_from_mapcentre_pix       # source pixel y position
+
+    else:
+        
+        # Find the point of least flux along a line between points either side of the jet
+        if point_arm1_x < point_arm2_x:
+            start_point = np.array([point_arm1_x, point_arm1_y])
+            end_point = np.array([point_arm2_x, point_arm2_y])
+        else:
+            start_point = np.array([point_arm2_x, point_arm2_y])
+            end_point = np.array([point_arm1_x, point_arm1_y])
+
+        # Get source pixel x/y position
+        sCentre_x, sCentre_y = JMA.GetMinimumFluxAlongLine(area_fluxes, start_point, end_point)
+
+    sCentre = np.array([sCentre_x, sCentre_y])                          # new centre point
+    oldCentre = np.array([ridge1[0,0], ridge1[0,1]])                    # old centre point
+
+    # If the new centre is too close to the start or end points, a proper minimum has not been found. Retain the old 
+    # centre point and don't update the data. Simiarly, if the new centre point is too close to the old centre point.
+    r_newCentre_arm1 = np.sqrt( (point_arm1_x - sCentre[0])**2 + (point_arm1_y - sCentre[1])**2 )
+    r_newCentre_arm2 = np.sqrt( (point_arm2_x - sCentre[0])**2 + (point_arm1_y - sCentre[1])**2 )
+    rdiff_oldnew = np.sqrt((sCentre[0] - oldCentre[0])**2 + (sCentre[1] - oldCentre[1])**2)
+    if r_newCentre_arm1 > 0.1 and r_newCentre_arm2 > 0.1 and rdiff_oldnew > 0.1:
+
+        # Set all data relative to the new centre
+        r_oldCentre_arm1 = np.sqrt( (point_arm1_x - oldCentre[0])**2 + (point_arm1_y - oldCentre[1])**2 )
+        if r_newCentre_arm1 < r_oldCentre_arm1:                                   # Which arm does the new centre lie in?
+            ridge1_upd, ridge2_upd, Rlen1_upd, Rlen2_upd, phi_val1_upd, phi_val2_upd = \
+                SetDataRelativeToCentre(sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2)
+        else:
+            ridge2_upd, ridge1_upd, Rlen2_upd, Rlen1_upd, phi_val2_upd, phi_val1_upd = \
+                SetDataRelativeToCentre(sCentre, ridge2, ridge1, Rlen2, Rlen1, phi_val2, phi_val1)
+    else:
+        sCentre = oldCentre
+        ridge1_upd = ridge1; ridge2_upd = ridge2
+        Rlen1_upd = Rlen1; Rlen2_upd = Rlen2
+        phi_val1_upd = phi_val1; phi_val2_upd = phi_val2
+
+    return sCentre, ridge1_upd, ridge2_upd, Rlen1_upd, Rlen2_upd, phi_val1_upd, phi_val2_upd
+
+#############################################
+
+def SetDataRelativeToCentre(sCentre, ridge_arm1, ridge_arm2, Rlen_arm1, Rlen_arm2, phi_val_arm1, phi_val_arm2):
+        
+    """
+    Update data relative to source centre.
+    Data for arm containing source centre is given first.
+    
+    Parameters
+    ----------
+    sCentre - 1D array, shape(2,)
+              Co-ordinates of source centre
+
+    ridge_arm1 - 2D array, shape(n,2)
+                 Array of ridgepoint co-ordinates for one arm of the jet
+
+    ridge_arm2 - 2D array, shape(n,2)
+                 Array of ridgepoint co-ordinates for other arm of the jet
+
+    Rlen_arm1 - 1D array of distance from source for each ridgepoint on
+                 one arm of the jet
+
+    Rlen_arm2 - 1D array of distance from source for each ridgepoint on
+                 other arm of the jet
+
+    phi_val_arm1 - 1D array of ridgeline angles for each ridgepoint on
+                    one arm of the jet
+
+    phi_val_arm2 - 1D array of ridgeline angles for each ridgepoint on
+                    other arm of the jet
+    
+    Returns
+    -------
+    ridge_arm1_upd - 2D array, shape(n,2)
+                     Array of ridgepoint co-ordinates for one arm of the jet
+
+    ridge_arm2_upd - 2D array, shape(n,2)
+                     Array of ridgepoint co-ordinates for other arm of the jet
+
+    Rlen_arm1_upd - 1D array of distance from source for each ridgepoint on
+                    one arm of the jet
+
+    Rlen_arm2_upd - 1D array of distance from source for each ridgepoint on
+                    other arm of the jet
+
+    phi_val_arm1_upd - 1D array of ridgeline angles for each ridgepoint on
+                       one arm of the jet
+
+    phi_val_arm2_upd - 1D array of ridgeline angles for each ridgepoint on
+                       other arm of the jet
+    
+    """
+    
+    # Initialise updated arrays
+    ridge_arm1_upd = ridge_arm1; ridge_arm2_upd = ridge_arm2
+    Rlen_arm1_upd = Rlen_arm1; Rlen_arm2_upd = Rlen_arm2
+    phi_val_arm1_upd = phi_val_arm1; phi_val_arm2_upd = phi_val_arm2
+
+    # Determine where source centre lies relative to ridge points in arm1.
+    r_sCentre = np.sqrt((sCentre[0] - ridge_arm1_upd[0,0])**2 + (sCentre[1] - ridge_arm1_upd[0,1])**2)
+    ridge_cnt = 0; move_count = 0; arm1_start = 0
+    r_1 = 0.0
+    r_2 = np.sqrt((ridge_arm1_upd[ridge_cnt+1,0] - ridge_arm1_upd[0,0])**2 + (ridge_arm1_upd[ridge_cnt+1,1] - ridge_arm1_upd[0,1])**2)
+    while ridge_cnt <= JMC.ridge_centre_search_points:
+        if r_1 <= r_sCentre <= r_2:
+            if np.abs(r_sCentre - r_1) < 0.1:       # Source centre is too close to previous point, so replace with the centre point
+                move_count = ridge_cnt - 1; arm1_start = ridge_cnt + 1 
+            elif np.abs(r_sCentre - r_2) < 0.1:     # Source centre is too close to next point, so replace with the centre point
+                move_count = ridge_cnt; arm1_start = ridge_cnt + 2
+            else:
+                move_count = ridge_cnt; arm1_start = ridge_cnt + 1 
+            break
+
+        ridge_cnt += 1
+        r_1 = np.sqrt((ridge_arm1_upd[ridge_cnt,0] - ridge_arm1_upd[0,0])**2 + (ridge_arm1_upd[ridge_cnt,1] - ridge_arm1_upd[0,1])**2)
+        r_2 = np.sqrt((ridge_arm1_upd[ridge_cnt+1,0] - ridge_arm1_upd[0,0])**2 + (ridge_arm1_upd[ridge_cnt+1,1] - ridge_arm1_upd[0,1])**2)
+
+    # Update the data by moving elements from one arm array to the other.
+    # Ridge points
+    if move_count > 0:
+        move_points = ridge_arm1_upd[1:move_count,:]
+    else:
+        move_points = np.empty((0,2))
+    ridge_arm1_upd = np.vstack((sCentre, ridge_arm1_upd[arm1_start:,:]))
+    ridge_arm2_upd = np.vstack((sCentre, move_points, ridge_arm2_upd))
+
+    # R
+    if move_count > 0:
+        move_points = Rlen_arm1_upd[1:move_count]
+        move_points = np.abs(move_points - r_sCentre)
+    else:
+        move_points = np.empty((0))
+    Rlen_arm1_upd = np.hstack((np.array([r_sCentre]), Rlen_arm1_upd[arm1_start:]))
+    Rlen_arm1_upd -= r_sCentre
+    Rlen_arm1_upd[0] = 0.0
+    Rlen_arm2_upd= np.hstack((np.array([r_sCentre]), move_points, Rlen_arm2_upd))
+    Rlen_arm2_upd += r_sCentre
+    Rlen_arm2_upd[0] = 0.0
+
+    # Phi
+    # Determine phi for the source centre in each arm
+    point_arm1_x = ridge_arm1_upd[JMC.ridge_centre_search_points, 0]
+    point_arm1_y = ridge_arm1_upd[JMC.ridge_centre_search_points, 1]
+    point_arm2_x = ridge_arm2_upd[JMC.ridge_centre_search_points, 0]
+    point_arm2_y = ridge_arm2_upd[JMC.ridge_centre_search_points, 1]
+    phi_sCentre_arm1 = np.arctan2((point_arm1_y - sCentre[1]), (point_arm1_x - sCentre[0]))
+    phi_sCentre_arm2 = np.arctan2((point_arm2_y - sCentre[1]), (point_arm2_x - sCentre[0]))
+    if move_count > 0:
+        move_points = phi_val_arm1_upd[1:move_count]
+    else:
+        move_points = np.empty((0))
+    phi_val_arm1_upd = np.hstack((np.array([phi_sCentre_arm1]), phi_val_arm1_upd[arm1_start:]))
+    phi_val_arm2_upd = np.hstack((np.array([phi_sCentre_arm2]), move_points, phi_val_arm2_upd))
+
+    return ridge_arm1_upd,  ridge_arm2_upd, Rlen_arm1_upd, Rlen_arm2_upd, phi_val_arm1_upd, phi_val_arm2_upd

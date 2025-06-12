@@ -6,9 +6,7 @@ Constants for JetModelling project
 Created by LizWhitehead - 08/05/2025
 """
 
-from encodings import search_function
-
-
-debug = True            # Turns on debug print statements if True
-ridgeline_only = False  # Run ridgeline code only
-search_angle = 20       # Edgepoint search angle in degrees
+debug = True                    # Turns on debug print statements if True
+ridgeline_only = False          # Run ridgeline code only
+search_angle = 20               # Edgepoint search angle in degrees
+ridge_centre_search_points = 3  # Number of ridgepoints on either side of first point to search for source position

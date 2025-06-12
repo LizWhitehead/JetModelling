@@ -15,7 +15,7 @@ MinIntpolFactor = 1.5    ## Minimum length factor for an edgeline for an edgepoi
 MaxIntpolSections = 6    ## Maximum number of interpolated points along an edgeline
 
 ## Jet Sections
-MinSectionsPerArm = 18   ## Minimum number of merged sections per arm of the jet
-MaxSectionsPerArm = 25   ## Maximum number of merged sections per arm of the jet
+MinSectionsPerArm = 25   ## Minimum number of merged sections per arm of the jet
+MaxSectionsPerArm = 35   ## Maximum number of merged sections per arm of the jet
 MaxMergeIterations = 10  ## Maximum number of iterations to merge sections to within required number
 PercChangeInMaxFlux = 10 ## Percentage change in max flux for each merge iteration

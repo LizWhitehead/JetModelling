@@ -21,6 +21,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="JetModelling_Constants.py" />
+    <Compile Include="JetModelling_MapAnalysis.py" />
     <Compile Include="JetModelling_MapSetup.py" />
     <Compile Include="JetParameters\JetParameterFiles.py" />
     <Compile Include="JetParameters\JetParameters.py" />
@@ -40,7 +41,6 @@
     <Compile Include="JetSections\JetSections.py" />
     <Compile Include="JetSections\JetSectionToolkit.py" />
     <Compile Include="JetSections\JSConstants.py" />
-    <Compile Include="JetSections\JSMapAnalysis.py" />
     <Compile Include="JetSections\JSSetup.py" />
   </ItemGroup>
   <ItemGroup>
