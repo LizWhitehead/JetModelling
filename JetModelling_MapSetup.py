@@ -45,5 +45,5 @@ def setup_map_specific_parameters():
     angScale = 0.3438
     sRadioRA = nan
     sRadioDec = nan
-    # sRadioRA = 16.8539791667
-    # sRadioDec = 32.4125416667
+    # sRadioRA = 16.8539791667      # Not used to locate the source centre as not exact enough
+    # sRadioDec = 32.4125416667     # Not used to locate the source centre as not exact enough
