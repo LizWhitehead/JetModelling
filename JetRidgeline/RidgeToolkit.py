@@ -579,11 +579,9 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                     while True and Rtot1 < Rmax:# and Rcounter1 <= 15: #and phitot1 < 24 * dphi: ##Trying to add an angle restriction
                         #Rtot1 += R
                         #Rcounter1 += 1
-                        cone1, check_cone1 = GetRidgeCone(area_fluxes, \
-                                                          maxima_array, ridge1[-1,:], \
-                                                          new_phi1, chain_mask1, dphi)
-                        new_point1, new_phi1, chain_mask1, RNew1 = GetRidgePoint(new_fluxes, ridge1[-1,:], \
-                                                                  cone1, check_cone1, chain_mask1, R, lmsize, Rtot1, Rmax)
+                        cone1, check_cone1 = GetRidgeCone(area_fluxes, maxima_array, ridge1[-1,:], new_phi1, chain_mask1, dphi)
+                        new_point1, new_phi1, chain_mask1, RNew1 = GetRidgePoint(new_fluxes, ridge1[-1,:], phi_val1[-1], cone1, \
+                                                                                 check_cone1, chain_mask1, R, lmsize, Rtot1, Rmax, phi_val1[0])
                         Rnewlen1 = Rtot1 + RNew1
                         Rlen1 = np.append(Rlen1, Rnewlen1)
                         ridge1 = np.vstack((ridge1, new_point1))
@@ -604,10 +602,9 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
                     while True and Rtot2 < Rmax:# and Rcounter2 <= 15: #and phitot2 < 24 * dphi: ##Trying to add an angle restriction
                         #Rtot2 += R
                         #Rcounter2 += 1
-                        cone2, check_cone2 = GetRidgeCone(area_fluxes, maxima_array, ridge2[-1,:], \
-                                                          new_phi2, chain_mask2, dphi)
-                        new_point2, new_phi2, chain_mask2, RNew2 = GetRidgePoint(new_fluxes, ridge2[-1,:], \
-                                                                  cone2, check_cone2, chain_mask2, R, lmsize, Rtot2, Rmax)
+                        cone2, check_cone2 = GetRidgeCone(area_fluxes, maxima_array, ridge2[-1,:], new_phi2, chain_mask2, dphi)
+                        new_point2, new_phi2, chain_mask2, RNew2 = GetRidgePoint(new_fluxes, ridge2[-1,:], phi_val2[-1], cone2, \
+                                                                                 check_cone2, chain_mask2, R, lmsize, Rtot2, Rmax, phi_val2[0])
                         Rnewlen2 = Rtot2 + RNew2
                         Rlen2 = np.append(Rlen2, Rnewlen2)
                         ridge2 = np.vstack((ridge2, new_point2))
@@ -1034,7 +1031,7 @@ def GetRidgeCone(area_fluxes, maxima_array, ridge_point, ridge_phi, chain_mask, 
 
 #############################################
 
-def GetRidgePoint(area_fluxes, ridge_point, cone, check_cone, chain_mask, R, lmsize, Rtot, Rmax):
+def GetRidgePoint(area_fluxes, ridge_point, ridge_phi, cone, check_cone, chain_mask, R, lmsize, Rtot, Rmax, phi_orig):
 
     """
     Returns a new point along the ridge with its angular direction
@@ -1057,6 +1054,9 @@ def GetRidgePoint(area_fluxes, ridge_point, cone, check_cone, chain_mask, R, lms
                   previous point along the ridge line, from which the
                   next point is sought
 
+    ridge_phi - float,
+                angular direction of the previous ridge point
+
     cone - 2D masked array,
            area_fluxes array masked to preserve the search cone only
 
@@ -1077,6 +1077,9 @@ def GetRidgePoint(area_fluxes, ridge_point, cone, check_cone, chain_mask, R, lms
            
     Rmax - float,
            maximum length the ridgeline can be drawn to
+
+    phi_orig - float,
+               angular direction of the first point in the jet arm
     
     Constants
     ---------
@@ -1134,6 +1137,18 @@ def GetRidgePoint(area_fluxes, ridge_point, cone, check_cone, chain_mask, R, lms
     new_R = 0    
     
     if Rtot <= RLC.Jlim * Rmax:
+
+        # Avoid jumping across bends in the middle of jet if possible
+        # # if np.ma.count(cone_slice) == 0:
+        # #     r_mask = np.ma.mask_or(np.ma.masked_outside(r, 0, R*2).mask, chain_mask)
+        # #     new_cone, new_check_cone = AttemptToAvoidInternalJump(area_fluxes, ridge_point, ridge_phi, phi_orig, r_mask)
+        # #     new_cone_mask = new_cone.mask
+        # #     new_slice_mask = np.ma.mask_or(r_mask, new_cone_mask)
+        # #     new_cone_slice = np.ma.masked_array(area_fluxes, mask=new_slice_mask, copy = True)
+        # #     if np.ma.count(new_cone_slice) > 0:
+        # #         cone = new_cone; check_cone = new_check_cone
+        # #         cone_mask = new_cone_mask; slice_mask = new_slice_mask; cone_slice = new_cone_slice
+
         while np.ma.count(cone_slice) == 0:
             R += 1
             r_mask = np.ma.mask_or(np.ma.masked_outside(r, 0, R).mask, chain_mask)
@@ -2049,7 +2064,6 @@ def FindNoise(source_array):
 
 #############################################
 
-
 def FindNoiseArea(source, hdu3):
         
     """
@@ -2095,6 +2109,127 @@ def FindNoiseArea(source, hdu3):
 
     print("mean, noise: ", mean, noise)
     return mean, noise
+
+#############################################
+
+def AttemptToAvoidInternalJump(area_fluxes, ridge_point, ridge_phi, phi_orig, r_mask):
+
+    """
+    Called if next ridgepoint is not found, before extending R to try
+    to jump across a gap. Tries to avoid jumping across internal bends 
+    along the jet.
+
+    Parameters
+    -----------
+    area_fluxes - 2D array,
+                  raw image array convolved with a centre-heavy cross
+                  kernel
+
+    ridge_point - 1D array, shape(2, )
+                  previous point along the ridge line, from which the
+                  next point is 
+
+    ridge_phi - float,
+                angular direction of the previous ridge point
+
+    phi_orig - float,
+               angular direction of the first point in the jet arm
+
+    r_mask - 2D masked array,
+             area_fluxes array masked between current and new radii
+
+    Returns
+    -----------
+    new_cone - 2D masked array,
+               area_fluxes array masked to preserve the new search cone
+
+    new_check_cone - 2D masked array, (NEEDS DEVELOPMENT)
+                     area_fluxes array masked to preserve the stop finding cone
+
+    """
+
+    # Find the centre phi of the current cone
+    phi_cone = ridge_phi
+
+    # Take the new cone centre phi to be in the same general direction as the jet arm (i.e. on the same side of the 
+    # line orthogonal to phi_orig).
+    phi_orig_plus_90 = PiRange(phi_orig + pi/2)
+    min_phi = min(phi_cone, phi_orig_plus_90); max_phi = max(phi_cone, phi_orig_plus_90)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_plus = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_plus > pi: diff_plus = np.abs(diff_plus - 2*pi)
+    phi_orig_minus_90 = PiRange(phi_orig - pi/2)
+    min_phi = min(phi_cone, phi_orig_minus_90); max_phi = max(phi_cone, phi_orig_minus_90)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_minus = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_plus > pi: diff_minus = np.abs(diff_minus - 2*pi)
+    if diff_plus > diff_minus:
+        phi_same_side = phi_orig_minus_90
+        phi_opposite_side = phi_orig_plus_90
+    else:
+        phi_same_side = phi_orig_plus_90
+        phi_opposite_side = phi_orig_minus_90
+
+    # First, try centering the new cone at an angle dphi/2 from phi_opposite side in the jet direction
+    phi_opposite_plus = PiRange(phi_opposite_side + np.radians(RLC.dphi/2.0))
+    min_phi = min(phi_orig, phi_opposite_plus); max_phi = max(phi_orig, phi_opposite_plus)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_plus = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_plus > pi: diff_plus = np.abs(diff_plus - 2*pi)
+    phi_opposite_minus = PiRange(phi_opposite_side - np.radians(RLC.dphi/2.0))
+    min_phi = min(phi_orig, phi_opposite_minus); max_phi = max(phi_orig, phi_opposite_minus)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_minus = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_plus > pi: diff_minus = np.abs(diff_plus - 2*pi)
+    if diff_plus > diff_minus:
+        phi_opp_cone_centre = phi_opposite_minus
+    else:
+        phi_opp_cone_centre = phi_opposite_plus
+
+    new_opp_phirange = AngleRange(phi_opp_cone_centre, np.radians(RLC.dphi/2.0), np.radians(RLC.dphi/2.0))
+    new_opp_cone = GetCone(area_fluxes, ridge_point, new_opp_phirange)
+    new_opp_cone_mask = new_opp_cone.mask
+    new_opp_slice_mask = np.ma.mask_or(r_mask, new_opp_cone_mask)
+    new_opp_cone_slice = np.ma.masked_array(area_fluxes, mask=new_opp_slice_mask, copy = True)
+
+    # Now try centering the new cone at an angle dphi/2 from phi_same side in the jet direction
+    phi_same_plus = PiRange(phi_same_side + np.radians(RLC.dphi/2.0))
+    min_phi = min(phi_orig, phi_same_plus); max_phi = max(phi_orig, phi_same_plus)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_plus = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_plus > pi: diff_plus = np.abs(diff_plus - 2*pi)
+    phi_same_minus = PiRange(phi_same_side - np.radians(RLC.dphi/2.0))
+    min_phi = min(phi_orig, phi_same_minus); max_phi = max(phi_orig, phi_same_minus)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_minus = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_plus > pi: diff_minus = np.abs(diff_plus - 2*pi)
+    if diff_plus > diff_minus:
+        phi_same_cone_centre = phi_same_minus
+    else:
+        phi_same_cone_centre = phi_same_plus
+
+    new_same_phirange = AngleRange(phi_same_cone_centre, np.radians(RLC.dphi/2.0), np.radians(RLC.dphi/2.0))
+    new_same_cone = GetCone(area_fluxes, ridge_point, new_same_phirange)
+    new_same_cone_mask = new_same_cone.mask
+    new_same_slice_mask = np.ma.mask_or(r_mask, new_same_cone_mask)
+    new_same_cone_slice = np.ma.masked_array(area_fluxes, mask=new_same_slice_mask, copy = True)
+
+    # Check if any maxima found in either cone slice
+    if np.ma.count(new_opp_cone_slice) > 0 or np.ma.count(new_same_cone_slice) > 0:
+        if np.ma.count(new_same_cone_slice) > np.ma.count(new_opp_cone_slice):
+            phi_new_cone_centre = phi_same_cone_centre
+            new_cone = new_same_cone
+        else:
+            phi_new_cone_centre = phi_opp_cone_centre
+            new_cone = new_opp_cone
+    else:
+        phi_new_cone_centre = phi_same_cone_centre
+        new_cone = new_same_cone
+
+    new_check_range = AngleRange(phi_new_cone_centre, atan2(1.,6.), atan2(1.,6.))
+    new_check_cone = GetCone(area_fluxes, ridge_point, new_check_range)
+
+    return new_cone, new_check_cone
 
 #############################################
 
@@ -2148,58 +2283,67 @@ def SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, p
     
     """
 
+    oldCentre = np.array([ridge1[0,0], ridge1[0,1]])                    # old centre point
+
     # Define points, several ridgepoints along, on either side of the jet
     point_arm1_x = ridge1[JMC.ridge_centre_search_points, 0]
     point_arm1_y = ridge1[JMC.ridge_centre_search_points, 1]
     point_arm2_x = ridge2[JMC.ridge_centre_search_points, 0]
     point_arm2_y = ridge2[JMC.ridge_centre_search_points, 1]
 
-    # Find the source position
-    if not isnan(JMS.sRadioRA) and not isnan(JMS.sRadioDec):
+    # Check if we have enough ridge points in both arms. If not, retain the old centre point and don't update the data.
+    if not np.isnan(point_arm1_x) and not np.isnan(point_arm2_x):
 
-        # Source position is known in degrees
-        sRA_from_mapcentre_deg = JMS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
-        sDec_from_mapcentre_deg = JMS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
-        sRA_from_mapcentre_pix = sRA_from_mapcentre_deg / JMS.ddel      # source RA relative to map centre RA in pixels
-        sDec_from_mapcentre_pix = sDec_from_mapcentre_deg / JMS.ddel    # source Dec relative to map centre Dec in pixels
+        # Find the source position
+        if not isnan(JMS.sRadioRA) and not isnan(JMS.sRadioDec):
 
-        map_centre_pixels_x = area_fluxes.shape[1] / 2.0
-        map_centre_pixels_y = area_fluxes.shape[0] / 2.0
+            # Source position is known in degrees
+            sRA_from_mapcentre_deg = JMS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
+            sDec_from_mapcentre_deg = JMS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
+            sRA_from_mapcentre_pix = sRA_from_mapcentre_deg / JMS.ddel      # source RA relative to map centre RA in pixels
+            sDec_from_mapcentre_pix = sDec_from_mapcentre_deg / JMS.ddel    # source Dec relative to map centre Dec in pixels
 
-        sCentre_x = map_centre_pixels_x + sRA_from_mapcentre_pix        # source pixel x position
-        sCentre_y = map_centre_pixels_y + sDec_from_mapcentre_pix       # source pixel y position
+            map_centre_pixels_x = area_fluxes.shape[1] / 2.0
+            map_centre_pixels_y = area_fluxes.shape[0] / 2.0
 
-    else:
+            sCentre_x = map_centre_pixels_x + sRA_from_mapcentre_pix        # source pixel x position
+            sCentre_y = map_centre_pixels_y + sDec_from_mapcentre_pix       # source pixel y position
+
+        else:
         
-        # Find the point of least flux along a line between points either side of the jet
-        if point_arm1_x < point_arm2_x:
-            start_point = np.array([point_arm1_x, point_arm1_y])
-            end_point = np.array([point_arm2_x, point_arm2_y])
+            # Find the point of least flux along a line between points either side of the jet
+            if point_arm1_x < point_arm2_x:
+                start_point = np.array([point_arm1_x, point_arm1_y])
+                end_point = np.array([point_arm2_x, point_arm2_y])
+            else:
+                start_point = np.array([point_arm2_x, point_arm2_y])
+                end_point = np.array([point_arm1_x, point_arm1_y])
+
+            # Get source pixel x/y position
+            sCentre_x, sCentre_y = JMA.GetMinimumFluxAlongLine(area_fluxes, start_point, end_point)
+
+        sCentre = np.array([sCentre_x, sCentre_y])                          # new centre point
+
+        # If the new centre is too close to the start or end points, a proper minimum has not been found. Retain the old 
+        # centre point and don't update the data. Simiarly, if the new centre point is too close to the old centre point.
+        r_newCentre_arm1 = np.sqrt( (point_arm1_x - sCentre[0])**2 + (point_arm1_y - sCentre[1])**2 )
+        r_newCentre_arm2 = np.sqrt( (point_arm2_x - sCentre[0])**2 + (point_arm1_y - sCentre[1])**2 )
+        rdiff_oldnew = np.sqrt((sCentre[0] - oldCentre[0])**2 + (sCentre[1] - oldCentre[1])**2)
+        if r_newCentre_arm1 > 0.1 and r_newCentre_arm2 > 0.1 and rdiff_oldnew > 0.1:
+
+            # Set all data relative to the new centre
+            r_oldCentre_arm1 = np.sqrt( (point_arm1_x - oldCentre[0])**2 + (point_arm1_y - oldCentre[1])**2 )
+            if r_newCentre_arm1 < r_oldCentre_arm1:                                   # Which arm does the new centre lie in?
+                ridge1_upd, ridge2_upd, Rlen1_upd, Rlen2_upd, phi_val1_upd, phi_val2_upd = \
+                    SetDataRelativeToCentre(sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2)
+            else:
+                ridge2_upd, ridge1_upd, Rlen2_upd, Rlen1_upd, phi_val2_upd, phi_val1_upd = \
+                    SetDataRelativeToCentre(sCentre, ridge2, ridge1, Rlen2, Rlen1, phi_val2, phi_val1)
         else:
-            start_point = np.array([point_arm2_x, point_arm2_y])
-            end_point = np.array([point_arm1_x, point_arm1_y])
-
-        # Get source pixel x/y position
-        sCentre_x, sCentre_y = JMA.GetMinimumFluxAlongLine(area_fluxes, start_point, end_point)
-
-    sCentre = np.array([sCentre_x, sCentre_y])                          # new centre point
-    oldCentre = np.array([ridge1[0,0], ridge1[0,1]])                    # old centre point
-
-    # If the new centre is too close to the start or end points, a proper minimum has not been found. Retain the old 
-    # centre point and don't update the data. Simiarly, if the new centre point is too close to the old centre point.
-    r_newCentre_arm1 = np.sqrt( (point_arm1_x - sCentre[0])**2 + (point_arm1_y - sCentre[1])**2 )
-    r_newCentre_arm2 = np.sqrt( (point_arm2_x - sCentre[0])**2 + (point_arm1_y - sCentre[1])**2 )
-    rdiff_oldnew = np.sqrt((sCentre[0] - oldCentre[0])**2 + (sCentre[1] - oldCentre[1])**2)
-    if r_newCentre_arm1 > 0.1 and r_newCentre_arm2 > 0.1 and rdiff_oldnew > 0.1:
-
-        # Set all data relative to the new centre
-        r_oldCentre_arm1 = np.sqrt( (point_arm1_x - oldCentre[0])**2 + (point_arm1_y - oldCentre[1])**2 )
-        if r_newCentre_arm1 < r_oldCentre_arm1:                                   # Which arm does the new centre lie in?
-            ridge1_upd, ridge2_upd, Rlen1_upd, Rlen2_upd, phi_val1_upd, phi_val2_upd = \
-                SetDataRelativeToCentre(sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2)
-        else:
-            ridge2_upd, ridge1_upd, Rlen2_upd, Rlen1_upd, phi_val2_upd, phi_val1_upd = \
-                SetDataRelativeToCentre(sCentre, ridge2, ridge1, Rlen2, Rlen1, phi_val2, phi_val1)
+            sCentre = oldCentre
+            ridge1_upd = ridge1; ridge2_upd = ridge2
+            Rlen1_upd = Rlen1; Rlen2_upd = Rlen2
+            phi_val1_upd = phi_val1; phi_val2_upd = phi_val2
     else:
         sCentre = oldCentre
         ridge1_upd = ridge1; ridge2_upd = ridge2

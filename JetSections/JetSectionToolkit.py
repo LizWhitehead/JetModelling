@@ -153,7 +153,7 @@ def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rle
                 break
 
             if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JSC.MaxRFactor * RLC.R):  # Test whether the last step size has increased by too much
-                new_edge_points = FindEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
+                new_edge_points = FindEdgePoints(flux_array, ridge[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
             else:
                 new_edge_points = FindInitEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])  # Re-initialise edge points algorithm
 
@@ -166,7 +166,7 @@ def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rle
 
 #############################################
 
-def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
+def FindEdgePoints(flux_array, ridge_point, ridge_R, prev_edge_points):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -179,9 +179,6 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
 
     ridge_point - 1D array, shape(2,)
                   ridge point along the ridge line
-
-    ridge_phi - float,
-                angular direction of the ridge line
 
     ridge_R - float,
               distance from the source along the jet in pixels
@@ -233,7 +230,6 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
         phi_prev1 = phi_prev_coord2; phi_prev2 = phi_prev_coord1
 
     # Search within a defined angle from the previous first edge point.
-    # The angle change should be in the same direction as ridge_phi.
     if phi_prev1 == phi_prev_coord1:
         phi_latest1 = PiRange(phi_prev1 - search_angle)
     else:
@@ -244,7 +240,7 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
     quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
     diff = max_phi - min_phi
     if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-        phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask        # search between ridge_phi and phi_prev1
+        phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask        # search between phi_latest1 and phi_prev1
     else:
         phi_mask = np.ma.masked_outside(phi, phi_latest1, phi_prev1).mask
     ##prev_edge_mask = np.ma.masked_where(phi == phi_prev1, phi).mask                 # mask the previous edge point phi
@@ -257,7 +253,6 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
     edge_coord1 = np.array([edge_coord1_yx[1] + 0.5,edge_coord1_yx[0] + 0.5])
 
     # Search within a defined angle from the previous second edge point.
-    # The angle change should be in the same direction as ridge_phi.
     if phi_prev1 == phi_prev_coord1:
         phi_latest2 = PiRange(phi_prev2 + search_angle)
     else:

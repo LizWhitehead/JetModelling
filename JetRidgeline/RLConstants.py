@@ -43,10 +43,6 @@ Lcone = 85  ##  The angle in degrees of the larger cone
 MaxLen = 0.95 ##  Multiplier of Source size to determine max RL length
 ipit = 6  ##  Max number of iterations in the initial point search for directions
 
-##  FloodFill, GetAvailableSources, CreateCutOutCat
-#rdel  ## See function init_maptype_specific_constants
-#ddel  ## See function init_maptype_specific_constants
-
 ##  GetRidgePoint
 Jlim = 40/95  ##  Mulitpler of RL Length Max that it can jump under
 MaxJ = 1  ##  Multiplier of source size the RL can jump to
@@ -62,9 +58,6 @@ LGZA = 1.  ##  Number of Components to filter by if active.  Needs dots.
 Start = 0  ##  The index to start the selection of sources from
 Step = 1  ##  The fraction step size of the function if 1 runs all, 2 50%, 4 25% etc
 ImSize = 1  ##  The fraction of the source the final image is cut down to
-
-##  GetRMSArray
-#nSig  ## See function init_maptype_specific_constants
 
 ##  HostRFromLofar
 SigAst = 0.6 ##  The astrometric error, changing between a radio and optical catalogue (arcsec)
