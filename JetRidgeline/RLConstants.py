@@ -57,7 +57,6 @@ LGZA = 1.  ##  Number of Components to filter by if active.  Needs dots.
 ##  TrialSeries, CreateCutouts
 Start = 0  ##  The index to start the selection of sources from
 Step = 1  ##  The fraction step size of the function if 1 runs all, 2 50%, 4 25% etc
-ImSize = 1  ##  The fraction of the source the final image is cut down to
 
 ##  HostRFromLofar
 SigAst = 0.6 ##  The astrometric error, changing between a radio and optical catalogue (arcsec)

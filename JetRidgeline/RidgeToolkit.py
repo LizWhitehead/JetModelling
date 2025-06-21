@@ -11,7 +11,6 @@ import JetModelling_Constants as JMC
 import JetModelling_MapAnalysis as JMA
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
-from JetRidgeline.LotssCatalogue.sizeflux_tools import Flood,Mask
 from astropy.io import fits
 from astropy.table import Table
 from astropy import units as u
@@ -101,10 +100,10 @@ def AreaFluxes(fluxes):
     Constants
     ---------
     
-    ImSize - float,
-             the fraction of the source size that the final image is cut
-             down to. 1 will match the size of the source from the centre
-             of the cutout
+    ImFraction - float,
+                 the fraction of the source size that the final image is cut
+                 down to. 1 will match the size of the source from the centre
+                 of the cutout
 
     Notes
     -----------
@@ -179,10 +178,10 @@ def CreateCutouts():
     Constants
     ---------
     
-    ImSize - float,
-             the fraction of the source size that the final image is cut
-             down to. 1 will match the size of the source from the centre
-             of the cutout
+    ImFraction - float,
+                 the fraction of the source size that the final image is cut
+                 down to. 1 will match the size of the source from the centre
+                 of the cutout
     
     Returns
     -------
@@ -1938,8 +1937,10 @@ def TrialSeries(R, dphi):
                 # x_coord y_coord angle_dir (3 columns, space separated)
                 file1 = np.column_stack((ridge1[:,0], ridge1[:,1], phi_val1, Rlen1))
                 file2 = np.column_stack((ridge2[:,0], ridge2[:,1], phi_val2, Rlen2))
-                np.savetxt(RLF.R1 %source_name, file1, delimiter=' ')
-                np.savetxt(RLF.R2 %source_name, file2, delimiter=' ')
+                np.savetxt(RLF.R1 %source_name, file1, delimiter=' ', \
+                           header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
+                np.savetxt(RLF.R2 %source_name, file2, delimiter=' ', \
+                           header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
     
                 y, x = np.mgrid[slice((0),(area_fluxes.shape[0]),1), slice((0),(area_fluxes.shape[1]),1)]
                 y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes).mask)
@@ -1950,10 +1951,10 @@ def TrialSeries(R, dphi):
                 ymin = np.ma.min(y)
                 ymax = np.ma.max(y)
                         
-                x_source_min = float(optical_pos[0]) - RLC.ImSize * float(lmsize)
-                x_source_max = float(optical_pos[0]) + RLC.ImSize * float(lmsize)
-                y_source_min = float(optical_pos[1]) - RLC.ImSize * float(lmsize)
-                y_source_max = float(optical_pos[1]) + RLC.ImSize * float(lmsize)
+                x_source_min = float(sCentre[0]) - JMC.ImFraction * float(lmsize)
+                x_source_max = float(sCentre[0]) + JMC.ImFraction * float(lmsize)
+                y_source_min = float(sCentre[1]) - JMC.ImFraction * float(lmsize)
+                y_source_max = float(sCentre[1]) + JMC.ImFraction * float(lmsize)
                         
                 if x_source_min < xmin:
                     xplotmin = xmin

@@ -13,11 +13,11 @@ import JetSections.JSConstants as JSC
 import JetModelling_Constants as JMC
 import JetRidgeline.RLConstants as RLC
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
 from math import tan, atan2, atan, pow
-import shapely
 from shapely.geometry import LineString, Point
 import copy
 
@@ -1336,8 +1336,10 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
 
     fileEP1 = np.column_stack((edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], edge_points1[:,4]))
     fileEP2 = np.column_stack((edge_points2[:,0], edge_points2[:,1], edge_points2[:,2], edge_points2[:,3], edge_points2[:,4]))
-    np.savetxt(JSF.EP1 %source_name, fileEP1, delimiter=' ')
-    np.savetxt(JSF.EP2 %source_name, fileEP2, delimiter=' ')
+    np.savetxt(JSF.EP1 %source_name, fileEP1, delimiter=' ', \
+               header='edgepoint x1-coord (pix), edgepoint y1-coord (pix), edgepoint x2-coord (pix), edgepoint y2-coord (pix), edgepoint R (pix)')
+    np.savetxt(JSF.EP2 %source_name, fileEP2, delimiter=' ', \
+               header='edgepoint x1-coord (pix), edgepoint y1-coord (pix), edgepoint x2-coord (pix), edgepoint y2-coord (pix), edgepoint R (pix)')
 
     fileSP1 = np.column_stack((section_parameters1[:,0], section_parameters1[:,1], section_parameters1[:,2], section_parameters1[:,3], \
                                section_parameters1[:,4], section_parameters1[:,5], section_parameters1[:,6], section_parameters1[:,7], \
@@ -1345,8 +1347,14 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
     fileSP2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
                                section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
                                section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10], section_parameters2[:,11]))
-    np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ')
-    np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ')
+    np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ', \
+               header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
+                      'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
+                      'section start R (pix), section end R (pix), section flux (Jy/beam), section volume (pix**3')
+    np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ', \
+               header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
+                      'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
+                      'section start R (pix), section end R (pix), section flux (Jy/beam), section volume (pix**3')
 
 #############################################
 
@@ -1395,16 +1403,43 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     palette = copy.copy(plt.get_cmap("cividis"))
     palette.set_bad('k',0.0)
     lmsize = JMS.sSize  # pixels
-    optical_pos = (float(lmsize), float(lmsize))
+    imCentre = ( (edge_points1[0,0] + edge_points1[0,2]) / 2.0, (edge_points1[0,1] + edge_points1[0,3]) / 2.0 )
 
     y, x = np.mgrid[slice((0),(flux_array.shape[0]),1), slice((0),(flux_array.shape[1]),1)]
-    y = np.ma.array(y)
-    x = np.ma.array(x)
+    y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array).mask)
+    x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array).mask)
 
-    xplotmin = float(optical_pos[0]) - float(lmsize/2.0)
-    xplotmax = float(optical_pos[0]) + float(lmsize/2.0)
-    yplotmin = float(optical_pos[1]) - float(lmsize/2.0)
-    yplotmax = float(optical_pos[1]) + float(lmsize/2.0)
+    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMS.nSig * JMS.bgRMS), y, copy=True).mask)
+    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(y < (JMS.nSig * JMS.bgRMS), y, copy=True).mask)
+    xmin = np.ma.min(x_plotlimits)
+    xmax = np.ma.max(x_plotlimits)
+    ymin = np.ma.min(y_plotlimits)
+    ymax = np.ma.max(y_plotlimits)
+                        
+    x_source_min = float(imCentre[0]) - JMC.ImFraction * float(lmsize)
+    x_source_max = float(imCentre[0]) + JMC.ImFraction * float(lmsize)
+    y_source_min = float(imCentre[1]) - JMC.ImFraction * float(lmsize)
+    y_source_max = float(imCentre[1]) + JMC.ImFraction * float(lmsize)
+                        
+    if x_source_min < xmin:
+        xplotmin = xmin
+    else:
+        xplotmin = x_source_min
+                                
+    if x_source_max < xmax:
+        xplotmax = x_source_max
+    else:
+        xplotmax = xmax
+                        
+    if y_source_min < ymin:
+        yplotmin = ymin
+    else:
+        yplotmin = y_source_min
+                                
+    if y_source_max < ymax:
+        yplotmax = y_source_max
+    else:
+        yplotmax = ymax
 
     # Plot edge points
     fig, ax = plt.subplots(figsize=(10,10))
