@@ -26,13 +26,13 @@ def ComputeJetParameters(section_parameters1, section_parameters2):
                           Array with section points (x,y * 4), distance from source,
                           flux and volume for other arm of the jet
     """
-    
-    # Set up the directory structure for jet parameters computation
-    JPS.Setup()
 
     print('Starting jet parameters computation')
     print('-------------------------------------------')
     start_time = time.time()
+    
+    # Set up the directory structure for jet parameters computation
+    JPS.Setup()
 
     # Get parameter values along each arm of the jet
     GetJetParameters(section_parameters1, section_parameters2)

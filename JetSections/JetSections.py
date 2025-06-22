@@ -55,13 +55,13 @@ def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rle
     Notes
     -----------
     """
-    
-    # Set up the directory structure for jet sections processing
-    JSS.Setup()
 
     print('Starting jet sections processing')
     print('-------------------------------------------')
     start_time = time.time()
+    
+    # Set up the directory structure for jet sections processing
+    JSS.Setup()
 
     section_parameters1, section_parameters2 = GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
 

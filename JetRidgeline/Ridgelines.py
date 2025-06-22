@@ -17,6 +17,10 @@ import JetRidgeline.RidgeToolkit as RTK
 from warnings import resetwarnings
 
 def CreateRidgelines():
+
+    print('Starting ridgeline drawing process')
+    print('-------------------------------------------')
+    start_time = time.time()
     
     # Set up the directory structure for ridgeline processing. Produce 2D flattened map and thresholded npy cutout.
     RLS.Setup()
@@ -25,10 +29,6 @@ def CreateRidgelines():
     start_time = time.time()
     RTK.CreateCutouts()
     print('Time taken to make cutout = ' + str((time.time()-start_time)/60),'m')
-
-    print('Starting ridgeline drawing process')
-    print('-------------------------------------------')
-    start_time = time.time()
 
     # Create ridgelines
     ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RTK.TrialSeries(RLC.R, RLC.dphi)
