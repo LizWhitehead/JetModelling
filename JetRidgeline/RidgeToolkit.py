@@ -196,7 +196,7 @@ def CreateCutouts():
     print('Making cutout for source',JMS.sName,'with size',lmsize,'pixels')
     hdu = DefineHDU(JMS.sName)
     data = hdu[0].data
-    size = (2 * lmsize, 2 * lmsize)
+    size = (lmsize, lmsize)
     wcs = WCS(hdu[0].header)    # Keep world coordinate system
     cutout = Cutout2D(data, centre_pos, size, wcs = wcs)
     hdu[0].data = cutout.data

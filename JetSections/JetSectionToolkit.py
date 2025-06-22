@@ -9,9 +9,7 @@ Created by LizWhitehead - Jan 2025
 from numpy.ma import nomask
 import JetModelling_MapSetup as JMS
 import JetSections.JetSectionFiles as JSF
-import JetSections.JSConstants as JSC
 import JetModelling_Constants as JMC
-import JetRidgeline.RLConstants as RLC
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from skimage.draw import polygon2mask
@@ -82,7 +80,8 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         edge_points1 = FindAllEdgePointsForJetArm(flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
         edge_points2 = FindAllEdgePointsForJetArm(flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
 
-        # Interpolate extra edge points at points in the jet where significant flux is cut off
+        # Interpolate extra edge points at points in the jet where significant flux or area (=> calculated volume) is cut off.
+        # This will ensure that summed flux and volume are correct when merging segments.
         print('Adding extra edge points')
         edge_points1 = AddEdgePoints(flux_array, edge_points1)
         edge_points2 = AddEdgePoints(flux_array, edge_points2)
@@ -109,7 +108,7 @@ def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rle
     flux_array - 2D array,
                  raw image array
 
-    init_edge_points - 2D array, shape(1,5)
+    init_edge_points - 1D array
                        Points on either side of the jet, corresponding to the 
                        closest distance to that edge from the initial ridge point,
                        and their distance from source.
@@ -152,7 +151,7 @@ def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rle
             if np.isnan(phi_val[ridge_count]):
                 break
 
-            if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JSC.MaxRFactor * RLC.R):  # Test whether the last step size has increased by too much
+            if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JMC.MaxRFactor * JMC.R):  # Test whether the last step size has increased by too much
                 new_edge_points = FindEdgePoints(flux_array, ridge[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
             else:
                 new_edge_points = FindInitEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])  # Re-initialise edge points algorithm
@@ -177,13 +176,13 @@ def FindEdgePoints(flux_array, ridge_point, ridge_R, prev_edge_points):
     flux_array - 2D array,
                  raw image array
 
-    ridge_point - 1D array, shape(2,)
-                  ridge point along the ridge line
+    ridge_point - 1D array
+                  ridge point co-ordinates along the ridge line
 
     ridge_R - float,
               distance from the source along the jet in pixels
 
-    prev_edge_points - 2D array, shape(1,5)
+    prev_edge_points - 1D array
                        edge points corresponding to
                        previous ridge point and distance from source
                        (x1,y1,x2,y2,R)
@@ -193,7 +192,7 @@ def FindEdgePoints(flux_array, ridge_point, ridge_R, prev_edge_points):
 
     Returns
     -----------
-    edge_points - 2D array, shape(1,5)
+    edge_points - 1D array
                   Points on either side of the jet, corresponding to the 
                   closest distance to that edge from the corresonding ridge point,
                   and distance from source
@@ -296,8 +295,8 @@ def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
     flux_array - 2D array,
                  raw image array
 
-    ridge_point - 1D array, shape(2,)
-                  ridge point along the ridge line
+    ridge_point - 1D array
+                  ridge point co-ordinates along the ridge line
 
     ridge_phi - float,
                 angular direction of the ridge line
@@ -310,7 +309,7 @@ def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
 
     Returns
     -----------
-    edge_points - 2D array, shape(1,5)
+    edge_points - 1D array
                   Points on either side of the jet, corresponding to the 
                   closest distance to that edge from the initial ridge point,
                   and their distance from source.
@@ -430,7 +429,7 @@ def AddEdgePoints(flux_array, edge_points):
             point_count += 1
 
             if point_count > 1:
-                if (ridge_R - lastpts[4]) < (JSC.MaxRFactor * RLC.R):   # Test whether the last step size has increased by too much
+                if (ridge_R - lastpts[4]) < (JMC.MaxRFactor * JMC.R):   # Test whether the last step size has increased by too much
 
                     if jet_side == 1:
                         dist = np.sqrt( (x_side1 - lastpts[0])**2 + (y_side1 - lastpts[1])**2 ) # distance between last 2 points on this side
@@ -439,10 +438,10 @@ def AddEdgePoints(flux_array, edge_points):
 
                     R_diff = ridge_R - lastpts[4]   # change in R since last edgepoint
 
-                    if dist > (JSC.MinIntpolFactor * RLC.R):
+                    if dist > (JMC.MinIntpolFactor * JMC.R):
                         # Distance is long enough to have cut off some flux.
                         # Work out the number of sections to divide the length between last 2 points.
-                        num_sections = max( min(np.floor(dist/RLC.R + 1).astype('int'), JSC.MaxIntpolSections), 2)
+                        num_sections = max( min(np.floor(dist/JMC.R + 1).astype('int'), JMC.MaxIntpolSections), 2)
 
                         R_per_section = R_diff / num_sections                               # change in R per section
 
@@ -620,17 +619,17 @@ def MergeSections(section_parameters, start_flux):
 
     # Iterate, up to a maximum number of times to try to get the number of merged sections to the required value
     iteration_count = 0
-    while ((np.size(section_params_merged, 0) < JSC.MinSectionsPerArm) or \
-           (np.size(section_params_merged, 0) > JSC.MaxSectionsPerArm)) and iteration_count < JSC.MaxMergeIterations:
+    while ((np.size(section_params_merged, 0) < JMC.MinSectionsPerArm) or \
+           (np.size(section_params_merged, 0) > JMC.MaxSectionsPerArm)) and iteration_count < JMC.MaxMergeIterations:
         iteration_count += 1
 
         # Set the max flux per merged section for this iteration
-        if np.size(section_params_merged, 0) < JSC.MinSectionsPerArm:
+        if np.size(section_params_merged, 0) < JMC.MinSectionsPerArm:
             # Reduce maximum flux by % for each iteration
-            max_flux = start_flux - (start_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
+            max_flux = start_flux - (start_flux * (iteration_count-1) * JMC.PercChangeInMaxFlux/100)
         else:
             # Increase maximum flux by % for each iteration
-            max_flux = start_flux + (start_flux * (iteration_count-1) * JSC.PercChangeInMaxFlux/100)
+            max_flux = start_flux + (start_flux * (iteration_count-1) * JMC.PercChangeInMaxFlux/100)
 
         section_params_merged = np.empty((0,12))                            # Re-initialise merged section parameters array
         last_merged_sections = np.full((1,12), np.nan)                      # Initialise last merged sections array
@@ -656,7 +655,7 @@ def MergeSections(section_parameters, start_flux):
             # Test whether maximum flux achieved.
             # Take the first section separately, as this is used for the initial maximum flux value.
             # But the merged section must ALWAYS be larger than the beam size.
-            if ( (R_section_start - last_R_section_end) > (JSC.MaxRFactor * RLC.R) ) or \
+            if ( (R_section_start - last_R_section_end) > (JMC.MaxRFactor * JMC.R) ) or \
                ( (merged_flux >= max_flux or sect_count == 1) and LargerThanBeamSize(merged_section_coords) ):
                 # Adding in this section flux would exceed the maximum flux
                 if np.isnan(last_merged_sections).any():
@@ -700,8 +699,8 @@ def LargerThanBeamSize(section_coords):
 
     Parameters
     -----------
-    section_coords - 1D array, shape(8,)
-                     Array with section points (x,y * 4)
+    section_coords - 1D array
+                     Section vertex co-ordinates (x,y * 4)
     
     Constants
     ---------
@@ -752,7 +751,7 @@ def GetSectionParameters(flux_array, polygon_points, initial_polygon_points):
                      Array with section polygon points (x,y * 4) and distance from
                      the source.
 
-    initial_polygon_points - 1D array, shape(5,)
+    initial_polygon_points - 1D array
                              Array with initial section polygon points (x,y * 4) and 
                              distance from the source.
     
@@ -841,7 +840,7 @@ def GetSectionPolygons(edge_points):
 
         if point_count > 1:
 
-            if (R_section - last_R_section) < (JSC.MaxRFactor * RLC.R): # Test whether the last step size has increased by too much
+            if (R_section - last_R_section) < (JMC.MaxRFactor * JMC.R): # Test whether the last step size has increased by too much
 
                 # Look at the lengths of the sides of the new polygon
                 x1_diff = np.abs(x1 - lastpts[0]); y1_diff = np.abs(y1 - lastpts[1])
@@ -948,13 +947,13 @@ def GetFlux(flux_array, curr_polypoints, last_polypoints, next_polypoints):
     flux_array - 2D array, shape(n,2)
                  raw image array
 
-    curr_polypoints - 1D array, shape(4,)
+    curr_polypoints - 1D array
                       Co-ordinates of the section polygon vertices.
 
-    last_polypoints - 1D array, shape(4,)
+    last_polypoints - 1D array
                       Co-ordinates of the last section polygon vertices.
 
-    next_polypoints - 1D array, shape(4,)
+    next_polypoints - 1D array
                       Co-ordinates of the next section polygon vertices.
     
     Constants
@@ -1046,7 +1045,7 @@ def GetVolume(polypoints):
 
     Parameters
     -----------
-    polypoints - 1D array, shape(4,)
+    polypoints - 1D array
                  Co-ordinates of the section polygon vertices.
     
     Constants
@@ -1135,7 +1134,7 @@ def Setup3PointPolygon(polypoints):
 
     Parameters
     -----------
-    polypoints - 1D array, shape(8,)
+    polypoints - 1D array
                  Co-ordinates of the section polygon vertices.
     
     Constants
@@ -1143,10 +1142,10 @@ def Setup3PointPolygon(polypoints):
 
     Returns
     -----------
-    base_points - 1D array, shape(4,)
+    base_points - 1D array
                   Co-ordinates of the polygon base
 
-    top_point - 1D array, shape(2,)
+    top_point - 1D array
                 Co-ordinate of the polygon top
 
     Notes
@@ -1212,7 +1211,7 @@ def Setup4PointPolygon(polypoints):
 
     Parameters
     -----------
-    polypoints - 1D array, shape(8,)
+    polypoints - 1D array
                  Co-ordinates of the section polygon vertices.
     
     Constants
@@ -1220,10 +1219,10 @@ def Setup4PointPolygon(polypoints):
 
     Returns
     -----------
-    base_points - 1D array, shape(4,)
+    base_points - 1D array
                   Co-ordinates of the polygon base
 
-    top_point - 1D array, shape(4,)
+    top_point - 1D array
                 Co-ordinates of the polygon top
 
     Notes
@@ -1388,15 +1387,6 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     section_parameters2 - 2D array, shape(n,12)
                           Array for other arm of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
-    
-    Constants
-    ---------
-
-    Returns
-    -----------
-
-    Notes
-    -----------
     """
 
     palette = plt.cm.cividis
@@ -1457,7 +1447,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         y_values = np.array([ep[1], ep[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)              # Edge point segment separators
         if epcount > 1:
-            if (ep[4] - last_ep[4]) < (JSC.MaxRFactor * RLC.R):       # if gap is too big don't draw edge lines 
+            if (ep[4] - last_ep[4]) < (JMC.MaxRFactor * JMC.R):       # If gap is too big, don't draw edge lines 
                 x_values = np.array([ep[0], last_ep[0]])
                 y_values = np.array([ep[1], last_ep[1]])
                 ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 1
@@ -1475,7 +1465,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         y_values = np.array([ep[1], ep[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)              # Edge point segment separators
         if epcount > 1:
-            if (ep[4] - last_ep[4]) < (JSC.MaxRFactor * RLC.R):       # if gap is too big don't draw edge lines 
+            if (ep[4] - last_ep[4]) < (JMC.MaxRFactor * JMC.R):       # If gap is too big, don't draw edge lines 
                 x_values = np.array([ep[0], last_ep[0]])
                 y_values = np.array([ep[1], last_ep[1]])
                 ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 1
@@ -1507,7 +1497,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-        if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):             # if gap is too big plot last separator
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R):             # If gap is too big, plot last separator
             PlotLastSegment(ax, last_sp)
         last_sp = sp
     PlotLastSegment(ax, sp)                                                             # Plot last separator
@@ -1518,7 +1508,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-        if spcount > 1 and (sp[8] - last_sp[9]) > (JSC.MaxRFactor * RLC.R):             # if gap is too big plot last separator
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R):             # If gap is too big, plot last separator
             PlotLastSegment(ax, last_sp)
         last_sp = sp
     PlotLastSegment(ax, sp)                                                             # Plot last separator
@@ -1538,7 +1528,7 @@ def PlotLastSegment(ax, sp):
 
     Parameters
     -----------
-    sp - 1D array, shape(12,)
+    sp - 1D array
          section points (x/y * 4), distance from source 
          and computed parameters for last segment
 
@@ -1572,8 +1562,8 @@ def PolarCoordinates(a, pos):
     a - 2D array, shape(n,2)
         array of pixels to be mapped onto polar coordinates
 
-    pos - 1D array, shape(2,)
-          array containing central point position given as pixel
+    pos - 1D array
+          central point position given as pixel
           values [x_position, y_position]
 
     Returns

@@ -24,7 +24,7 @@ def CreateRidgelines():
     print('Creating cutouts')
     start_time = time.time()
     RTK.CreateCutouts()
-    print('Time taken to make cutout = ' + str((time.time()-start_time)/(60*60)),'h')
+    print('Time taken to make cutout = ' + str((time.time()-start_time)/60),'m')
 
     print('Starting ridgeline drawing process')
     print('-------------------------------------------')
@@ -35,7 +35,7 @@ def CreateRidgelines():
 
     flux_array = RTK.GetCutoutArray(JMS.sName)          # Return raw unconvolved data
 
-    print('Time taken for ridgelines to draw = ' + str((time.time()-start_time)/(60*60)),'h')
+    print('Time taken for ridgelines to draw = ' + str((time.time()-start_time)/60),'m')
     resetwarnings()
 
     return flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2

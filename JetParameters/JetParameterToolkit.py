@@ -262,8 +262,8 @@ def PlotJetParameters(jet_parameters1, jet_parameters2):
 
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlim(1, 105)         ## LW ## Determine automatically
-    ax.set_ylim(1e-14, 1e-11)   ## LW ## Determine automatically
+    ax.set_xlim(d_min, d_max)
+    ax.set_ylim(p_min, p_max)
     axis.Axis.set_major_formatter(ax.xaxis, ticker.ScalarFormatter())
 
     ax.set_ylabel('Pressure (Pa)')

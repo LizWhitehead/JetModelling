@@ -37,10 +37,15 @@
     <Compile Include="JetRidgeline\RLConstants.py" />
     <Compile Include="JetRidgeline\RLSetup.py" />
     <Compile Include="JetModelling_Main.py" />
+    <Compile Include="JetRidgeline_FromData\LotssCatalogue\subim.py" />
+    <Compile Include="JetRidgeline_FromData\RidgelineFiles_FromData.py" />
+    <Compile Include="JetRidgeline_FromData\Ridgelines_FromData.py" />
+    <Compile Include="JetRidgeline_FromData\RidgeToolkit_FromData.py" />
+    <Compile Include="JetRidgeline_FromData\RLFDConstants.py" />
+    <Compile Include="JetRidgeline_FromData\RLFDSetup.py" />
     <Compile Include="JetSections\JetSectionFiles.py" />
     <Compile Include="JetSections\JetSections.py" />
     <Compile Include="JetSections\JetSectionToolkit.py" />
-    <Compile Include="JetSections\JSConstants.py" />
     <Compile Include="JetSections\JSSetup.py" />
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +67,9 @@
     <Folder Include="JetRidgeline" />
     <Folder Include="JetParameters\" />
     <Folder Include="JetRidgeline\LotssCatalogue\" />
+    <Folder Include="JetRidgeline_FromData\" />
+    <Folder Include="JetRidgeline_FromData\LotssCatalogue\" />
+    <Folder Include="JetRidgeline_FromData\LotssCatalogue\__pycache__\" />
     <Folder Include="JetSections\" />
   </ItemGroup>
   <ItemGroup>
@@ -113,6 +121,8 @@
     <Content Include="JetModellingC\Synch\x64\Release\synchmodule3.obj" />
     <Content Include="JetModellingC\Synch\x64\Release\vc143.pdb" />
     <Content Include="JetModellingC\Synch\x64\Release\vcpkg.applocal.log" />
+    <Content Include="JetRidgeline_FromData\LotssCatalogue\__pycache__\sizeflux_tools.cpython-39.pyc" />
+    <Content Include="JetRidgeline_FromData\LotssCatalogue\__pycache__\subim.cpython-39.pyc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="JetModellingC\synch\synch.vcxproj">

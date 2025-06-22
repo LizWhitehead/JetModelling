@@ -29,20 +29,20 @@ def setup_map_specific_parameters():
     global sRadioRA     ## source centre RA in degrees
     global sRadioDec    ## source centre Dec in degrees
 
-    map_file = 'C:/Maps/3C31.HGEOM2Copy.FITS'
-    rdel = -0.0003611111024; ddel = 0.0003611111024
-    nSig = 13.5
-    beamsize = 5
-    beamarea = 16.76195591180468
-    freq = 1.636e9
-    sName = '3C31'
-    sRA = 16.8217500000
-    sDec = 32.4255277778
-    sSize = 456
-    bgRMS = 0.0002
-    rShift = 0.0169
-    sourceR = 73.3
-    angScale = 0.3438
+    map_file = 'C:/Maps/NGC1044-cutout.fits'
+    rdel = -0.000486111111; ddel = 0.000486111111
+    nSig = 4
+    beamsize = 6.99
+    beamarea = 18.12937258110873
+    freq = 2.624893188e9
+    sName = 'NGC1044'
+    sRA = 40.278375
+    sDec = 8.733833333
+    sSize = 667
+    bgRMS = 0.000012
+    rShift = 0.021208
+    sourceR = 83.40
+    angScale = 1.75
     sRadioRA = nan
     sRadioDec = nan
     # sRadioRA = 16.8539791667      # Not used to locate the source centre as not exact enough

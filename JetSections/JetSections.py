@@ -8,11 +8,7 @@ Created by LizWhitehead - 30/04/2025
 
 import JetSections.JSSetup as JSS
 from JetSections.JetSectionToolkit import GetEdgepointsAndSections
-import JetSections.JSConstants as JSC
-import JetRidgeline.RLConstants as RLC
-import JetModelling_MapSetup as JMS
 from warnings import resetwarnings
-import numpy as np
 import time
 
 def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
@@ -69,7 +65,7 @@ def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rle
 
     section_parameters1, section_parameters2 = GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
 
-    print('Time taken for jet sections processing = ' + str((time.time()-start_time)/(60*60)),'h')
+    print('Time taken for jet sections processing = ' + str((time.time()-start_time)/60),'m')
     resetwarnings()
 
     return section_parameters1, section_parameters2

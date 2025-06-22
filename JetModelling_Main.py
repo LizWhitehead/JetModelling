@@ -10,6 +10,7 @@ Author: LizWhitehead 12/11/2024
 import JetModelling_MapSetup as JMS
 import JetModelling_Constants as JMC
 import JetRidgeline.Ridgelines as RL
+import JetRidgeline_FromData.Ridgelines_FromData as RLFD
 import JetSections.JetSections as JS
 import JetParameters.JetParameters as JP
 from warnings import simplefilter
@@ -18,7 +19,10 @@ simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
 JMS.setup_map_specific_parameters()
 
 # Create the jet ridgelines
-flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
+if JMC.ridgelines_from_data:
+    flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFD.CreateRidgelines()
+else:
+    flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
 
 if not JMC.ridgeline_only:
 

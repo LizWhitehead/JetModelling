@@ -37,6 +37,6 @@ def ComputeJetParameters(section_parameters1, section_parameters2):
     # Get parameter values along each arm of the jet
     GetJetParameters(section_parameters1, section_parameters2)
 
-    print('Time taken to compute jet parameters = ' + str((time.time()-start_time)/(60*60)),'h')
+    print('Time taken to compute jet parameters = ' + str((time.time()-start_time)/60),'m')
     resetwarnings()
 
