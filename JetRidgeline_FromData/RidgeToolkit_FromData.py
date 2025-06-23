@@ -7,7 +7,6 @@
 import JetModelling_MapSetup as JMS
 import JetModelling_Constants as JMC
 import JetModelling_MapAnalysis as JMA
-import JetRidgeline_FromData.RLFDConstants as RLFDC
 import JetRidgeline_FromData.RidgelineFiles_FromData as RLFDF
 import io
 import numpy as np
@@ -17,7 +16,7 @@ import copy
 
 #############################################
 
-def LoadRidgelineData(flux_array):
+def LoadRidgelineData(flux_array, R):
 
     """
     Load existing ridgeline data into internal data
@@ -27,6 +26,8 @@ def LoadRidgelineData(flux_array):
     -----------
     flux_array - 2D array,
                  raw image array
+    R - float,
+        Maximum step size of ridgeline in pixels
 
     Returns
     -----------
@@ -50,11 +51,11 @@ def LoadRidgelineData(flux_array):
     """
     # Read ridgeline data file for first arm
     ridge1 = np.empty((0,2)); phi_val1 = np.empty((0)); Rlen1 = np.empty((0))
-    ridge1, phi_val1, Rlen1 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm1, ridge1, phi_val1, Rlen1)
+    ridge1, phi_val1, Rlen1 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm1, ridge1, phi_val1, Rlen1, R)
 
     # Read ridgeline data file for other arm
     ridge2 = np.empty((0,2)); phi_val2 = np.empty((0)); Rlen2 = np.empty((0))
-    ridge2, phi_val2, Rlen2 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm2, ridge2, phi_val2, Rlen2)
+    ridge2, phi_val2, Rlen2 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm2, ridge2, phi_val2, Rlen2, R)
 
     # Determine the source position and update all data to be relative to this position
     sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2 = \
@@ -68,7 +69,7 @@ def LoadRidgelineData(flux_array):
 
 #############################################
 
-def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen):
+def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen, R):
 
     """
     Load existing ridgeline data into internal data
@@ -87,6 +88,9 @@ def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen):
 
     Rlen - 1D array of distance from source for each ridgepoint on
            one arm of the jet
+
+    R - float,
+        Maximum step size of ridgeline in pixels
 
     Returns
     -----------
@@ -114,7 +118,7 @@ def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen):
             else:
                 x = float(data[0]); y = float(data[1])
                 latest_R += np.sqrt( (x - last_saved_x)**2 + (y - last_saved_y)**2 )
-                if (latest_R - last_saved_R) > RLFDC.R:                 # Only save when difference in R > defined max value
+                if (latest_R - last_saved_R) > R:                 # Only save when difference in R > defined max value
                     ridge = np.vstack((ridge, np.array([x, y])))
                     Rlen = np.hstack((Rlen, latest_R))
                     phi_val = np.hstack(( phi_val, atan2((y - last_saved_y), (x - last_saved_x)) ))
