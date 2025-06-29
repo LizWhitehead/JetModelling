@@ -8,9 +8,9 @@ Created by LizWhitehead - 21/06/2025
 """
 
 import time
+import JetModelling_Constants as JMC
 import JetRidgeline_FromData.RLFDSetup as RLFDS
 import JetRidgeline_FromData.RidgeToolkit_FromData as RLFDTK
-import JetRidgeline_FromData.RLFDConstants as RLFDC
 from warnings import resetwarnings
 
 def CreateRidgelines():
@@ -23,7 +23,7 @@ def CreateRidgelines():
     flux_array = RLFDS.Setup()
 
     # Load existing ridgeline data
-    ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFDTK.LoadRidgelineData(flux_array, RLFDC.R)
+    ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFDTK.LoadRidgelineData(flux_array)
 
     print('Time taken for ridgelines to draw = ' + str((time.time()-start_time)/60),'m')
     resetwarnings()

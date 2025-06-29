@@ -9,10 +9,6 @@ Modified by:    LizWhitehead 12/11/2024 to set global maptype specific constants
 ##  Debugging on or off turns on print statements if True
 debug = True
 
-## R and dphi sizes
-R = 5 ## Step size of Ridgeline in pixels
-dphi = 60  ## Half angle of cone
-
 ##  AreaFluxes
 KerW = 4  ##  Weight of the kernel in the convolution
 

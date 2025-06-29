@@ -12,11 +12,12 @@ import io
 import numpy as np
 from math import atan2, isnan
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import copy
 
 #############################################
 
-def LoadRidgelineData(flux_array, R):
+def LoadRidgelineData(flux_array):
 
     """
     Load existing ridgeline data into internal data
@@ -26,8 +27,6 @@ def LoadRidgelineData(flux_array, R):
     -----------
     flux_array - 2D array,
                  raw image array
-    R - float,
-        Maximum step size of ridgeline in pixels
 
     Returns
     -----------
@@ -51,11 +50,11 @@ def LoadRidgelineData(flux_array, R):
     """
     # Read ridgeline data file for first arm
     ridge1 = np.empty((0,2)); phi_val1 = np.empty((0)); Rlen1 = np.empty((0))
-    ridge1, phi_val1, Rlen1 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm1, ridge1, phi_val1, Rlen1, R)
+    ridge1, phi_val1, Rlen1 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm1, ridge1, phi_val1, Rlen1)
 
     # Read ridgeline data file for other arm
     ridge2 = np.empty((0,2)); phi_val2 = np.empty((0)); Rlen2 = np.empty((0))
-    ridge2, phi_val2, Rlen2 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm2, ridge2, phi_val2, Rlen2, R)
+    ridge2, phi_val2, Rlen2 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm2, ridge2, phi_val2, Rlen2)
 
     # Determine the source position and update all data to be relative to this position
     sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2 = \
@@ -69,7 +68,7 @@ def LoadRidgelineData(flux_array, R):
 
 #############################################
 
-def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen, R):
+def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen):
 
     """
     Load existing ridgeline data into internal data
@@ -88,9 +87,6 @@ def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen, R):
 
     Rlen - 1D array of distance from source for each ridgepoint on
            one arm of the jet
-
-    R - float,
-        Maximum step size of ridgeline in pixels
 
     Returns
     -----------
@@ -118,7 +114,7 @@ def LoadRidgelineDataForOneArm(input_file_name, ridge, phi_val, Rlen, R):
             else:
                 x = float(data[0]); y = float(data[1])
                 latest_R += np.sqrt( (x - last_saved_x)**2 + (y - last_saved_y)**2 )
-                if (latest_R - last_saved_R) > R:                 # Only save when difference in R > defined max value
+                if (latest_R - last_saved_R) > JMC.R_fd:                 # Only save when difference in R > defined max value
                     ridge = np.vstack((ridge, np.array([x, y])))
                     Rlen = np.hstack((Rlen, latest_R))
                     phi_val = np.hstack(( phi_val, atan2((y - last_saved_y), (x - last_saved_x)) ))
@@ -200,17 +196,19 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
 
     """
 
+    flux_array_plot = JMC.flux_factor * flux_array.copy()
+
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
     palette.set_bad('k',0.0)
     lmsize = JMS.sSize  # pixels
 
-    y, x = np.mgrid[slice((0),(flux_array.shape[0]),1), slice((0),(flux_array.shape[1]),1)]
-    y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array).mask)
-    x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array).mask)
+    y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
+    y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
+    x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
     y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMS.nSig * JMS.bgRMS), y, copy=True).mask)
-    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(y < (JMS.nSig * JMS.bgRMS), y, copy=True).mask)
+    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMS.nSig * JMS.bgRMS), x, copy=True).mask)
     xmin = np.ma.min(x_plotlimits)
     xmax = np.ma.max(x_plotlimits)
     ymin = np.ma.min(y_plotlimits)
@@ -241,21 +239,24 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     else:
         yplotmax = ymax
 
-    # Plot edge points
+    # Plot ridgeline
     fig, ax = plt.subplots(figsize=(10,10))
     fig.suptitle('Source: %s' %JMS.sName)
     fig.subplots_adjust(top=0.9)
-    ax.set_aspect('equal', 'datalim')
+    ax.set_aspect('equal')
+    ax.set_xlim(xplotmin, xplotmax)
+    ax.set_ylim(yplotmin, yplotmax)
     
-    A = np.ma.array(flux_array, mask=np.ma.masked_invalid(flux_array).mask)
-    ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
+    A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
 
     ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
     ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
     ax.plot(sCentre[0], sCentre[1], 'g-', marker='x')   # source centre
 
-    ax.set_xlim(xplotmin, xplotmax)
-    ax.set_ylim(yplotmin, yplotmax)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.1)
+    fig.colorbar(c, cax = cax)
     
     fig.savefig(RLFDF.Rimage %JMS.sName)
     plt.close(fig)

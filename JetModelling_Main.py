@@ -7,7 +7,6 @@ Usage:  JetRidgeline_Main.py 'FITS file to process' -t 'Map Type [VLA,LOFAR-DR1,
 
 Author: LizWhitehead 12/11/2024
 """
-import JetModelling_MapSetup as JMS
 import JetModelling_Constants as JMC
 import JetRidgeline.Ridgelines as RL
 import JetRidgeline_FromData.Ridgelines_FromData as RLFD
@@ -15,8 +14,6 @@ import JetSections.JetSections as JS
 import JetParameters.JetParameters as JP
 from warnings import simplefilter
 simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
-
-JMS.setup_map_specific_parameters()
 
 # Create the jet ridgelines
 if JMC.ridgelines_from_data:

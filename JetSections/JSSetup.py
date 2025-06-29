@@ -16,7 +16,7 @@ def Setup():
     """
 
     # Initialise required directories under working directory. 
-    newdirs = ['sections']
+    newdirs = ['sections', 'regions']
     path = os.getcwd()
     for d in newdirs:
         newd=path + '/' + d

@@ -48,6 +48,7 @@ def GetJetParameters(section_parameters1, section_parameters2):
     jet_parameters1 = np.empty((0,5)); jet_parameters2 = np.empty((0,5))
 
     # Update flux, volume and distance along the jet and to have required units
+    print('Updating flux and volume units')
     section_parameters1 = SetRequiredUnits(section_parameters1)
     section_parameters2 = SetRequiredUnits(section_parameters2)
 
@@ -68,6 +69,7 @@ def GetJetParameters(section_parameters1, section_parameters2):
     ########################################################################
 
     # Compute parameters for each arm of the jet
+    print('Computing jet parameters')
     jet_parameters1 = GetParametersForJetArm(section_parameters1)
     jet_parameters2 = GetParametersForJetArm(section_parameters2)
 

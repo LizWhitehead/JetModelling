@@ -41,7 +41,6 @@
     <Compile Include="JetRidgeline_FromData\RidgelineFiles_FromData.py" />
     <Compile Include="JetRidgeline_FromData\Ridgelines_FromData.py" />
     <Compile Include="JetRidgeline_FromData\RidgeToolkit_FromData.py" />
-    <Compile Include="JetRidgeline_FromData\RLFDConstants.py" />
     <Compile Include="JetRidgeline_FromData\RLFDSetup.py" />
     <Compile Include="JetSections\JetSectionFiles.py" />
     <Compile Include="JetSections\JetSections.py" />

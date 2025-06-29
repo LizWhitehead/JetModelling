@@ -5,14 +5,12 @@
 # Modified some more by Bonny
 # Modified to work on a single source radio map by Liz
 
-from ast import While
 import JetModelling_MapSetup as JMS
 import JetModelling_Constants as JMC
 import JetModelling_MapAnalysis as JMA
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 from astropy.io import fits
-from astropy.table import Table
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.nddata import Cutout2D
@@ -21,10 +19,10 @@ from math import atan2, isnan
 from numpy import pi, cos, sin, sqrt, absolute
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import pyregion
 from scipy import ndimage
 from skimage import img_as_uint
-from skimage.measure import label
 from skimage.morphology import octagon
 from skimage.morphology import erosion
 from skimage.feature import peak_local_max
@@ -425,10 +423,10 @@ def FindRidges(area_fluxes, init_point, R, dphi, lmsize):
     
     init_point - 1D array, shape(2,)
                  starting point position for ridge detection    
-              
+    
     R - float,
         ridge finding step, given in pixels
-
+    
     dphi - float,
            half of the value of the cone opening angle
     
@@ -717,7 +715,6 @@ def GetFirstPoint(area_fluxes, init_point, cone, chain_mask, R):
 
     R - float,
         ridge finding step, given in pixels
-
 
     Returns
     -----------
@@ -1768,7 +1765,7 @@ def RetryDirections(new_iparray, init_point):
 
 #############################################
 
-def TrialSeries(R, dphi):
+def TrialSeries():
 
     """
     Performs ridge finding and output plotting for the source with given 
@@ -1780,15 +1777,6 @@ def TrialSeries(R, dphi):
     **NOTE - Matplotlib is currently throwing up a warning about the
     colour fill on pcolormesh.  Hence the simple filter warning ignore
     in the notebook.**
-
-    Parameters
-    -----------
-    
-    R - float,
-        ridge finding step, given in pixels
-
-    dphi - float,
-           1/2 of the value of the cone opening angle
     
     Notes
     -----------
@@ -1816,6 +1804,8 @@ def TrialSeries(R, dphi):
     Error = 'N/A'
         
     source_name = JMS.sName
+    R = JMC.R_rl
+    dphi = JMC.dphi
     Lra = JMS.sRA
     Ldec = JMS.sDec
     lmsize = JMS.sSize  # pixels
@@ -1941,15 +1931,19 @@ def TrialSeries(R, dphi):
                            header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
                 np.savetxt(RLF.R2 %source_name, file2, delimiter=' ', \
                            header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
+
+                area_fluxes_plot = JMC.flux_factor * area_fluxes.copy()
     
-                y, x = np.mgrid[slice((0),(area_fluxes.shape[0]),1), slice((0),(area_fluxes.shape[1]),1)]
-                y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes).mask)
-                x = np.ma.masked_array(x, mask=np.ma.masked_invalid(area_fluxes).mask)
-                        
-                xmin = np.ma.min(x)
-                xmax = np.ma.max(x)
-                ymin = np.ma.min(y)
-                ymax = np.ma.max(y)
+                y, x = np.mgrid[slice((0),(area_fluxes_plot.shape[0]),1), slice((0),(area_fluxes_plot.shape[1]),1)]
+                y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes_plot).mask)
+                x = np.ma.masked_array(x, mask=np.ma.masked_invalid(area_fluxes_plot).mask)
+
+                y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMS.nSig * JMS.bgRMS), y, copy=True).mask)
+                x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMS.nSig * JMS.bgRMS), x, copy=True).mask)
+                xmin = np.ma.min(x_plotlimits)
+                xmax = np.ma.max(x_plotlimits)
+                ymin = np.ma.min(y_plotlimits)
+                ymax = np.ma.max(y_plotlimits)
                         
                 x_source_min = float(sCentre[0]) - JMC.ImFraction * float(lmsize)
                 x_source_max = float(sCentre[0]) + JMC.ImFraction * float(lmsize)
@@ -1976,23 +1970,24 @@ def TrialSeries(R, dphi):
                 else:
                     yplotmax = ymax
                         
-                        
                 fig, ax = plt.subplots(figsize=(10,10))
                 fig.suptitle('Source: %s' %source_name)
                 fig.subplots_adjust(top=0.9)
-                ax.set_aspect('equal', 'datalim')
-    
-                A = np.ma.array(area_fluxes, mask=np.ma.masked_invalid(area_fluxes).mask)
-                ax.pcolor(x, y, A, cmap=palette, vmin=np.nanmin(A), vmax=np.nanmax(A))
-                ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
-                ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
-                ax.plot(sCentre[0], sCentre[1], 'g-', marker='x')   # source centre
-                #ax.scatter(float(cat_pos[0]), float(cat_pos[1]), s=130, c='m', marker='x', label='LOFAR id')
-                #ax.scatter(float(init_point[0]), float(init_point[1]), s=130, c='c', marker='x', label='Initial point')
-                ax.legend()
+                ax.set_aspect('equal')
                 ax.set_xlim(xplotmin, xplotmax)
                 ax.set_ylim(yplotmin, yplotmax)
     
+                A = np.ma.array(area_fluxes_plot, mask=np.ma.masked_invalid(area_fluxes_plot).mask)
+                c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+
+                ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
+                ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
+                ax.plot(sCentre[0], sCentre[1], 'g-', marker='x')   # source centre
+
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.1)
+                fig.colorbar(c, cax = cax)
+
                 fig.savefig(RLF.Rimage %(source_name, dphi))
                 plt.close(fig)
 
