@@ -7,6 +7,9 @@ Created by LizWhitehead - 06/05/2025
 """
 
 import numpy as np
+from scipy.optimize import curve_fit
+from scipy.stats import norm, kstest
+import matplotlib.pyplot as plt
 
 def GetFluxDistributionAlongLine(flux_array, start_point, end_point):
 
@@ -19,10 +22,10 @@ def GetFluxDistributionAlongLine(flux_array, start_point, end_point):
     flux_array - 2D array,
                  raw image array
 
-    start_point - 1D array, shape (2)
+    start_point - 1D array
                   Co-ordinates of line start point (x,y)
 
-    end_point - 1D array, shape (2)
+    end_point - 1D array
                 Co-ordinates of line end point (x,y)
     
     Constants
@@ -30,10 +33,10 @@ def GetFluxDistributionAlongLine(flux_array, start_point, end_point):
 
     Returns
     -----------
-    x_values - 1D array, shape (n)
+    x_values - 1D array
                Array of pixel distances along the line
 
-    y_values - 1D array, shape (n)
+    y_values - 1D array
                Array of flux values at x points along the line
 
     Notes
@@ -86,17 +89,16 @@ def GetMinimumFluxAlongLine(flux_array, start_point, end_point):
 
     """
     Get the position of the minimum flux value along a line.
-    Assumes x co-ordinate of end_point > x co-ordinate of start_point
 
     Parameters
     -----------
     flux_array - 2D array,
                  raw image array
 
-    start_point - 1D array, shape (2)
+    start_point - 1D array
                   Co-ordinates of line start point (x,y)
 
-    end_point - 1D array, shape (2)
+    end_point - 1D array
                 Co-ordinates of line end point (x,y)
     
     Constants
@@ -111,6 +113,11 @@ def GetMinimumFluxAlongLine(flux_array, start_point, end_point):
     Notes
     -----------
     """
+
+    # Ensure x co-ordinate of end_point > x co-ordinate of start_point
+    if start_point[0] > end_point[0]:
+        temp_end_point = end_point; end_point = start_point; start_point = temp_end_point
+
     # Get the flux distribution along the line
     x_values, flux_values = GetFluxDistributionAlongLine(flux_array, start_point, end_point)
 
@@ -126,3 +133,92 @@ def GetMinimumFluxAlongLine(flux_array, start_point, end_point):
 
 #############################################
 
+def FitGaussianToFluxAlongLine(flux_array, start_point, end_point, arm_number, edge_line_number):
+
+    """
+    Fit a gaussian to the flux distribution along a line
+
+    Parameters
+    -----------
+    flux_array - 2D array,
+                 raw image array
+
+    start_point - 1D array
+                  Co-ordinates of line start point (x,y)
+
+    end_point - 1D array
+                Co-ordinates of line end point (x,y)
+
+    Returns
+    -----------
+
+    Notes
+    -----------
+    """
+
+    # Ensure x co-ordinate of end_point > x co-ordinate of start_point
+    if start_point[0] > end_point[0]:
+        temp_end_point = end_point; end_point = start_point; start_point = temp_end_point
+
+    # Get the flux distribution along the line
+    x_values, flux_values = GetFluxDistributionAlongLine(flux_array, start_point, end_point)
+
+    # Fit a Gaussian to the data
+    mean = sum(x_values * flux_values)
+    sigma = sum(flux_values * (x_values - mean)**2)
+    popt, pcov = curve_fit(Gauss, x_values, flux_values, p0 = [1, mean, sigma])
+
+    x_mean = popt[1]
+    x_sigma = abs(popt[2])
+    FWHM = 2.3548200 * x_sigma      # 2 * sqrt(2 * ln(2)) * sigma
+    x_min = x_mean - (FWHM / 2)
+    x_max = x_mean + (FWHM / 2)
+
+    plt.plot(x_values, flux_values, 'o', label='data')
+    plt.plot(x_values, Gauss(x_values, *popt), label='fit')
+    plt.legend()
+
+    import os
+    plt.savefig(os.getcwd() + '/sections/FluxDistribution_' + str(arm_number) + '_' + str(edge_line_number))
+    plt.close()
+
+    #kstestResult = kstest(flux_values, lambda x: norm.cdf(x, loc=x_mean, scale=x_sigma))
+    kstestResult = kstest(flux_values, 'norm', args=(x_mean, x_sigma))
+
+    return
+
+# Define the Gaussian function
+def Gauss(x, a, x0, sigma):
+    y = a * np.exp(-(x - x0)**2 / (2 * sigma**2))
+    return y
+
+#############################################
+
+def FitGaussianAlongJetArm(flux_array, edge_points, arm_number):
+
+    """
+    Fit a gaussian to edge lines along a jet arm
+
+    Parameters
+    -----------
+    flux_array - 2D array,
+                 raw image array
+
+    edge_points - 2D array, shape(n,4)
+                  Points on one arm of the jet, corresponding to the 
+                  closest distance to that edge from the corresponding ridge point.
+
+    Returns
+    -----------
+
+    Notes
+    -----------
+    """
+
+    icnt = 0
+    for x1,y1, x2,y2, R in edge_points:
+        icnt += 1
+
+        if icnt == 1 or icnt % 10 == 0:
+            start_point = np.array([x1,y1]); end_point = np.array([x2,y2])
+            FitGaussianToFluxAlongLine(flux_array, start_point, end_point, arm_number, icnt)

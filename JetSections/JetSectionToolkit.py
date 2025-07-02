@@ -6,17 +6,17 @@ Toolkit for sections processing
 Created by LizWhitehead - Jan 2025
 """
 
-from numpy.ma import nomask
 import JetModelling_MapSetup as JMS
 import JetSections.JetSectionFiles as JSF
 import JetModelling_Constants as JMC
+import JetModelling_MapAnalysis as JMA
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
 from math import tan, atan2, atan, pow, isnan
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point, Polygon
 from regions import PixCoord, PolygonPixelRegion, Regions
 import copy
 
@@ -87,14 +87,25 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         edge_points1 = AddEdgePoints(flux_array, edge_points1)
         edge_points2 = AddEdgePoints(flux_array, edge_points2)
 
+        # Attempt to fit a Gaussian along edge lines along the jet arms
+        # JMA.FitGaussianAlongJetArm(flux_array, edge_points1, 1)
+        # JMA.FitGaussianAlongJetArm(flux_array, edge_points2, 2)
+
         # Get sections and section parameters (distance from source, flux, volume) of the jet
         section_parameters1, section_parameters2, section_perimeters1, section_perimeters2 = \
                                                   GetJetSections(flux_array, edge_points1, edge_points2)
 
-        # Save files and plot data
+        # Plot edgepoint and section data
+        # Note, this requires the start and end section R values, to look for jumps.
+        PlotEdgePointsAndSections(flux_array, JMS.sName, edge_points1, edge_points2, section_parameters1, section_parameters2)
+        
+        # Re-calculate the distance of the sections along the jet using their centre points.
+        section_parameters1 = ReCalculate_R(section_parameters1)
+        section_parameters2 = ReCalculate_R(section_parameters2)
+
+        # Save files
         SaveEdgepointAndSectionFiles(JMS.sName, edge_points1, edge_points2, section_parameters1, section_parameters2, section_perimeters1, section_perimeters2)
         SaveRegions(JMS.sName, section_perimeters1, section_perimeters2)
-        PlotEdgePointsAndSections(flux_array, JMS.sName, edge_points1, edge_points2, section_parameters1, section_parameters2)
 
     return section_parameters1, section_parameters2
 
@@ -601,6 +612,53 @@ def GetJetSections(flux_array, edge_points1, edge_points2):
     section_params_merged2, section_perimeters2 = MergeSections(section_parameters2, start_flux)
 
     return section_params_merged1, section_params_merged2, section_perimeters1, section_perimeters2
+
+#############################################
+
+def ReCalculate_R(section_parameters):
+
+    """
+    Re-calculate the distance of the sections along the jet using their centre points.
+
+    Parameters
+    -----------
+    section_parameters - 2D array, shape(n,12)
+                         Array with section points (x,y * 4), distance from source
+                         and computed parameters for this arm of the jet
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    updated_section_parameters - 2D array, shape(n,11)
+                                 Array with section points (x,y * 4), distance from source
+                                 and computed parameters for this arm of the jet
+
+    Notes
+    -----------
+    """
+
+    # Initialise updated section parameters array
+    updated_section_parameters = np.empty((0,11))
+
+    # Initialise R for the section and previous centre point
+    R_section = 0.0; prev_centre_pt = Point( (section_parameters[0,0] + section_parameters[0,2]) / 2.0, (section_parameters[0,1] + section_parameters[0,3]) / 2.0)
+
+    for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section] in section_parameters:
+
+        # Re-calculate the distance of the sections along the jet using their centre points
+        if x4 == -1:
+            centre_pt = Polygon([(x1,y1), (x2,y2), (x3,y3)]).centroid               # section with 3 vertices
+        else:
+            centre_pt = Polygon([(x1,y1), (x2,y2), (x3,y3), (x4,y4)]).centroid      # section with 4 vertices
+        R_section = R_section + np.sqrt( (centre_pt.x - prev_centre_pt.x)**2 + (centre_pt.y - prev_centre_pt.y)**2 )
+        prev_centre_pt = centre_pt
+
+        updated_section_parameters = np.vstack((updated_section_parameters, \
+                    np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, volume_section])))
+
+    return updated_section_parameters
 
 #############################################
 
@@ -1490,11 +1548,11 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
-    section_parameters1 - 2D array, shape(n,12)
+    section_parameters1 - 2D array, shape(n,11)
                           Array for one arm of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
 
-    section_parameters2 - 2D array, shape(n,12)
+    section_parameters2 - 2D array, shape(n,11)
                           Array for other arm of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
 
@@ -1516,18 +1574,18 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
 
     fileSP1 = np.column_stack((section_parameters1[:,0], section_parameters1[:,1], section_parameters1[:,2], section_parameters1[:,3], \
                                section_parameters1[:,4], section_parameters1[:,5], section_parameters1[:,6], section_parameters1[:,7], \
-                               section_parameters1[:,8], section_parameters1[:,9], section_parameters1[:,10], section_parameters1[:,11]))
+                               section_parameters1[:,8], section_parameters1[:,9], section_parameters1[:,10]))
     fileSP2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
                                section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
-                               section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10], section_parameters2[:,11]))
+                               section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10]))
     np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ', \
                header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
                       'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
-                      'section start R (pix), section end R (pix), section flux (Jy/beam), section volume (pix**3')
+                      'section R (pix), section flux (Jy/beam), section volume (pix**3')
     np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ', \
                header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
                       'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
-                      'section start R (pix), section end R (pix), section flux (Jy/beam), section volume (pix**3')
+                      'section R (pix), section flux (Jy/beam), section volume (pix**3')
 
     fileSR1 = section_perimeters1
     fileSR2 = section_perimeters2
@@ -1598,6 +1656,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
 
     """
     Plots the edge points and jet sections on the source.
+    Note, this requires the start and end section R values, to look for jumps.
 
     Parameters
     -----------
@@ -1717,6 +1776,12 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                 ep_count = 1    # reset counter
         last_ep = ep
 
+    # Plot centre line in red, to make it obvious
+    ep = edge_points1[0,:]
+    x_values = np.array([ep[0], ep[2]])
+    y_values = np.array([ep[1], ep[3]])
+    ax.plot(x_values, y_values, 'r-', linewidth=0.8)
+
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.1)
     fig.colorbar(c, cax = cax)
@@ -1741,7 +1806,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-        if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R_es):             # If gap is too big, plot last separator
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R_es):          # If gap is too big, plot last separator
             PlotLastSegment(ax, last_sp)
         last_sp = sp
     PlotLastSegment(ax, sp)                                                             # Plot last separator
@@ -1752,10 +1817,16 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-        if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R_es):             # If gap is too big, plot last separator
+        if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R_es):          # If gap is too big, plot last separator
             PlotLastSegment(ax, last_sp)
         last_sp = sp
     PlotLastSegment(ax, sp)                                                             # Plot last separator
+
+    # Plot centre line in red, to make it obvious
+    sp = section_parameters1[0,:]
+    x_values = np.array([sp[0], sp[2]])
+    y_values = np.array([sp[1], sp[3]])
+    ax.plot(x_values, y_values, 'r-', linewidth=0.8)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.1)

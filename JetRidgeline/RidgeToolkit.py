@@ -2307,15 +2307,9 @@ def SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, p
 
         else:
         
-            # Find the point of least flux along a line between points either side of the jet
-            if point_arm1_x < point_arm2_x:
-                start_point = np.array([point_arm1_x, point_arm1_y])
-                end_point = np.array([point_arm2_x, point_arm2_y])
-            else:
-                start_point = np.array([point_arm2_x, point_arm2_y])
-                end_point = np.array([point_arm1_x, point_arm1_y])
-
-            # Get source pixel x/y position
+            # Find the point of least flux along a line between points either side of the jet - the source pixel x/y position 
+            start_point = np.array([point_arm1_x, point_arm1_y])
+            end_point = np.array([point_arm2_x, point_arm2_y])
             sCentre_x, sCentre_y = JMA.GetMinimumFluxAlongLine(area_fluxes, start_point, end_point)
 
         sCentre = np.array([sCentre_x, sCentre_y])                          # new centre point
