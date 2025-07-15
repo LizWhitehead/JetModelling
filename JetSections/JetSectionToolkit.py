@@ -87,13 +87,12 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         edge_points1 = AddEdgePoints(flux_array, edge_points1)
         edge_points2 = AddEdgePoints(flux_array, edge_points2)
 
-        # Attempt to fit a Gaussian along edge lines along the jet arms
-        # JMA.FitGaussianAlongJetArm(flux_array, edge_points1, 1)
-        # JMA.FitGaussianAlongJetArm(flux_array, edge_points2, 2)
+        # Refine the edges using a percentile of the flux distribution
+        edge_points1 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points1)
+        edge_points2 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points2)
 
         # Get sections and section parameters (distance from source, flux, volume) of the jet
-        section_parameters1, section_parameters2, section_perimeters1, section_perimeters2 = \
-                                                  GetJetSections(flux_array, edge_points1, edge_points2)
+        section_parameters1, section_parameters2, section_perimeters1, section_perimeters2 = GetJetSections(flux_array, edge_points1, edge_points2)
 
         # Plot edgepoint and section data
         # Note, this requires the start and end section R values, to look for jumps.

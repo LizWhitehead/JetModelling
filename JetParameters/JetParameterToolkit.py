@@ -51,22 +51,6 @@ def GetJetParameters(section_parameters1, section_parameters2):
     section_parameters1 = SetRequiredUnits(section_parameters1)
     section_parameters2 = SetRequiredUnits(section_parameters2)
 
-    ########################################################################
-    # import io
-    # judedata1 = []; judedata2 = []
-    # with io.open("C:\Other GIT Repositories\JetContent Judith\oldtext\JudeData1.txt", mode="r", encoding="utf-8") as f:
-    #     for line in f:
-    #         data1 = line.split()
-    #         judedata1.append([float(data1[0]), float(data1[1]), float(data1[2])])
-    # with io.open("C:\Other GIT Repositories\JetContent Judith\oldtext\JudeData2.txt", mode="r", encoding="utf-8") as f:
-    #     for line in f:
-    #         data2 = line.split()
-    #         judedata2.append([float(data2[0]), float(data2[1]), float(data2[2])])
-
-    # jet_parameters1 = GetParametersForJetArm(judedata1)
-    # jet_parameters2 = GetParametersForJetArm(judedata2)
-    ########################################################################
-
     # Compute parameters for each arm of the jet
     print('Computing jet parameters')
     jet_parameters1 = GetParametersForJetArm(section_parameters1)
@@ -113,16 +97,14 @@ def GetParametersForJetArm(section_parameters):
     arcsec_to_kpc = JMS.angScale                                    # arcsec to kpc conversion
 
     # Loop through section parameters array for one arm of the jet
-    ##################################################################################
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, volume_section] in section_parameters:
-    #for [R_section, flux_section, volume_section] in section_parameters:
-    ##################################################################################
 
+        eIndex = (2 * JMS.spectral_index) + 1                       # Electron energy ("injection") index
         equivSphereR = pow((volume_section / (pi * 4/3)), 1/3.0)    # Radius of equivalent sphere with volume of section
         cosmo = FlatLambdaCDM(H0=70, Om0=0.3)                       # Cosmology
-        eIndex = (2 * 0.55) + 1                                     # Electron energy ("injection") index
+
         s = SynchSource(type='sphere', gmin=10, gmax=1e4, z=JMS.rShift, injection=eIndex, spectrum='powerlaw', cosmology=cosmo, asph=equivSphereR)
-        s.normalize(freq=JMS.freq, flux=flux_section, method='equipartition', brange=(1e-11,1e-7))
+        s.normalize(freq=JMS.freq, flux=flux_section, zeta=(1 + JMS.kappa), method='equipartition', brange=(1e-11,1e-7))
 
         R_section_m = R_section * arcsec_to_kpc * JPC.kpc_to_m                          # section distance from source (m)
         R_section_kpc = R_section * arcsec_to_kpc                                       # section distance from source (kpc)

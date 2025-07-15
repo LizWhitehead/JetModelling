@@ -28,6 +28,7 @@ MaxRFactor = 100                # Maximum factor for increase of step size befor
 R_es = 5                        # Step size along the jet in pixels
 MinIntpolFactor = 1.5           # Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6           # Maximum number of interpolated points along an edgeline
+flux_percentile = 100           # Flux percentile limit for refining jet edges (100 => no change)
 
 # Jet Sections
 MinSectionsPerArm = 25          # Minimum number of merged sections per arm of the jet
