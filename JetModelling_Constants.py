@@ -6,6 +6,8 @@ Constants for JetModelling project
 Created by LizWhitehead - 08/05/2025
 """
 
+from math import nan
+
 debug = True                    # Turns on debug print statements if True
 ridgeline_only = False          # Run ridgeline code only
 
@@ -39,6 +41,7 @@ PercChangeInMaxFlux = 10        # Percentage change in max flux for each merge i
 # Regions
 x_offset = 0                    # x offset of the region co-ordinates to full image co-ordinates in pixels
 y_offset = 0                    # y offset of the region co-ordinates to full image co-ordinates in pixels
+max_vertices = 500              # maximum number of vertices in a region polygon
 
 # Plotting
 ImFraction = 0.5                # The fraction of the source the final image is cut down to for plotting

@@ -724,7 +724,7 @@ def MergeSections(section_parameters, start_flux):
     -----------
     """
     # Set perimeter array size
-    pSize = 300
+    pSize = JMC.max_vertices
 
     # Initialise perimeter array
     perimeter_array = np.empty((0,pSize))
@@ -1297,63 +1297,86 @@ def GetVolume(polypoints):
         # 3 points in polygon
         base_points, top_point = Setup3PointPolygon(polypoints)
 
-        # Calculate the volume
-        cone_R = base_points[1,0] / 2                                           # Radius of cone base.
-        cone_cotPhi = top_point[1] / top_point[0]                               # cot of cone half-angle.
-        cone_H = cone_R * cone_cotPhi                                           # Height of cone.
-        cone_slant_m = np.abs(top_point[1] / (base_points[1,0] - top_point[0])) # Gradient of slant plane.
-        cone_tanTheta = cone_slant_m                                            # Angle from horizontal of slant plane.
-
-        # If theta >= (pi/2 - phi), the cone is very flat and the calculation becomes infinite.
-        # In this case, the volume is very small, so assume zero.
-        phi_rdns = atan(1.0/cone_cotPhi)
-        theta_rdns = atan(cone_tanTheta)
-        if theta_rdns < (pi/2 - phi_rdns):
-            # Volume of top of the cone, from the vertex down to the slant plane
-            cone_volume_top = pi/3 * cone_R**2 * cone_H * \
-                              pow( ((cone_H - (cone_tanTheta * cone_R)) / (cone_H + (cone_tanTheta * cone_R))), 3/2)
-
-            # Total volume of the cone
-            cone_volume = pi/3 * cone_R**2 * cone_H
-
-            # Volume of the base of the cone, from the base up to the slant plane
-            cone_volume_base = cone_volume - cone_volume_top
+        # Calculate the volume.
+        # Assume the volume is of the base of a cone, sliced by a slant plane down to the X axis.
+        if (base_points[1,0] - top_point[0]) == 0.0:                            # Test the gradient of the slant plane
+            # Gradient of slant line is infinite. Assume the volume is given by a sliced cylinder.
+            cylinder_H = top_point[1]                                           # Height of cylinder
+            cylinder_R = base_points[1,0] / 2                                   # Radius of cylinder
+            section_volume = pi * cylinder_R**2 * cylinder_H / 2
         else:
-            cone_volume_base = 0.0
+            cone_R = base_points[1,0] / 2                                           # Radius of cone base.
+            cone_cotPhi = top_point[1] / top_point[0]                               # cot of cone half-angle.
+            cone_H = cone_R * cone_cotPhi                                           # Height of cone.
+            cone_slant_m = np.abs(top_point[1] / (base_points[1,0] - top_point[0])) # Gradient of slant plane.
+            cone_tanTheta = cone_slant_m                                            # Angle from horizontal of slant plane.
 
-        section_volume = cone_volume_base
+            # If theta >= (pi/2 - phi), the calculation becomes infinite.
+            # In this case, assume the volume is given by a sliced cylinder.
+            phi_rdns = atan(1.0/cone_cotPhi)
+            theta_rdns = atan(cone_tanTheta)
+            if theta_rdns < (pi/2 - phi_rdns):
+
+                # Volume of top of the cone, from the vertex down to the slant plane
+                cone_volume_top = pi/3 * cone_R**2 * cone_H * \
+                                  pow( ((cone_H - (cone_tanTheta * cone_R)) / (cone_H + (cone_tanTheta * cone_R))), 3/2)
+
+                # Total volume of the cone
+                cone_volume = pi/3 * cone_R**2 * cone_H
+
+                # Volume of the base of the cone, from the base up to the slant plane
+                cone_volume_base = cone_volume - cone_volume_top
+                section_volume = cone_volume_base
+
+            else:                                                                   # Assume sliced cylinder
+                cylinder_H = top_point[1]                                           # Height of cylinder
+                cylinder_R = base_points[1,0] / 2                                   # Radius of cylinder
+                section_volume = pi * cylinder_R**2 * cylinder_H / 2
 
     else:
         # 4 points in polygon
         base_points, top_points = Setup4PointPolygon(polypoints)
 
-        # Calculate the volume
-        cone_R = base_points[1,0] / 2                                                                       # Radius of cone base.
-        cone_cotPhi = top_points[0,1] / top_points[0,0]                                                     # cot of cone half-angle.
-        cone_H = cone_R * cone_cotPhi                                                                       # Height of cone.
-        cone_slant_m = np.abs((top_points[1,1] - top_points[0,1]) / (top_points[1,0] - top_points[0,0]))    # Gradient of slant plane.
-        cone_tanTheta = cone_slant_m                                                                        # Angle from horizontal of slant plane.
-        cone_h1 = ( cone_slant_m * (base_points[1,0] / 2) ) + top_points[0,1]                               # Distance of slant plane above
-                                                                                                            # the base, along the cone axis.
-        cone_h = cone_H - cone_h1                                                                           # Distance of slant plane from the
-                                                                                                            # vertex, along the cone axis.
-        # If theta >= (pi/2 - phi), the cone is very flat and the calculation becomes infinite.
-        # In this case, the volume is very small, so assume zero.
-        phi_rdns = atan(1.0/cone_cotPhi)
-        theta_rdns = atan(cone_tanTheta)
-        if theta_rdns < (pi/2 - phi_rdns):
-        # Volume of top of the cone, from the vertex down to the slant plane
-            cone_volume_top = (pi/3 * pow(cone_h,3) * cone_cotPhi) / pow( (cone_cotPhi**2 - cone_tanTheta**2), 3/2)
-
-            # Total volume of the cone
-            cone_volume = pi/3 * cone_R**2 * cone_H
-
-            # Volume of the base of the cone, from the base up to the slant plane
-            cone_volume_base = cone_volume - cone_volume_top
+        # Calculate the volume.
+        # Assume the volume is of the base of a cone, sliced by a slant plane.
+        if (top_points[1,0] - top_points[0,0]) == 0.0:                              # Test the gradient of the slant plane
+            # Gradient  of slant line is infinite. Assume the volume is given by a sliced cylinder.
+            cylinder_H1 = top_points[0,1]                                           # First height of cylinder
+            cylinder_H2 = top_points[1,1]                                           # Second height of cylinder
+            cylinder_R = base_points[1,0] / 2                                       # Radius of cylinder
+            section_volume = pi * cylinder_R**2 * (cylinder_H1 + cylinder_H2) / 2
         else:
-            cone_volume_base = 0.0
+            cone_R = base_points[1,0] / 2                                                                       # Radius of cone base.
+            cone_cotPhi = top_points[0,1] / top_points[0,0]                                                     # cot of cone half-angle.
+            cone_H = cone_R * cone_cotPhi                                                                       # Height of cone.
+            cone_slant_m = np.abs((top_points[1,1] - top_points[0,1]) / (top_points[1,0] - top_points[0,0]))    # Gradient of slant plane.
+            cone_tanTheta = cone_slant_m                                                                        # Angle from horizontal of slant plane.
+            if top_points[0,1] < top_points[1,1]:                                       # Test for the smallest side
+                cone_h1 = ( cone_slant_m * (base_points[1,0] / 2) ) + top_points[0,1]   # Distance of slant plane above the base, along the cone axis.
+            else:
+                cone_h1 = ( cone_slant_m * (base_points[1,0] / 2) ) + top_points[1,1]   # Distance of slant plane above the base, along the cone axis.
+            cone_h = cone_H - cone_h1                                                   # Distance of slant plane from the vertex, along the cone axis.
 
-        section_volume = cone_volume_base
+            # If theta >= (pi/2 - phi), the calculation becomes infinite.
+            # In this case, assume the volume is given by a sliced cylinder.
+            phi_rdns = atan(1.0/cone_cotPhi)
+            theta_rdns = atan(cone_tanTheta)
+            if theta_rdns < (pi/2 - phi_rdns):
+
+                # Volume of top of the cone, from the vertex down to the slant plane
+                cone_volume_top = (pi/3 * pow(cone_h,3) * cone_cotPhi) / pow( (cone_cotPhi**2 - cone_tanTheta**2), 3/2)
+
+                # Total volume of the cone
+                cone_volume = pi/3 * cone_R**2 * cone_H
+
+                # Volume of the base of the cone, from the base up to the slant plane
+                cone_volume_base = cone_volume - cone_volume_top
+                section_volume = cone_volume_base
+            else:                                                                   # Assume sliced cylinder
+                cylinder_H1 = top_points[0,1]                                       # First height of cylinder
+                cylinder_H2 = top_points[1,1]                                       # Second height of cylinder
+                cylinder_R = base_points[1,0] / 2                                   # Radius of cylinder
+                section_volume = pi * cylinder_R**2 * (cylinder_H1 + cylinder_H2) / 2
 
     return section_volume
 
@@ -1489,39 +1512,42 @@ def Setup4PointPolygon(polypoints):
     base_points[0,0] = 0.0; base_points[0,1] = 0.0                  # Ensure first base point is exactly at the origin
     base_points[1,1] = 0.0                                          # Ensure second base point lies exactly on the X axis
 
-    # If the top points have -ve Y co-ordinates, reflect around the X axis
-    if top_points[0,1] < 0:
-        top_points[0,1] = - top_points[0,1]; top_points[1,1] = - top_points[1,1]
+    # If the top points have -ve Y co-ordinates, reflect around the X axis.
+    # [Note that, after identifying the base points as the longest line, it is rare that one of the
+    #  top points is above and one below the X axis. In this case, one will only be slightly below.]
+    if top_points[0,1] < 0: top_points[0,1] = - top_points[0,1]
+    if top_points[1,1] < 0: top_points[1,1] = - top_points[1,1]
 
     # If the gradient of the first side is negative or the gradient of the second side is positive,
-    # move the X co-ordinate such that the gradient is negated. This may happen for the short side
-    # of the polygon, when at a bend in the jet.
-    if (top_points[0,0] - base_points[0,0]) < 0:
-        top_points[0,0] += np.abs(top_points[0,0]-base_points[0,0]) * 2
-    if (top_points[1,0] - base_points[1,0]) > 0:
-        top_points[1,0] -= np.abs(top_points[1,0]-base_points[1,0]) * 2
+    # move the X co-ordinate such that the side is vertical.
+    if (top_points[0,0] - base_points[0,0]) < 0: top_points[0,0] = base_points[0,0]
+    if (top_points[1,0] - base_points[1,0]) > 0: top_points[1,0] = base_points[1,0]
 
     # If the sides of the polygon are less than 1 degree from the vertical, move the   
-    # top co-ordinates to make the sides 1 degree from the vertical
+    # top co-ordinates to make the sides 1 degree from the vertical.
     if atan2(top_points[0,0], top_points[0,1]) < pi*1/180:
         top_points[0,0] = top_points[0,1] * tan(pi*1/180)
     if atan2((base_points[1,0] - top_points[1,0]), top_points[1,1]) < pi*1/180:
         top_points[1,0] = base_points[1,0] - (top_points[1,1] * tan(pi*1/180))
 
-    # Make an approximation. Move the top co-ordinates such that the gradient of the shortest
-    # side is the same (although opposite) as that of the longest side.
-    length_side1 = np.sqrt( (top_points[0,0]-base_points[0,0])**2 + (top_points[0,1]-base_points[0,1])**2 )
-    length_side2 = np.sqrt( (top_points[1,0]-base_points[1,0])**2 + (top_points[1,1]-base_points[1,1])**2 )
-    grad_side1 = (top_points[0,1] - base_points[0,1]) / (top_points[0,0] - base_points[0,0])
-    grad_side2 = (top_points[1,1] - base_points[1,1]) / (top_points[1,0] - base_points[1,0])
-    if length_side1 < length_side2:
-        base_points[0,0] = top_points[0,0] - ( (top_points[0,1]-base_points[0,1]) / (- grad_side2) )
-        offset = np.array([base_points[0,0], base_points[0,1]])
-        base_points -= offset; top_points -= offset 
-        base_points[0,0] = 0.0; base_points[0,1] = 0.0              # Ensure first base point is exactly at the origin
-        base_points[1,1] = 0.0                                      # Ensure second base point lies exactly on the X axis
+    if (top_points[0,0] - base_points[0,0]) == 0.0 or (top_points[1,0] - base_points[1,0]) == 0.0:
+        # This can still be the case if dimensions are small. In this case, leave the co-ordinates as they are.
+        None
     else:
-        base_points[1,0] = top_points[1,0] - ( (top_points[1,1]-base_points[1,1]) / (- grad_side1) )
+        # Make an approximation. Move the co-ordinates such that the gradient of the shortest
+        # side is the same (although opposite) as that of the longest side.
+        length_side1 = np.sqrt( (top_points[0,0]-base_points[0,0])**2 + (top_points[0,1]-base_points[0,1])**2 )
+        length_side2 = np.sqrt( (top_points[1,0]-base_points[1,0])**2 + (top_points[1,1]-base_points[1,1])**2 )
+        grad_side1 = (top_points[0,1] - base_points[0,1]) / (top_points[0,0] - base_points[0,0])
+        grad_side2 = (top_points[1,1] - base_points[1,1]) / (top_points[1,0] - base_points[1,0])
+        if length_side1 < length_side2:
+            base_points[0,0] = top_points[0,0] - ( (top_points[0,1]-base_points[0,1]) / (- grad_side2) )
+            offset = np.array([base_points[0,0], base_points[0,1]])
+            base_points -= offset; top_points -= offset 
+            base_points[0,0] = 0.0; base_points[0,1] = 0.0              # Ensure first base point is exactly at the origin
+            base_points[1,1] = 0.0                                      # Ensure second base point lies exactly on the X axis
+        else:
+            base_points[1,0] = top_points[1,0] - ( (top_points[1,1]-base_points[1,1]) / (- grad_side1) )
 
     return base_points, top_points
 
@@ -1586,8 +1612,24 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
                       'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
                       'section R (pix), section flux (Jy/beam), section volume (pix**3')
 
-    fileSR1 = section_perimeters1
-    fileSR2 = section_perimeters2
+    maxlen = 0
+    for sp in section_perimeters1:
+        spCoordCnt = 0
+        for sp_coord in sp:
+            spCoordCnt += 1
+            if isnan(sp_coord):
+                if spCoordCnt > maxlen: maxlen = spCoordCnt     # maximum length of output record
+                break
+    fileSR1 = section_perimeters1[:,0:maxlen]
+    maxlen = 0
+    for sp in section_perimeters2:
+        spCoordCnt = 0
+        for sp_coord in sp:
+            spCoordCnt += 1
+            if isnan(sp_coord):
+                if spCoordCnt > maxlen: maxlen = spCoordCnt     # maximum length of output record
+                break
+    fileSR2 = section_perimeters2[:,0:maxlen]
     np.savetxt(JSF.SR1 %source_name, fileSR1, delimiter=' ')
     np.savetxt(JSF.SR2 %source_name, fileSR2, delimiter=' ')
 
