@@ -20,8 +20,8 @@ R_rl = 5                        # Step size of ridgeline in pixels
 dphi = 60                       # Half angle of search cone
 
 # Ridgelines (from data)
-ridgelines_from_data_arm1 = 'C:/Maps/NGC1044_ridge1.txt'    # Input data file for arm1
-ridgelines_from_data_arm2 = 'C:/Maps/NGC1044_ridge2.txt'    # Input data file for arm2
+ridgelines_from_data_arm1 = 'C:/Maps/NGC1044_ridge1_new.txt'    # Input data file for arm1
+ridgelines_from_data_arm2 = 'C:/Maps/NGC1044_ridge2_new.txt'    # Input data file for arm2
 R_fd = 6                                                    # Maximum step size of ridgeline in pixels
 
 # Edgepoints
@@ -33,6 +33,7 @@ MaxIntpolSections = 6           # Maximum number of interpolated points along an
 flux_percentile = 100           # Flux percentile limit for refining jet edges (100 => no change)
 
 # Jet Sections
+MergeStartFluxFactor = 2        # Multiplication factor of max flux in arm, for starting flux in merge algorithm
 MinSectionsPerArm = 25          # Minimum number of merged sections per arm of the jet
 MaxSectionsPerArm = 60          # Maximum number of merged sections per arm of the jet
 MaxMergeIterations = 20         # Maximum number of iterations to merge sections to within required number
@@ -41,7 +42,7 @@ PercChangeInMaxFlux = 10        # Percentage change in max flux for each merge i
 # Regions
 x_offset = 0                    # x offset of the region co-ordinates to full image co-ordinates in pixels
 y_offset = 0                    # y offset of the region co-ordinates to full image co-ordinates in pixels
-max_vertices = 500              # maximum number of vertices in a region polygon
+max_vertices = 2000             # maximum number of vertices in a region polygon
 
 # Plotting
 ImFraction = 0.5                # The fraction of the source the final image is cut down to for plotting

@@ -163,8 +163,14 @@ def RefineEdgesFromFluxPercentileWidth(flux_array, start_point, end_point):
     # Get the flux distribution along the line
     x_axis_values, flux_values = GetFluxDistributionAlongLine(flux_array, start_point, end_point)
 
-    # Get min and max x values for defined percentile width
+    # Get limiting percentile flux value
     flux_value_limit = np.max(flux_values) * (100 - JMC.flux_percentile) / 100.0
+    if flux_value_limit < 0.0:
+        # Add enough to make flux values positive
+        flux_values += abs(np.min(flux_values))
+        flux_value_limit = np.max(flux_values) * (100 - JMC.flux_percentile) / 100.0
+
+    # Get min and max x values for defined percentile width
     icnt = -1
     for flux in flux_values:                        # Values with increasing x
         icnt += 1

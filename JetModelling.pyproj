@@ -23,12 +23,14 @@
     <Compile Include="JetModelling_Constants.py" />
     <Compile Include="JetModelling_MapAnalysis.py" />
     <Compile Include="JetModelling_MapSetup.py" />
+    <Compile Include="JetModelling_SourceSetup.py" />
     <Compile Include="JetParameters\JetParameterFiles.py" />
     <Compile Include="JetParameters\JetParameters.py" />
     <Compile Include="JetParameters\JetParameterToolkit.py" />
     <Compile Include="JetParameters\JPConstants.py" />
     <Compile Include="JetParameters\JPSetup.py" />
     <Compile Include="JetParameters\JPSynchro.py" />
+    <Compile Include="JetParameters\JPKSynch.py" />
     <Compile Include="JetRidgeline\LotssCatalogue\sizeflux_tools.py" />
     <Compile Include="JetRidgeline\LotssCatalogue\subim.py" />
     <Compile Include="JetRidgeline\RidgelineFiles.py" />
@@ -49,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="JetModellingC\" />
+    <Folder Include="JetModellingC\Ksynch\" />
     <Folder Include="JetModellingC\Synch\" />
     <Folder Include="JetModellingC\Synch\.vs\" />
     <Folder Include="JetModellingC\Synch\.vs\Synch\" />
@@ -72,6 +75,11 @@
     <Folder Include="JetSections\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="JetModellingC\Ksynch\integ.h" />
+    <Content Include="JetModellingC\Ksynch\ksynch.c" />
+    <Content Include="JetModellingC\Ksynch\Ksynch.vcxproj" />
+    <Content Include="JetModellingC\Ksynch\Ksynch.vcxproj.filters" />
+    <Content Include="JetModellingC\Ksynch\Ksynch.vcxproj.user" />
     <Content Include="JetModellingC\Synch\.vs\Synch\FileContentIndex\0d62ce67-1898-491b-a9fa-3d523b14dab1.vsidx" />
     <Content Include="JetModellingC\Synch\.vs\Synch\FileContentIndex\cdeee44c-e099-47c8-9adb-7f671abe5bed.vsidx" />
     <Content Include="JetModellingC\Synch\.vs\Synch\v17\.suo" />

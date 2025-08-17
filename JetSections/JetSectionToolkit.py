@@ -605,9 +605,9 @@ def GetJetSections(flux_array, edge_points1, edge_points2):
 
     # Merge sections to within a required count range for each arm of the jet. Create regions for merged sections.
     print('Merging sections and creating section DS9 regions')
-    start_flux = np.max(section_parameters1[:,10])          # Take start flux as maximum arm value
+    start_flux = JMC.MergeStartFluxFactor * np.max(section_parameters1[:,10])          # Take start flux as multiple of the maximum arm flux
     section_params_merged1, section_perimeters1 = MergeSections(section_parameters1, start_flux)
-    start_flux = np.max(section_parameters2[:,10])          # Take start flux as maximum arm value
+    start_flux = JMC.MergeStartFluxFactor * np.max(section_parameters2[:,10])          # Take start flux as multiple of the maximum arm flux
     section_params_merged2, section_perimeters2 = MergeSections(section_parameters2, start_flux)
 
     return section_params_merged1, section_params_merged2, section_perimeters1, section_perimeters2
@@ -773,7 +773,7 @@ def MergeSections(section_parameters, start_flux):
 
             # Test whether we have jumped over too large a gap. Don't merge across the gap. Otherwise ...
             # Test whether maximum flux achieved.
-            # Take the first section separately, as this is used for the initial maximum flux value.
+            # Take the first section separately, to ensure the middle sections are not too large.
             # But the merged section must ALWAYS be larger than the beam size.
             if ( (R_section_start - last_R_section_end) > (JMC.MaxRFactor * JMC.R_es) ) or \
                ( (merged_flux >= max_flux or sect_count == 1) and LargerThanBeamSize(merged_section_coords) ):
@@ -1299,8 +1299,8 @@ def GetVolume(polypoints):
 
         # Calculate the volume.
         # Assume the volume is of the base of a cone, sliced by a slant plane down to the X axis.
-        if (base_points[1,0] - top_point[0]) == 0.0:                            # Test the gradient of the slant plane
-            # Gradient of slant line is infinite. Assume the volume is given by a sliced cylinder.
+        if (base_points[1,0] - top_point[0]) == 0.0 or top_point[1] == 0.0:     # Test the gradient of the slant plane
+            # Gradient of slant line is infinite or zero. Assume the volume is given by a sliced cylinder.
             cylinder_H = top_point[1]                                           # Height of cylinder
             cylinder_R = base_points[1,0] / 2                                   # Radius of cylinder
             section_volume = pi * cylinder_R**2 * cylinder_H / 2
@@ -1339,8 +1339,8 @@ def GetVolume(polypoints):
 
         # Calculate the volume.
         # Assume the volume is of the base of a cone, sliced by a slant plane.
-        if (top_points[1,0] - top_points[0,0]) == 0.0:                              # Test the gradient of the slant plane
-            # Gradient  of slant line is infinite. Assume the volume is given by a sliced cylinder.
+        if (top_points[1,0] - top_points[0,0]) == 0.0 or top_points[0,1] == 0.0:    # Test the gradient of the slant plane
+            # Gradient  of slant line is infinite or zero. Assume the volume is given by a sliced cylinder.
             cylinder_H1 = top_points[0,1]                                           # First height of cylinder
             cylinder_H2 = top_points[1,1]                                           # Second height of cylinder
             cylinder_R = base_points[1,0] / 2                                       # Radius of cylinder
@@ -1780,6 +1780,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
     c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+    c.set_array(A)
 
     epcount = 0
     for ep in edge_points1:
@@ -1840,6 +1841,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
     c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+    c.set_array(A)
 
     spcount = 0
     for sp in section_parameters1:

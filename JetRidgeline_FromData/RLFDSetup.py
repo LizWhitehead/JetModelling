@@ -36,6 +36,6 @@ def Setup():
 
     # Get the flux array from the map file
     hdu = fits.open(JMS.map_file)
-    flux_array = hdu[0].data
+    flux_array = hdu[0].data.squeeze()
 
     return flux_array
