@@ -44,6 +44,10 @@
     <Compile Include="JetRidgeline_FromData\Ridgelines_FromData.py" />
     <Compile Include="JetRidgeline_FromData\RidgeToolkit_FromData.py" />
     <Compile Include="JetRidgeline_FromData\RLFDSetup.py" />
+    <Compile Include="JetRidgeline_Skeletonize\RidgelineFiles_Skeletonize.py" />
+    <Compile Include="JetRidgeline_Skeletonize\Ridgelines_Skeletonize.py" />
+    <Compile Include="JetRidgeline_Skeletonize\RidgeToolkit_Skeletonize.py" />
+    <Compile Include="JetRidgeline_Skeletonize\RLSSetup.py" />
     <Compile Include="JetSections\JetSectionFiles.py" />
     <Compile Include="JetSections\JetSections.py" />
     <Compile Include="JetSections\JetSectionToolkit.py" />
@@ -72,6 +76,7 @@
     <Folder Include="JetRidgeline_FromData\" />
     <Folder Include="JetRidgeline_FromData\LotssCatalogue\" />
     <Folder Include="JetRidgeline_FromData\LotssCatalogue\__pycache__\" />
+    <Folder Include="JetRidgeline_Skeletonize\" />
     <Folder Include="JetSections\" />
   </ItemGroup>
   <ItemGroup>

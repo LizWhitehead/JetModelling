@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-RidgelineFiles_FromData.py
+RidgelineFiles_Skeletonize.py
 Define folder and file names.
-Created by LizWhitehead - 21/06/2025
+Created by LizWhitehead - 24/08/2025
 """
 
 import os

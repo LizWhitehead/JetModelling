@@ -4,25 +4,48 @@
 JetModelling_Constants.py
 Constants for JetModelling project
 Created by LizWhitehead - 08/05/2025
+
+Note: The first jet arm (North) is considered to be that with the highest Y values.
 """
 
+import numpy as np
 from math import nan
+from enum import Enum
+
+class RidgelineMethod(Enum):
+    RLXID = 1
+    FROMDATA = 2
+    SKELETONIZE = 3
 
 debug = True                    # Turns on debug print statements if True
 ridgeline_only = False          # Run ridgeline code only
+eqtol = 0.0001                  # Tolerance for testing equality of float values
+nSig_arms = np.array([1.5,4.0]) # The multiple of sigma for the RMS reduction for each jet arm
 
 # Ridgelines (general)
-ridgelines_from_data = True     # Create ridgelines from existing ridgeline data
-ridge_centre_search_points = 6  # Number of ridgepoints on either side of first point to search for source position
+ridgeline_method = RidgelineMethod.SKELETONIZE  # Method for creating ridgelines
+ridge_centre_search_points = 7  # Number of ridgepoints on either side of first point to search for source position
 
 # Ridgelines (RL-Xid)
 R_rl = 5                        # Step size of ridgeline in pixels
 dphi = 60                       # Half angle of search cone
+nSig = 13.5                     # The multiple of sigma for the RMS reduction
 
 # Ridgelines (from data)
-ridgelines_from_data_arm1 = 'C:/Maps/NGC1044_ridge1_new.txt'    # Input data file for arm1
-ridgelines_from_data_arm2 = 'C:/Maps/NGC1044_ridge2_new.txt'    # Input data file for arm2
-R_fd = 6                                                    # Maximum step size of ridgeline in pixels
+ridgelines_from_data_arm1 = 'C:/Maps/3C31_ridge_coords1.txt'    # Input data file for arm1
+ridgelines_from_data_arm2 = 'C:/Maps/3C31_ridge_coords2.txt'    # Input data file for arm2
+R_fd = 6                        # Maximum step size of ridgeline in pixels
+
+# Ridgelines (skeletonize)
+CutdownSize0 = 1000; CutDownSize1 = 1000    # Cut-down size of image for skeletonize
+GaussSigmaFilter = 35           # Sigma level for thresholding
+ContoursLevelPerc = 80          # Percentile level for finding contours
+MaxContourLength = 1000         # Maximum allowed length for contours
+MaxRemoveSmallHolesArea = 200   # Maximum area of "holes" in skeleton that will be removed
+MaximumLoopJumpPixels = 20      # Maximum jump between points, used in finding "loops"
+nSig_s = 12                     # The multiple of sigma for RMS reduction; nan if not required
+SplitInnerOuterSkeleton = True; nSig_s_outer = nan; JoinInterpolatePoints = 6     #  Values used if joining together skeletons for inner and outer jets
+R_s = 6                         # Maximum step size of ridgeline in pixels
 
 # Edgepoints
 search_angle = 30               # Edgepoint search angle in degrees
@@ -30,22 +53,22 @@ MaxRFactor = 100                # Maximum factor for increase of step size befor
 R_es = 5                        # Step size along the jet in pixels
 MinIntpolFactor = 1.5           # Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6           # Maximum number of interpolated points along an edgeline
-flux_percentile = 100           # Flux percentile limit for refining jet edges (100 => no change)
+flux_percentile = 50            # Flux percentile limit for refining jet edges (100 => no change)
 
 # Jet Sections
-MergeStartFluxFactor = 2        # Multiplication factor of max flux in arm, for starting flux in merge algorithm
-MinSectionsPerArm = 25          # Minimum number of merged sections per arm of the jet
+MergeStartFluxFactor = np.array([0.5,0.5])  # Multiplication factor of starting flux in merge algorithm for each jet arm
+MinSectionsPerArm = 30          # Minimum number of merged sections per arm of the jet
 MaxSectionsPerArm = 60          # Maximum number of merged sections per arm of the jet
-MaxMergeIterations = 20         # Maximum number of iterations to merge sections to within required number
+MaxMergeIterations = 10         # Maximum number of iterations to merge sections to within required number
 PercChangeInMaxFlux = 10        # Percentage change in max flux for each merge iteration
 
 # Regions
-x_offset = 0                    # x offset of the region co-ordinates to full image co-ordinates in pixels
-y_offset = 0                    # y offset of the region co-ordinates to full image co-ordinates in pixels
+x_offset = 0.0                  # x offset of the region co-ordinates to full image co-ordinates in pixels
+y_offset = 0.0                  # y offset of the region co-ordinates to full image co-ordinates in pixels
 max_vertices = 2000             # maximum number of vertices in a region polygon
 
 # Plotting
-ImFraction = 0.5                # The fraction of the source the final image is cut down to for plotting
+ImFraction = 0.9                # The fraction of the source the final image is cut down to for plotting
 flux_factor = 1                 # Factor to multiply flux by for plotting
 vmin = 0                        # Linear mapping colour range minimum
-vmax = 0.002                    # Linear mapping colour range maximum
+vmax = 0.010                    # Linear mapping colour range maximum

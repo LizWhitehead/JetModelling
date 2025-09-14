@@ -2,9 +2,9 @@
 # coding: utf-8
 
 """
-RLFDSetup.py
+RLSSetup.py
 Create a flattened 2D version of the input FITS file.
-Created by LizWhitehead - 21/06/2025
+Created by LizWhitehead - 24/08/2025
 """
 
 import JetModelling_MapSetup as JMS

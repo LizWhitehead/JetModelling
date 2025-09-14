@@ -7,24 +7,30 @@ Usage:  JetRidgeline_Main.py 'FITS file to process' -t 'Map Type [VLA,LOFAR-DR1,
 
 Author: LizWhitehead 12/11/2024
 """
-import JetModelling_Constants as JMC
-import JetRidgeline.Ridgelines as RL
-import JetRidgeline_FromData.Ridgelines_FromData as RLFD
-import JetSections.JetSections as JS
-import JetParameters.JetParameters as JP
-from warnings import simplefilter
-simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
 
-# Create the jet ridgelines
-if JMC.ridgelines_from_data:
-    flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFD.CreateRidgelines()
-else:
-    flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
+if __name__ == '__main__':      # The main function shouldn't execute for spawned parallel processes (use in ridgeline skeletonize)
 
-if not JMC.ridgeline_only:
+    import JetModelling_Constants as JMC
+    import JetRidgeline.Ridgelines as RL
+    import JetRidgeline_FromData.Ridgelines_FromData as RLFD
+    import JetRidgeline_Skeletonize.Ridgelines_Skeletonize as RLS
+    import JetSections.JetSections as JS
+    import JetParameters.JetParameters as JP
+    from warnings import simplefilter
+    simplefilter('ignore') # there is a matplotlib issue with shading on the graphs
 
-    # Divide the jet into sections by finding edge points
-    section_parameters1, section_parameters2 = JS.CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
+    # Create the jet ridgelines
+    if JMC.ridgeline_method == JMC.RidgelineMethod.FROMDATA:
+        flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFD.CreateRidgelines()
+    elif JMC.ridgeline_method == JMC.RidgelineMethod.RLXID:
+        flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
+    else:   # JMC.RidgelineMethod.SKELETONIZE
+        flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLS.CreateRidgelines()
 
-    # Compute parameters along the jet
-    JP.ComputeJetParameters(section_parameters1, section_parameters2)
+    if not JMC.ridgeline_only:
+
+        # Divide the jet into sections by finding edge points
+        section_parameters1, section_parameters2 = JS.CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
+
+        # Compute parameters along the jet
+        JP.ComputeJetParameters(section_parameters1, section_parameters2)

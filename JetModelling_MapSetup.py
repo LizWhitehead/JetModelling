@@ -8,17 +8,16 @@ Created by LizWhitehead - 18/04/2025
 
 from math import nan
 
-map_file = 'C:/Maps/NGC1044_l_band-cutout.fits'     # FITS map file
-rdel = -0.0003055555556; ddel = 0.0003055555556     # Equivalent pixel value for RA/Dec in FITS file in degrees
-nSig = 2.0                                          # The multiple of sigma for the RMS reduction
-beamsize = 6.99                                     # Beam size in arcsecs
-beamarea = 18.12937258110873                        # Beam area in pixels
-freq = 1283895507.8125                              # Observation frequency
-sName = 'NGC1044'                                   # Source name
-sRA = 40.278375                                     # Map centre RA in degrees
-sDec = 8.733833333                                  # Map centre Dec in degrees
-sSize = 1500                                        # Source size in pixels (one side of containing square)
-bgRMS = 0.000006                                    # Background flux RMS value in Jy/beam
+map_file = 'C:/Maps/3C31.HGEOM2Copy.FITS'           # FITS map file
+rdel = -0.0003611111024; ddel = 0.0003611111024     # Equivalent pixel value for RA/Dec in FITS file in degrees
+beamsize = 5                                        # Beam size in arcsecs
+beamarea = 16.76195591180468                        # Beam area in pixels
+freq = 1.636e9                                      # Observation frequency
+sName = '3C31'                                      # Source name
+sRA = 16.8217500000                                 # Map centre RA in degrees
+sDec = 32.4255277778                                # Map centre Dec in degrees
+sSize = 456                                         # Source size in pixels (one side of containing square)
+bgRMS = 0.0002                                      # Background flux RMS value in Jy/beam
 sRadioRA = nan                                      # Source (radio) centre RA in degrees
 sRadioDec = nan                                     # Source (radio) centre Dec in degrees
 # sRadioRA = 16.8539791667      # Not used to locate the source centre as not exact enough

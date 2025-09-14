@@ -165,7 +165,7 @@ def RefineEdgesFromFluxPercentileWidth(flux_array, start_point, end_point):
 
     # Get limiting percentile flux value
     flux_value_limit = np.max(flux_values) * (100 - JMC.flux_percentile) / 100.0
-    if flux_value_limit < 0.0:
+    if flux_value_limit < 0:
         # Add enough to make flux values positive
         flux_values += abs(np.min(flux_values))
         flux_value_limit = np.max(flux_values) * (100 - JMC.flux_percentile) / 100.0
@@ -236,7 +236,9 @@ def RefineEdgesAlongJetArm(flux_array, edge_points):
         for x1,y1, x2,y2, R in edge_points:
 
             start_point = np.array([x1,y1]); end_point = np.array([x2,y2])
-            start_point, end_point = RefineEdgesFromFluxPercentileWidth(flux_array, start_point, end_point)
+
+            if x1 != x2 or y1 != y2:
+                start_point, end_point = RefineEdgesFromFluxPercentileWidth(flux_array, start_point, end_point)
 
             updated_edge_points = np.vstack((updated_edge_points, np.hstack((start_point, end_point, R)) ))
 

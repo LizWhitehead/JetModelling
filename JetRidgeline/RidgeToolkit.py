@@ -1938,8 +1938,8 @@ def TrialSeries():
                 y = np.ma.masked_array(y, mask=np.ma.masked_invalid(area_fluxes_plot).mask)
                 x = np.ma.masked_array(x, mask=np.ma.masked_invalid(area_fluxes_plot).mask)
 
-                y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMS.nSig * JMS.bgRMS), y, copy=True).mask)
-                x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMS.nSig * JMS.bgRMS), x, copy=True).mask)
+                y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMC.nSig * JMS.bgRMS), y, copy=True).mask)
+                x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMC.nSig * JMS.bgRMS), x, copy=True).mask)
                 xmin = np.ma.min(x_plotlimits)
                 xmax = np.ma.max(x_plotlimits)
                 ymin = np.ma.min(y_plotlimits)

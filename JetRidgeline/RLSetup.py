@@ -8,6 +8,7 @@ Modified by:    LizWhitehead 13/11/2024 to run on a map of single AGN.
 """
 
 import JetModelling_MapSetup as JMS
+import JetModelling_Constants as JMC
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 from JetRidgeline.LotssCatalogue.subim import extract_subim
@@ -51,7 +52,7 @@ def Setup():
         nlhdu = fits.open(cutout) 
         d = nlhdu[0].data
         #thres = (1e-3) * JMS.nSig * JMS.bgRMS
-        thres = JMS.nSig * JMS.bgRMS
+        thres = JMC.nSig * JMS.bgRMS
 
         d[d<thres] = np.nan
         print ("Max val of thresholded array is:", np.nanmax(d))
