@@ -10,6 +10,7 @@ Created by LizWhitehead - 24/08/2025
 """
 
 import JetModelling_MapSetup as JMS
+import JetModelling_SourceSetup as JSS
 import JetModelling_Constants as JMC
 import JetModelling_MapAnalysis as JMA
 import JetRidgeline_Skeletonize.RidgelineFiles_Skeletonize as RLSF
@@ -21,6 +22,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from math import atan2, floor, nan, isnan
 import copy
+
+MaxContourLength = 2000     # Maximum allowed length for contours
 
 #############################################
 
@@ -78,19 +81,19 @@ def CreateSkeletonRidgeline(flux_array):
     ridge_coords2 - 2D array, shape(n,2)
                     Array of ridgepoint co-ordinates for other arm of the jet
     """
-    cutdown_amount0 = floor( (flux_array.shape[0] - JMC.CutdownSize0) / 2.0 )
-    cutdown_amount1 = floor( (flux_array.shape[1] - JMC.CutDownSize1) / 2.0 )
+    cutdown_amount0 = floor( (flux_array.shape[0] - JMS.CutdownSize0) / 2.0 )
+    cutdown_amount1 = floor( (flux_array.shape[1] - JMS.CutDownSize1) / 2.0 )
     image = flux_array[cutdown_amount0 : (flux_array.shape[0]-cutdown_amount0), \
                        cutdown_amount1 : (flux_array.shape[1]-cutdown_amount1),]
     image_orig = image.copy()
 
-    coords, image_brightest = GetSkeleton(image_orig, image, JMC.nSig_s)
+    coords, image_brightest = GetSkeleton(image_orig, image, JMS.nSig_s)
     coords1, coords2 = split_at_brightest(coords.T.tolist(), image_brightest)
     coords1 = RemoveLoopingEnds(coords1.tolist())
     coords2 = RemoveLoopingEnds(coords2.tolist())
 
-    if JMC.SplitInnerOuterSkeleton:
-        coords_outer, image_brightest = GetSkeleton(image_orig, image, JMC.nSig_s_outer)
+    if JMS.SplitInnerOuterSkeleton:
+        coords_outer, image_brightest = GetSkeleton(image_orig, image, JMS.nSig_s_outer)
         coords_outer1, coords_outer2 = split_at_brightest(coords_outer.T.tolist(), image_brightest)
         coords_outer1 = RemoveLoopingEnds(coords_outer1.tolist())
         coords_outer2 = RemoveLoopingEnds(coords_outer2.tolist())
@@ -135,8 +138,8 @@ def GetSkeleton(image_orig, image, nSig):
         rms_mask = np.ma.masked_where(image_valid <= (nSig * JMS.bgRMS), image_valid).mask
         image = np.ma.masked_array(image, mask = rms_mask)
 
-    image = ski.filters.gaussian(image, sigma=JMC.GaussSigmaFilter)
-    contours = ski.measure.find_contours(image, np.percentile(image, JMC.ContoursLevelPerc))
+    image = ski.filters.gaussian(image, sigma=JMS.GaussSigmaFilter)
+    contours = ski.measure.find_contours(image, np.percentile(image, JMS.ContoursLevelPerc))
     max_pos = np.argmax([len(contour) for contour in contours])
 
     mask_image = np.zeros(image.T.shape)
@@ -165,7 +168,7 @@ def GetSkeleton(image_orig, image, nSig):
 
     thresholded = skeleton_sum > 0
     thresholded = ski.morphology.skeletonize(
-        ski.morphology.remove_small_holes(ski.filters.gaussian(thresholded, 1) > 0, JMC.MaxRemoveSmallHolesArea)
+        ski.morphology.remove_small_holes(ski.filters.gaussian(thresholded, 1) > 0, JMS.MaxRemoveSmallHolesArea)
     )
 
     num_ends = np.inf
@@ -212,7 +215,7 @@ def RemoveLoopingEnds(coords):
     for coord in coords:
         if icnt > 0:
             dist = np.sqrt( (coord[0]-prev_coord[0])**2 + (coord[1]-prev_coord[1])**2 )
-            if dist > JMC.MaximumLoopJumpPixels:
+            if dist > JMS.MaximumLoopJumpPixels:
                 break
 
         coords_updated.append(coord)
@@ -249,12 +252,12 @@ def CombineInnerAndOuterSkeletons(coords_inner, coords_outer):
     join_ind_outer = dist.argmin()
 
     # Attempt to smooth the join by taking points before the join points and interpolating
-    join_ind_inner = len(coords_inner) - floor(JMC.JoinInterpolatePoints/2) - 1; join_pt_inner = coords_inner[join_ind_inner]
-    join_ind_outer += floor(JMC.JoinInterpolatePoints/2); join_pt_outer = coords_outer[join_ind_outer]
+    join_ind_inner = len(coords_inner) - floor(JMS.JoinInterpolatePoints/2) - 1; join_pt_inner = coords_inner[join_ind_inner]
+    join_ind_outer += floor(JMS.JoinInterpolatePoints/2); join_pt_outer = coords_outer[join_ind_outer]
     intCnt = 1; interpolate_pts = []
-    while intCnt <= JMC.JoinInterpolatePoints:
-        interpolate_pts.append([join_pt_inner[0] + ((join_pt_outer[0] - join_pt_inner[0]) * intCnt / (JMC.JoinInterpolatePoints+1)), \
-                                join_pt_inner[1] + ((join_pt_outer[1] - join_pt_inner[1]) * intCnt / (JMC.JoinInterpolatePoints+1))])
+    while intCnt <= JMS.JoinInterpolatePoints:
+        interpolate_pts.append([join_pt_inner[0] + ((join_pt_outer[0] - join_pt_inner[0]) * intCnt / (JMS.JoinInterpolatePoints+1)), \
+                                join_pt_inner[1] + ((join_pt_outer[1] - join_pt_inner[1]) * intCnt / (JMS.JoinInterpolatePoints+1))])
         intCnt += 1
 
     coords = coords_inner[:join_ind_inner+1] + interpolate_pts + coords_outer[join_ind_outer:]
@@ -358,7 +361,7 @@ def process_level(level, image):
     """
     contours = ski.measure.find_contours(image, level)
 
-    if len(contours) > JMC.MaxContourLength or len(contours) < 1:
+    if len(contours) > MaxContourLength or len(contours) < 1:
         return None
 
     longest_contour = contours[np.argmax([len(contour) for contour in contours])]
@@ -528,9 +531,9 @@ def SaveRidgelineFiles(ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
 
     file1 = np.column_stack((ridge1[:,0], ridge1[:,1], phi_val1, Rlen1))
     file2 = np.column_stack((ridge2[:,0], ridge2[:,1], phi_val2, Rlen2))
-    np.savetxt(RLSF.R1 %JMS.sName, file1, delimiter=' ', \
+    np.savetxt(RLSF.R1 %(JMS.sName, str(JMS.map_number+1)), file1, delimiter=' ', \
                header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
-    np.savetxt(RLSF.R2 %JMS.sName, file2, delimiter=' ', \
+    np.savetxt(RLSF.R2 %(JMS.sName, str(JMS.map_number+1)), file2, delimiter=' ', \
                header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
 
 #############################################
@@ -574,10 +577,10 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     ymin = np.ma.min(y_plotlimits)
     ymax = np.ma.max(y_plotlimits)
                         
-    x_source_min = float(sCentre[0]) - JMC.ImFraction * float(lmsize)
-    x_source_max = float(sCentre[0]) + JMC.ImFraction * float(lmsize)
-    y_source_min = float(sCentre[1]) - JMC.ImFraction * float(lmsize)
-    y_source_max = float(sCentre[1]) + JMC.ImFraction * float(lmsize)
+    x_source_min = float(sCentre[0]) - JMS.ImFraction * float(lmsize)
+    x_source_max = float(sCentre[0]) + JMS.ImFraction * float(lmsize)
+    y_source_min = float(sCentre[1]) - JMS.ImFraction * float(lmsize)
+    y_source_max = float(sCentre[1]) + JMS.ImFraction * float(lmsize)
                         
     if x_source_min < xmin:
         xplotmin = xmin
@@ -608,7 +611,7 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     ax.set_ylim(yplotmin, yplotmax)
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
-    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
 
     ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
     ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
@@ -618,7 +621,7 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     cax = divider.append_axes("right", size="5%", pad=0.1)
     fig.colorbar(c, cax = cax)
     
-    fig.savefig(RLSF.Rimage %JMS.sName)
+    fig.savefig(RLSF.Rimage %(JMS.sName, str(JMS.map_number+1)))
     plt.close(fig)
         
 #############################################
@@ -685,11 +688,11 @@ def SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, p
     if not np.isnan(point_arm1_x) and not np.isnan(point_arm2_x):
 
         # Find the source position
-        if not isnan(JMS.sRadioRA) and not isnan(JMS.sRadioDec):
+        if not isnan(JSS.sRadioRA) and not isnan(JSS.sRadioDec):
 
             # Source position is known in degrees
-            sRA_from_mapcentre_deg = JMS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
-            sDec_from_mapcentre_deg = JMS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
+            sRA_from_mapcentre_deg = JSS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
+            sDec_from_mapcentre_deg = JSS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
             sRA_from_mapcentre_pix = sRA_from_mapcentre_deg / JMS.ddel      # source RA relative to map centre RA in pixels
             sDec_from_mapcentre_pix = sDec_from_mapcentre_deg / JMS.ddel    # source Dec relative to map centre Dec in pixels
 

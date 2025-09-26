@@ -25,23 +25,24 @@ def Setup():
     # Sets up the directory structure for ridgeline processing. Produces thresholded npy cutout.
 
     # Initialise required directories under working directory. 
-    newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','problematic','cutouts']
-    path = os.getcwd()
-    for d in newdirs:
-        newd=path + '/' + d
-        try:
-            os.mkdir(newd)
-        except:
-            # Directory already exists. Empty it.
-            print ("Directory", newd, "already exists, cleaning it out")
-            if "win" not in sys.platform.lower():
-                os.system("rm " + newd + "/*")
+    if JMS.map_number == 0:             # If the first map in this run, clear the ridgeline folder
+        newdirs = ['fits','rms','fits_cutouts','rms_cutouts','Distances','MagnitudeColour','Ratios','CutOutCats','MagCutOutCats','badsources_output','ridges','problematic','cutouts']
+        path = os.getcwd()
+        for d in newdirs:
+            newd=path + '/' + d
+            try:
+                os.mkdir(newd)
+            except:
+                # Directory already exists. Empty it.
+                print ("Directory", newd, "already exists, cleaning it out")
+                if "win" not in sys.platform.lower():
+                    os.system("rm " + newd + "/*")
+                else:
+                    newd = newd.replace('\\', '/')
+                    os.system("del /Q \"" + newd + "\\*\"")
             else:
-                newd = newd.replace('\\', '/')
-                os.system("del /Q \"" + newd + "\\*\"")
-        else:
-            # Directory doesn't exist. Create it.
-            print ("Made directory ", newd)
+                # Directory doesn't exist. Create it.
+                print ("Made directory ", newd)
 
     # Create flattened 2D cutout of source. This will work, even if input map file is already 2D.
     flag = get_fits(JMS.sRA, JMS.sDec, JMS.sName, JMS.sSize*JMS.ddel)     # pass size in degrees

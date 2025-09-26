@@ -7,6 +7,7 @@ Created by LizWhitehead - 25/07/2025
 """
 
 import numpy as np
+from math import nan
 
 rShift = 0.0169         # Red shift of source
 sourceR = 73.3          # Distance to source in Mpc
@@ -15,6 +16,8 @@ spectral_index = 0.55   # Spectral index
 emin = 8e-13            # electron energy lower cutoff
 emax = 8e-8             # electron energy higher cutoff
 logkmax = 4.0           # maximum allowed kappa
+sRadioRA = nan          # Source (radio) centre RA in degrees (not used as not exact enough)
+sRadioDec = nan         # Source (radio) centre Dec in degrees (not used as not exact enough)
 
 #########################################################################
 # Environmental parameters.

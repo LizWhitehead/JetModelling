@@ -996,7 +996,7 @@ def LargerThanBeamSize(section_coords):
     # Initialise return flag
     larger = False
 
-    beam_size_pixels = JMS.beamsize / 3600 / JMS.ddel
+    beam_size_pixels = JMS.beamsize
 
     # Test the length of the diagonals of the section
     if section_coords[6] == -1:
@@ -1424,7 +1424,8 @@ def GetVolume(polypoints):
 
         # Calculate the volume.
         # Assume the volume is of the base of a cone, sliced by a slant plane.
-        if abs(top_points[1,0] - top_points[0,0]) < JMC.eqtol or abs(top_points[0,1]) < JMC.eqtol:  # Test the gradient of the slant plane
+        if abs(top_points[1,0] - top_points[0,0]) < JMC.eqtol or \
+           abs(top_points[0,1]) < JMC.eqtol or abs(top_points[1,1]) < JMC.eqtol:    # Test the gradient of the slant plane and heights of the top points
             # Gradient  of slant line is infinite or zero. Assume the volume is given by a sliced cylinder.
             cylinder_H1 = top_points[0,1]                                           # First height of cylinder
             cylinder_H2 = top_points[1,1]                                           # Second height of cylinder
@@ -1493,18 +1494,32 @@ def Setup3PointPolygon(polypoints):
     """
 
     # Determine the base and top co-ordinate of the polygon "partial cone".
-    length1 = np.sqrt( (polypoints[2]-polypoints[0])**2 + (polypoints[3]-polypoints[1])**2 )
-    length2 = np.sqrt( (polypoints[4]-polypoints[2])**2 + (polypoints[5]-polypoints[3])**2 )
-    length3 = np.sqrt( (polypoints[4]-polypoints[0])**2 + (polypoints[5]-polypoints[1])**2 )
-    if length1 >= length2 and length1 >= length3:
-        base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])        # Base co-ordinates
-        top_point = np.array([polypoints[4], polypoints[5]])                                            # Top co-ordinate
-    elif length2 > length1 and length2 > length3:
-        base_points = np.array([[polypoints[2], polypoints[3]], [polypoints[4], polypoints[5]]])        # Base co-ordinates
-        top_point = np.array([polypoints[0], polypoints[1]])                                            # Top co-ordinate
+    # length1 = np.sqrt( (polypoints[2]-polypoints[0])**2 + (polypoints[3]-polypoints[1])**2 )
+    # length2 = np.sqrt( (polypoints[4]-polypoints[2])**2 + (polypoints[5]-polypoints[3])**2 )
+    # length3 = np.sqrt( (polypoints[4]-polypoints[0])**2 + (polypoints[5]-polypoints[1])**2 )
+    # if length1 >= length2 and length1 >= length3:
+    #     base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])        # Base co-ordinates
+    #     top_point = np.array([polypoints[4], polypoints[5]])                                            # Top co-ordinate
+    # elif length2 > length1 and length2 > length3:
+    #     base_points = np.array([[polypoints[2], polypoints[3]], [polypoints[4], polypoints[5]]])        # Base co-ordinates
+    #     top_point = np.array([polypoints[0], polypoints[1]])                                            # Top co-ordinate
+    # else:
+    #     base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[0], polypoints[1]]])        # Base co-ordinates
+    #     top_point = np.array([polypoints[2], polypoints[3]])                                            # Top co-ordinate
+    length1 = np.sqrt( (polypoints[2] - polypoints[0])**2 + (polypoints[3] - polypoints[1])**2 )
+    length2 = np.sqrt( (polypoints[4] - polypoints[2])**2 + (polypoints[5] - polypoints[3])**2 )
+    length3 = np.sqrt( (polypoints[0] - polypoints[4])**2 + (polypoints[1] - polypoints[5])**2 )
+    lengths = np.array([length1, length2, length3])
+    arg_maxlen = np.argmax(lengths)
+    if arg_maxlen == 0:
+         base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])       # Base co-ordinates
+         top_point = np.array([polypoints[4], polypoints[5]])                                           # Top co-ordinate
+    elif arg_maxlen == 1:
+         base_points = np.array([[polypoints[2], polypoints[3]], [polypoints[4], polypoints[5]]])       # Base co-ordinates
+         top_point = np.array([polypoints[0], polypoints[1]])                                           # Top co-ordinate
     else:
-        base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[0], polypoints[1]]])        # Base co-ordinates
-        top_point = np.array([polypoints[2], polypoints[3]])                                            # Top co-ordinate
+         base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[0], polypoints[1]]])       # Base co-ordinates
+         top_point = np.array([polypoints[2], polypoints[3]])                                           # Top co-ordinate
 
     # Translate the polygon so that first base point is at the origin
     offset = np.array([base_points[0,0], base_points[0,1]])
@@ -1570,14 +1585,32 @@ def Setup4PointPolygon(polypoints):
     """
 
     # Determine the base and top co-ordinates of the polygon "partial cone".
+    # length1 = np.sqrt( (polypoints[2] - polypoints[0])**2 + (polypoints[3] - polypoints[1])**2 )
+    # length2 = np.sqrt( (polypoints[6] - polypoints[4])**2 + (polypoints[7] - polypoints[5])**2 )
+    # if length1 > length2:                                                                               # Compare possible base/top lengths
+    #     base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])        # Base co-ordinates
+    #     top_points = np.array([[polypoints[4], polypoints[5]], [polypoints[6], polypoints[7]]])         # Top co-ordinates
+    # else:
+    #     base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[6], polypoints[7]]])        # Base co-ordinates
+    #     top_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])         # Top co-ordinates
     length1 = np.sqrt( (polypoints[2] - polypoints[0])**2 + (polypoints[3] - polypoints[1])**2 )
-    length2 = np.sqrt( (polypoints[6] - polypoints[4])**2 + (polypoints[7] - polypoints[5])**2 )
-    if length1 > length2:                                                                               # Compare possible base/top lengths
+    length2 = np.sqrt( (polypoints[4] - polypoints[2])**2 + (polypoints[5] - polypoints[3])**2 )
+    length3 = np.sqrt( (polypoints[6] - polypoints[4])**2 + (polypoints[7] - polypoints[5])**2 )
+    length4 = np.sqrt( (polypoints[0] - polypoints[6])**2 + (polypoints[1] - polypoints[7])**2 )
+    lengths = np.array([length1, length2, length3, length4])
+    arg_maxlen = np.argmax(lengths)
+    if arg_maxlen == 0:
         base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])        # Base co-ordinates
         top_points = np.array([[polypoints[4], polypoints[5]], [polypoints[6], polypoints[7]]])         # Top co-ordinates
-    else:
+    elif arg_maxlen == 1:
+        base_points = np.array([[polypoints[2], polypoints[3]], [polypoints[4], polypoints[5]]])        # Base co-ordinates
+        top_points = np.array([[polypoints[6], polypoints[7]], [polypoints[0], polypoints[1]]])         # Top co-ordinates
+    elif arg_maxlen == 2:
         base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[6], polypoints[7]]])        # Base co-ordinates
         top_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])         # Top co-ordinates
+    else:
+        base_points = np.array([[polypoints[6], polypoints[7]], [polypoints[0], polypoints[1]]])        # Base co-ordinates
+        top_points = np.array([[polypoints[2], polypoints[3]], [polypoints[4], polypoints[5]]])         # Top co-ordinates
 
     # Translate the polygon so that first base point is at the origin
     offset = np.array([base_points[0,0], base_points[0,1]])
@@ -1590,10 +1623,11 @@ def Setup4PointPolygon(polypoints):
     shape_to_rotate = np.concatenate((base_points, top_points), axis = 0)
     rotated_shape = dot( shape_to_rotate-anchor, np.array([[cos(rot_angle),sin(rot_angle)], [-sin(rot_angle),cos(rot_angle)]]) ) + anchor
     base_points = np.array([[rotated_shape[0,0],rotated_shape[0,1]], [rotated_shape[1,0],rotated_shape[1,1]]])
-    if rotated_shape[2,0] < rotated_shape[3,0]:                     # Order top points in order of increasing X
-        top_points = np.array([[rotated_shape[2,0],rotated_shape[2,1]], [rotated_shape[3,0],rotated_shape[3,1]]])
-    else:
-        top_points = np.array([[rotated_shape[3,0],rotated_shape[3,1]], [rotated_shape[2,0],rotated_shape[2,1]]])
+    # if rotated_shape[2,0] < rotated_shape[3,0]:                     # Order top points in order of increasing X
+    #     top_points = np.array([[rotated_shape[2,0],rotated_shape[2,1]], [rotated_shape[3,0],rotated_shape[3,1]]])
+    # else:
+    #     top_points = np.array([[rotated_shape[3,0],rotated_shape[3,1]], [rotated_shape[2,0],rotated_shape[2,1]]])
+    top_points = np.array([[rotated_shape[3,0],rotated_shape[3,1]], [rotated_shape[2,0],rotated_shape[2,1]]])
     base_points[0,0] = 0.0; base_points[0,1] = 0.0                  # Ensure first base point is exactly at the origin
     base_points[1,1] = 0.0                                          # Ensure second base point lies exactly on the X axis
 
@@ -1679,9 +1713,9 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
 
     fileEP1 = np.column_stack((edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], edge_points1[:,4]))
     fileEP2 = np.column_stack((edge_points2[:,0], edge_points2[:,1], edge_points2[:,2], edge_points2[:,3], edge_points2[:,4]))
-    np.savetxt(JSF.EP1 %source_name, fileEP1, delimiter=' ', \
+    np.savetxt(JSF.EP1 %(source_name, str(JMS.map_number+1)), fileEP1, delimiter=' ', \
                header='edgepoint x1-coord (pix), edgepoint y1-coord (pix), edgepoint x2-coord (pix), edgepoint y2-coord (pix), edgepoint R (pix)')
-    np.savetxt(JSF.EP2 %source_name, fileEP2, delimiter=' ', \
+    np.savetxt(JSF.EP2 %(source_name, str(JMS.map_number+1)), fileEP2, delimiter=' ', \
                header='edgepoint x1-coord (pix), edgepoint y1-coord (pix), edgepoint x2-coord (pix), edgepoint y2-coord (pix), edgepoint R (pix)')
 
     fileSP1 = np.column_stack((section_parameters1[:,0], section_parameters1[:,1], section_parameters1[:,2], section_parameters1[:,3], \
@@ -1690,11 +1724,11 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
     fileSP2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
                                section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
                                section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10], section_parameters2[:,11]))
-    np.savetxt(JSF.SP1 %source_name, fileSP1, delimiter=' ', \
+    np.savetxt(JSF.SP1 %(source_name, str(JMS.map_number+1)), fileSP1, delimiter=' ', \
                header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
                       'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
                       'section R (pix), section flux (Jy/beam), section volume (pix**3), section area (pix**2)')
-    np.savetxt(JSF.SP2 %source_name, fileSP2, delimiter=' ', \
+    np.savetxt(JSF.SP2 %(source_name, str(JMS.map_number+1)), fileSP2, delimiter=' ', \
                header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
                       'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
                       'section R (pix), section flux (Jy/beam), section volume (pix**3), section area (pix**2)')
@@ -1717,8 +1751,8 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
                 if spCoordCnt > maxlen: maxlen = spCoordCnt     # maximum length of output record
                 break
     fileSR2 = section_perimeters2[:,0:maxlen]
-    np.savetxt(JSF.SR1 %source_name, fileSR1, delimiter=' ')
-    np.savetxt(JSF.SR2 %source_name, fileSR2, delimiter=' ')
+    np.savetxt(JSF.SR1 %(source_name, str(JMS.map_number+1)), fileSR1, delimiter=' ')
+    np.savetxt(JSF.SR2 %(source_name, str(JMS.map_number+1)), fileSR2, delimiter=' ')
 
 #############################################
 
@@ -1776,7 +1810,7 @@ def SaveRegions(source_name, section_perimeters1, section_perimeters2):
         all_regions.append(PolygonPixelRegion(pix))
 
     # Save as a DS9 region file
-    Regions(all_regions).write(JSF.RGS %source_name, format='ds9')
+    Regions(all_regions).write(JSF.RGS %(source_name, str(JMS.map_number+1)), format='ds9')
 
 #############################################
 
@@ -1832,10 +1866,10 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     ymin = np.ma.min(y_plotlimits)
     ymax = np.ma.max(y_plotlimits)
                         
-    x_source_min = float(imCentre[0]) - JMC.ImFraction * float(lmsize)
-    x_source_max = float(imCentre[0]) + JMC.ImFraction * float(lmsize)
-    y_source_min = float(imCentre[1]) - JMC.ImFraction * float(lmsize)
-    y_source_max = float(imCentre[1]) + JMC.ImFraction * float(lmsize)
+    x_source_min = float(imCentre[0]) - JMS.ImFraction * float(lmsize)
+    x_source_max = float(imCentre[0]) + JMS.ImFraction * float(lmsize)
+    y_source_min = float(imCentre[1]) - JMS.ImFraction * float(lmsize)
+    y_source_max = float(imCentre[1]) + JMS.ImFraction * float(lmsize)
                         
     if x_source_min < xmin:
         xplotmin = xmin
@@ -1866,7 +1900,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     ax.set_ylim(yplotmin, yplotmax)
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
-    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
     c.set_array(A)
 
     epcount = 0
@@ -1915,7 +1949,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     cax = divider.append_axes("right", size="5%", pad=0.1)
     fig.colorbar(c, cax = cax)
     
-    fig.savefig(JSF.EPimage %source_name)
+    fig.savefig(JSF.EPimage %(source_name, str(JMS.map_number+1)))
     plt.close(fig)
 
     # Plot jet sections
@@ -1927,7 +1961,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     ax.set_ylim(yplotmin, yplotmax)
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
-    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
     c.set_array(A)
 
     spcount = 0
@@ -1962,7 +1996,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     cax = divider.append_axes("right", size="5%", pad=0.1)
     fig.colorbar(c, cax = cax)
     
-    fig.savefig(JSF.SCimage %source_name)
+    fig.savefig(JSF.SCimage %(source_name, str(JMS.map_number+1)))
     plt.close(fig)
 
 #############################################

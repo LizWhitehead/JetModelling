@@ -12,6 +12,6 @@ import os
 indir = os.getcwd()
 
 # Ridgelines
-R1 = indir + '/ridges/%s_ridge1.txt'
-R2 = indir + '/ridges/%s_ridge2.txt'
-Rimage = indir + '/ridges/%s_ridges.png'
+R1 = indir + '/ridges/%s_%s_ridge1.txt'
+R2 = indir + '/ridges/%s_%s_ridge2.txt'
+Rimage = indir + '/ridges/%s_%s_ridges.png'

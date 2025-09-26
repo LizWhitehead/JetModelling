@@ -11,6 +11,6 @@ import os
 indir = os.getcwd()            # Windows
 
 # Jet parameters files
-JP_kappa0_arm1          = indir + '/parameters/%s_kappa0_arm1.txt'
-JP_kappa0_arm2          = indir + '/parameters/%s_kappa0_arm2.txt'
-JP_kappa0_plot_pressure = indir + '/parameters/%s_kappa0_pressure.png'
+JP_kappa0_arm1          = indir + '/parameters/%s_%s_kappa0_arm1.txt'
+JP_kappa0_arm2          = indir + '/parameters/%s_%s_kappa0_arm2.txt'
+JP_kappa0_plot_pressure = indir + '/parameters/%s_%s_kappa0_pressure.png'

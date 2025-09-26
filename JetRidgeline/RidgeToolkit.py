@@ -6,6 +6,7 @@
 # Modified to work on a single source radio map by Liz
 
 import JetModelling_MapSetup as JMS
+import JetModelling_SourceSetup as JSS
 import JetModelling_Constants as JMC
 import JetModelling_MapAnalysis as JMA
 import JetRidgeline.RidgelineFiles as RLF
@@ -1927,9 +1928,9 @@ def TrialSeries():
                 # x_coord y_coord angle_dir (3 columns, space separated)
                 file1 = np.column_stack((ridge1[:,0], ridge1[:,1], phi_val1, Rlen1))
                 file2 = np.column_stack((ridge2[:,0], ridge2[:,1], phi_val2, Rlen2))
-                np.savetxt(RLF.R1 %source_name, file1, delimiter=' ', \
+                np.savetxt(RLF.R1 %(source_name, str(JMS.map_number+1)), file1, delimiter=' ', \
                            header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
-                np.savetxt(RLF.R2 %source_name, file2, delimiter=' ', \
+                np.savetxt(RLF.R2 %(source_name, str(JMS.map_number+1)), file2, delimiter=' ', \
                            header='ridgepoint x-coord (pix), ridgepoint y-coord (pix), ridgepoint phi (radns), ridgepoint R (pix)')
 
                 area_fluxes_plot = JMC.flux_factor * area_fluxes.copy()
@@ -1945,10 +1946,10 @@ def TrialSeries():
                 ymin = np.ma.min(y_plotlimits)
                 ymax = np.ma.max(y_plotlimits)
                         
-                x_source_min = float(sCentre[0]) - JMC.ImFraction * float(lmsize)
-                x_source_max = float(sCentre[0]) + JMC.ImFraction * float(lmsize)
-                y_source_min = float(sCentre[1]) - JMC.ImFraction * float(lmsize)
-                y_source_max = float(sCentre[1]) + JMC.ImFraction * float(lmsize)
+                x_source_min = float(sCentre[0]) - JMS.ImFraction * float(lmsize)
+                x_source_max = float(sCentre[0]) + JMS.ImFraction * float(lmsize)
+                y_source_min = float(sCentre[1]) - JMS.ImFraction * float(lmsize)
+                y_source_max = float(sCentre[1]) + JMS.ImFraction * float(lmsize)
                         
                 if x_source_min < xmin:
                     xplotmin = xmin
@@ -1978,7 +1979,7 @@ def TrialSeries():
                 ax.set_ylim(yplotmin, yplotmax)
     
                 A = np.ma.array(area_fluxes_plot, mask=np.ma.masked_invalid(area_fluxes_plot).mask)
-                c = ax.pcolor(x, y, A, cmap=palette, vmin=JMC.vmin, vmax=JMC.vmax)
+                c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
 
                 ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
                 ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
@@ -1988,7 +1989,7 @@ def TrialSeries():
                 cax = divider.append_axes("right", size="5%", pad=0.1)
                 fig.colorbar(c, cax = cax)
 
-                fig.savefig(RLF.Rimage %(source_name, dphi))
+                fig.savefig(RLF.Rimage %(source_name, str(JMS.map_number+1), dphi))
                 plt.close(fig)
 
     # save the list of problematic sources in problematic_sources_list.txt
@@ -2291,11 +2292,11 @@ def SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, p
     if not np.isnan(point_arm1_x) and not np.isnan(point_arm2_x):
 
         # Find the source position
-        if not isnan(JMS.sRadioRA) and not isnan(JMS.sRadioDec):
+        if not isnan(JSS.sRadioRA) and not isnan(JSS.sRadioDec):
 
             # Source position is known in degrees
-            sRA_from_mapcentre_deg = JMS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
-            sDec_from_mapcentre_deg = JMS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
+            sRA_from_mapcentre_deg = JSS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
+            sDec_from_mapcentre_deg = JSS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
             sRA_from_mapcentre_pix = sRA_from_mapcentre_deg / JMS.ddel      # source RA relative to map centre RA in pixels
             sDec_from_mapcentre_pix = sDec_from_mapcentre_deg / JMS.ddel    # source Dec relative to map centre Dec in pixels
 

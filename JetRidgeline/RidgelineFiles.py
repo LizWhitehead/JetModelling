@@ -33,9 +33,9 @@ fitscutout = indir + '/fits_cutouts/'
 # Ridgelines
 TFC = indir+'/total_flux_cutWorkingSet.txt'
 Probs = indir+'/problematic/%s_image.png'
-R1 = indir+'/ridges/%s_ridge1.txt'
-R2 = indir+'/ridges/%s_ridge2.txt'
-Rimage = indir+'/ridges/%s_ridges%d.png'
+R1 = indir+'/ridges/%s_%s_ridge1.txt'
+R2 = indir+'/ridges/%s_%s_ridge2.txt'
+Rimage = indir+'/ridges/%s_%s_ridges%d.png'
 psl = indir+'/problematic/problematic_sources_listWorkingSet.txt'
 
 # SourceSearch

@@ -280,9 +280,9 @@ def SaveParameterFiles(jp_kappa0_arm1, jp_kappa0_arm2):
     -----------
     """
 
-    np.savetxt(JPF.JP_kappa0_arm1 %JMS.sName, jp_kappa0_arm1, delimiter=' ', \
+    np.savetxt(JPF.JP_kappa0_arm1 %(JMS.sName, str(JMS.map_number+1)), jp_kappa0_arm1, delimiter=' ', \
                header='section R (kpc), section flux (Jy), section volume (kpc**3), section mag field strength (Tesla), internal pressure (Pa), emissivity, external pressure (Pa)')
-    np.savetxt(JPF.JP_kappa0_arm2 %JMS.sName, jp_kappa0_arm2, delimiter=' ', \
+    np.savetxt(JPF.JP_kappa0_arm2 %(JMS.sName, str(JMS.map_number+1)), jp_kappa0_arm2, delimiter=' ', \
                header='section R (kpc), section flux (Jy), section volume (kpc**3), section mag field strength (Tesla), internal pressure (Pa), emissivity, external pressure (Pa)')
 
 #############################################
@@ -335,6 +335,6 @@ def PlotJetParameters(jp_kappa0_arm1, jp_kappa0_arm2):
 
     ax.legend()
 
-    plt.savefig(JPF.JP_kappa0_plot_pressure %JMS.sName)
+    plt.savefig(JPF.JP_kappa0_plot_pressure %(JMS.sName, str(JMS.map_number+1)))
         
 #############################################

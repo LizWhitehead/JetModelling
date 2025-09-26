@@ -9,7 +9,6 @@ Note: The first jet arm (North) is considered to be that with the highest Y valu
 """
 
 import numpy as np
-from math import nan
 from enum import Enum
 
 class RidgelineMethod(Enum):
@@ -19,8 +18,8 @@ class RidgelineMethod(Enum):
 
 debug = True                    # Turns on debug print statements if True
 ridgeline_only = False          # Run ridgeline code only
-eqtol = 0.0001                  # Tolerance for testing equality of float values
-nSig_arms = np.array([1.5,4.0]) # The multiple of sigma for the RMS reduction for each jet arm
+eqtol = 0.01                    # Tolerance for testing equality of float values
+nSig_arms = np.array([1.5,1.5]) # The multiple of the RMS flux threshold value for each jet arm
 
 # Ridgelines (general)
 ridgeline_method = RidgelineMethod.SKELETONIZE  # Method for creating ridgelines
@@ -29,22 +28,14 @@ ridge_centre_search_points = 7  # Number of ridgepoints on either side of first 
 # Ridgelines (RL-Xid)
 R_rl = 5                        # Step size of ridgeline in pixels
 dphi = 60                       # Half angle of search cone
-nSig = 13.5                     # The multiple of sigma for the RMS reduction
+nSig = 13.5                     # The multiple of RMS flux threshold value
 
 # Ridgelines (from data)
-ridgelines_from_data_arm1 = 'C:/Maps/3C31_ridge_coords1.txt'    # Input data file for arm1
-ridgelines_from_data_arm2 = 'C:/Maps/3C31_ridge_coords2.txt'    # Input data file for arm2
+ridgelines_from_data_arm1 = 'C:/JetModelling_FromData/3C31_ridge_coords1.txt'    # Input data file for arm1
+ridgelines_from_data_arm2 = 'C:/JetModelling_FromData/3C31_ridge_coords2.txt'    # Input data file for arm2
 R_fd = 6                        # Maximum step size of ridgeline in pixels
 
 # Ridgelines (skeletonize)
-CutdownSize0 = 1000; CutDownSize1 = 1000    # Cut-down size of image for skeletonize
-GaussSigmaFilter = 35           # Sigma level for thresholding
-ContoursLevelPerc = 80          # Percentile level for finding contours
-MaxContourLength = 1000         # Maximum allowed length for contours
-MaxRemoveSmallHolesArea = 200   # Maximum area of "holes" in skeleton that will be removed
-MaximumLoopJumpPixels = 20      # Maximum jump between points, used in finding "loops"
-nSig_s = 12                     # The multiple of sigma for RMS reduction; nan if not required
-SplitInnerOuterSkeleton = True; nSig_s_outer = nan; JoinInterpolatePoints = 6     #  Values used if joining together skeletons for inner and outer jets
 R_s = 6                         # Maximum step size of ridgeline in pixels
 
 # Edgepoints
@@ -68,7 +59,4 @@ y_offset = 0.0                  # y offset of the region co-ordinates to full im
 max_vertices = 2000             # maximum number of vertices in a region polygon
 
 # Plotting
-ImFraction = 0.9                # The fraction of the source the final image is cut down to for plotting
 flux_factor = 1                 # Factor to multiply flux by for plotting
-vmin = 0                        # Linear mapping colour range minimum
-vmax = 0.010                    # Linear mapping colour range maximum
