@@ -206,23 +206,22 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
     palette.set_bad('k',0.0)
-    lmsize = JMS.sSize  # pixels
 
     y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
     x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
-    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (np.min(JMC.nSig_arms) * JMS.bgRMS), y, copy=True).mask)
-    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (np.min(JMC.nSig_arms) * JMS.bgRMS), x, copy=True).mask)
+    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (np.min(JMS.nSig_arms) * JMS.bgRMS), y, copy=True).mask)
+    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (np.min(JMS.nSig_arms) * JMS.bgRMS), x, copy=True).mask)
     xmin = np.ma.min(x_plotlimits)
     xmax = np.ma.max(x_plotlimits)
     ymin = np.ma.min(y_plotlimits)
     ymax = np.ma.max(y_plotlimits)
                         
-    x_source_min = float(sCentre[0]) - JMS.ImFraction * float(lmsize)
-    x_source_max = float(sCentre[0]) + JMS.ImFraction * float(lmsize)
-    y_source_min = float(sCentre[1]) - JMS.ImFraction * float(lmsize)
-    y_source_max = float(sCentre[1]) + JMS.ImFraction * float(lmsize)
+    x_source_min = float(sCentre[0]) - JMS.ImFraction * float(JMS.sSize[0])
+    x_source_max = float(sCentre[0]) + JMS.ImFraction * float(JMS.sSize[0])
+    y_source_min = float(sCentre[1]) - JMS.ImFraction * float(JMS.sSize[1])
+    y_source_max = float(sCentre[1]) + JMS.ImFraction * float(JMS.sSize[1])
                         
     if x_source_min < xmin:
         xplotmin = xmin

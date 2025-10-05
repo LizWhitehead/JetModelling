@@ -191,7 +191,7 @@ def CreateCutouts():
     """
     
     centre_pos = SkyCoord(JMS.sRA*u.deg,JMS.sDec*u.deg,frame='fk5')
-    lmsize = JMS.sSize          # size in pixels
+    lmsize = np.max(JMS.sSize)          # size in pixels
     print('Making cutout for source',JMS.sName,'with size',lmsize,'pixels')
     hdu = DefineHDU(JMS.sName)
     data = hdu[0].data
@@ -1809,7 +1809,7 @@ def TrialSeries():
     dphi = JMC.dphi
     Lra = JMS.sRA
     Ldec = JMS.sDec
-    lmsize = JMS.sSize  # pixels
+    lmsize = np.max(JMS.sSize)  # pixels
     flux_array = GetCutoutArray(source_name)
         
     optical_pos = (float(lmsize), float(lmsize))

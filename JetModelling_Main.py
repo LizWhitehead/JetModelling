@@ -20,8 +20,8 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
 
     # Loop through all maps included in this run (same AGN, different frequencies)
     for map_number in range(JMS.map_count):
-    #for map_number in range(JMS.map_count-1):
-    #for map_number in range(1, JMS.map_count):
+    #for map_number in range(JMS.map_count-2):
+    #for map_number in range(1, JMS.map_count-1):
 
         # Initialise the map
         JMS.InitialiseMap(map_number)

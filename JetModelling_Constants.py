@@ -19,7 +19,6 @@ class RidgelineMethod(Enum):
 debug = True                    # Turns on debug print statements if True
 ridgeline_only = False          # Run ridgeline code only
 eqtol = 0.01                    # Tolerance for testing equality of float values
-nSig_arms = np.array([1.5,1.5]) # The multiple of the RMS flux threshold value for each jet arm
 
 # Ridgelines (general)
 ridgeline_method = RidgelineMethod.SKELETONIZE  # Method for creating ridgelines
@@ -44,7 +43,8 @@ MaxRFactor = 100                # Maximum factor for increase of step size befor
 R_es = 5                        # Step size along the jet in pixels
 MinIntpolFactor = 1.5           # Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6           # Maximum number of interpolated points along an edgeline
-flux_percentile = 50            # Flux percentile limit for refining jet edges (100 => no change)
+##flux_percentile = 50            # Flux percentile limit for refining jet edges (100 => no change)
+flux_percentile = 100           # Flux percentile limit for refining jet edges (100 => no change)
 
 # Jet Sections
 MergeStartFluxFactor = np.array([0.5,0.5])  # Multiplication factor of starting flux in merge algorithm for each jet arm
