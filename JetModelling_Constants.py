@@ -41,17 +41,13 @@ R_s = 6                         # Maximum step size of ridgeline in pixels
 search_angle = 30               # Edgepoint search angle in degrees
 MaxRFactor = 100                # Maximum factor for increase of step size before re-initialising edgepoint algorithm 
 R_es = 5                        # Step size along the jet in pixels
-MinIntpolFactor = 1.5           # Minimum length factor for an edgeline for an edgepoint to be added
-MaxIntpolSections = 6           # Maximum number of interpolated points along an edgeline
-##flux_percentile = 50            # Flux percentile limit for refining jet edges (100 => no change)
+MinIntpolFactor = 2.0           # Minimum length factor for an edgeline for an edgepoint to be added
+MaxIntpolSections = 4           # Maximum number of interpolated points along an edgeline
 flux_percentile = 100           # Flux percentile limit for refining jet edges (100 => no change)
 
 # Jet Sections
-MergeStartFluxFactor = np.array([0.5,0.5])  # Multiplication factor of starting flux in merge algorithm for each jet arm
-MinSectionsPerArm = 30          # Minimum number of merged sections per arm of the jet
-MaxSectionsPerArm = 60          # Maximum number of merged sections per arm of the jet
-MaxMergeIterations = 10         # Maximum number of iterations to merge sections to within required number
-PercChangeInMaxFlux = 10        # Percentage change in max flux for each merge iteration
+MergeMaxStartRFactor = 1.1      # Multiplication factor of starting max merge distance in merge algorithm (>= 1)
+MergeRIncreaseFactor = 1.15     # Multiplication factor of step increase in max merge distance (>=1)
 
 # Regions
 x_offset = 0.0                  # x offset of the region co-ordinates to full image co-ordinates in pixels

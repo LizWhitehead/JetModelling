@@ -14,3 +14,5 @@ indir = os.getcwd()            # Windows
 JP_kappa0_arm1          = indir + '/parameters/%s_%s_kappa0_arm1.txt'
 JP_kappa0_arm2          = indir + '/parameters/%s_%s_kappa0_arm2.txt'
 JP_kappa0_plot_pressure = indir + '/parameters/%s_%s_kappa0_pressure.png'
+JP_flux_plot            = indir + '/parameters/%s_%s_flux.png'
+JP_flux_area_plot       = indir + '/parameters/%s_%s_flux_area.png'

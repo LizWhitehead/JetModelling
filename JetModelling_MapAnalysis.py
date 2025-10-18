@@ -110,9 +110,6 @@ def GetMinimumFluxAlongLine(flux_array, start_point, end_point):
     xmin_coord - x co-ordinate of minimum flux value
 
     ymin_coord - y co-ordinate of minimum flux value
-
-    Notes
-    -----------
     """
 
     # Get the flux distribution along the line
@@ -128,6 +125,48 @@ def GetMinimumFluxAlongLine(flux_array, start_point, end_point):
     ymin_coord = (x_axis_values[arg_fluxmin] * sin_theta) + start_point[1]
 
     return xmin_coord, ymin_coord
+
+#############################################
+
+def GetMaximumFluxAlongLine(flux_array, start_point, end_point):
+
+    """
+    Get the position of the maximum flux value along a line.
+
+    Parameters
+    -----------
+    flux_array - 2D array,
+                 raw image array
+
+    start_point - 1D array
+                  Co-ordinates of line start point (x,y)
+
+    end_point - 1D array
+                Co-ordinates of line end point (x,y)
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    xmax_coord - x co-ordinate of maximum flux value
+
+    ymax_coord - y co-ordinate of maximum flux value
+    """
+
+    # Get the flux distribution along the line
+    x_axis_values, flux_values = GetFluxDistributionAlongLine(flux_array, start_point, end_point)
+
+    dist_tot = np.sqrt( (end_point[0] - start_point[0])**2 + (end_point[1] - start_point[1])**2 )     # Total length of the line
+    sin_theta = (end_point[1] - start_point[1]) / dist_tot                     # sin of the line incline angle
+    cos_theta = (end_point[0] - start_point[0]) / dist_tot                     # cos of the line incline angle
+
+    # Find the position of the maximum flux along the line
+    arg_fluxmax = np.nanargmax(flux_values)
+    xmax_coord = (x_axis_values[arg_fluxmax] * cos_theta) + start_point[0]
+    ymax_coord = (x_axis_values[arg_fluxmax] * sin_theta) + start_point[1]
+
+    return xmax_coord, ymax_coord
 
 #############################################
 

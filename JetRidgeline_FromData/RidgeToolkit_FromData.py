@@ -329,19 +329,11 @@ def SetDataRelativeToSourcePosition(area_fluxes, ridge1, ridge2, Rlen1, Rlen2, p
     if not np.isnan(point_arm1_x) and not np.isnan(point_arm2_x):
 
         # Find the source position
-        if not isnan(JSS.sRadioRA) and not isnan(JSS.sRadioDec):
+        if not isnan(JMS.sCentre[0]) and not isnan(JMS.sCentre[1]):
 
-            # Source position is known in degrees
-            sRA_from_mapcentre_deg = JSS.sRadioRA - JMS.sRA                 # source RA relative to map centre RA in degrees
-            sDec_from_mapcentre_deg = JSS.sRadioDec - JMS.sDec              # source Dec relative to map centre Dec in degrees
-            sRA_from_mapcentre_pix = sRA_from_mapcentre_deg / JMS.ddel      # source RA relative to map centre RA in pixels
-            sDec_from_mapcentre_pix = sDec_from_mapcentre_deg / JMS.ddel    # source Dec relative to map centre Dec in pixels
-
-            map_centre_pixels_x = area_fluxes.shape[1] / 2.0
-            map_centre_pixels_y = area_fluxes.shape[0] / 2.0
-
-            sCentre_x = map_centre_pixels_x + sRA_from_mapcentre_pix        # source pixel x position
-            sCentre_y = map_centre_pixels_y + sDec_from_mapcentre_pix       # source pixel y position
+            # Source position, as read from the map
+            sCentre_x = JMS.sCentre[0]                                      # source pixel x position
+            sCentre_y = JMS.sCentre[1]                                      # source pixel y position
 
         else:
         

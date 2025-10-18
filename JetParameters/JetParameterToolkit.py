@@ -46,7 +46,7 @@ def GetJetParameters(section_parameters1, section_parameters2):
     """
 
     # Initialise jet parameters arrays
-    jp_kappa0_arm1 = np.empty((0,7)); jp_kappa0_arm2 = np.empty((0,7))
+    jp_kappa0_arm1 = np.empty((0,8)); jp_kappa0_arm2 = np.empty((0,8))
 
     # Update flux, volume, area and distance along the jet and to have required units
     print('Updating flux, volume and area units')
@@ -85,7 +85,7 @@ def GetParametersForJetArm(section_parameters, arm_number):
 
     Returns
     -----------
-    jp_kappa0 - 2D array, shape(n,7)
+    jp_kappa0 - 2D array, shape(n,8)
                 Distance from source and computed parameters for one arm of the jet
 
     Notes
@@ -93,7 +93,7 @@ def GetParametersForJetArm(section_parameters, arm_number):
     """
 
     # Initialise kappa0 array
-    jp_kappa0 = np.empty((0,7))
+    jp_kappa0 = np.empty((0,8))
 
     # Initialise external pressure
     if arm_number == 1: ext_pressure_for_arm = JSS.ext_pressure_arm1
@@ -115,6 +115,7 @@ def GetParametersForJetArm(section_parameters, arm_number):
             R_section_kpc = R_section * arcsec_to_kpc                                       # section distance from source (kpc)
             volume_section_m = volume_section * pow((arcsec_to_kpc * JPC.kpc_to_m), 3)      # volume of section (m cubed)
             volume_section_kpc = volume_section * pow(arcsec_to_kpc, 3)                     # volume of section (kpc cubed)
+            area_section_kpc = area_section * pow(arcsec_to_kpc, 2)                         # area of section (kpc squared)
 
             ################################################################################################################
             # Model with kappa=0, at equipartition. Find internal pressure, magnetic field and emissivity.
@@ -140,7 +141,7 @@ def GetParametersForJetArm(section_parameters, arm_number):
             if not np.all(np.isnan(ext_pressure_for_arm)): 
                 ext_pressure = InterpolateExternalParameterValue(R_section_kpc, ext_pressure_for_arm)   # external pressure
 
-            jp_kappa0 = np.vstack((jp_kappa0, np.array([R_section_kpc, flux_section, volume_section_kpc, \
+            jp_kappa0 = np.vstack((jp_kappa0, np.array([R_section_kpc, flux_section, volume_section_kpc, area_section_kpc, \
                                                         B_field, int_pressure, emissivity, ext_pressure])))
         
 
@@ -262,11 +263,11 @@ def SaveParameterFiles(jp_kappa0_arm1, jp_kappa0_arm2):
 
     Parameters
     -----------
-    jp_kappa0_arm1 - 2D array, shape(n,7)
+    jp_kappa0_arm1 - 2D array, shape(n,8)
                      Array for one arm of the jet, with distance from source 
                      and computed parameters
 
-    jp_kappa0_arm2 - 2D array, shape(n,7)
+    jp_kappa0_arm2 - 2D array, shape(n,8)
                      Array for one arm of the jet, with distance from source 
                      and computed parameters
     
@@ -281,9 +282,9 @@ def SaveParameterFiles(jp_kappa0_arm1, jp_kappa0_arm2):
     """
 
     np.savetxt(JPF.JP_kappa0_arm1 %(JMS.sName, str(JMS.map_number+1)), jp_kappa0_arm1, delimiter=' ', \
-               header='section R (kpc), section flux (Jy), section volume (kpc**3), section mag field strength (Tesla), internal pressure (Pa), emissivity, external pressure (Pa)')
+               header='section R (kpc), section flux (Jy), section volume (kpc**3), section area (kpc**2), section mag field strength (Tesla), internal pressure (Pa), emissivity, external pressure (Pa)')
     np.savetxt(JPF.JP_kappa0_arm2 %(JMS.sName, str(JMS.map_number+1)), jp_kappa0_arm2, delimiter=' ', \
-               header='section R (kpc), section flux (Jy), section volume (kpc**3), section mag field strength (Tesla), internal pressure (Pa), emissivity, external pressure (Pa)')
+               header='section R (kpc), section flux (Jy), section volume (kpc**3), section area (kpc**2), section mag field strength (Tesla), internal pressure (Pa), emissivity, external pressure (Pa)')
 
 #############################################
 
@@ -294,11 +295,11 @@ def PlotJetParameters(jp_kappa0_arm1, jp_kappa0_arm2):
 
     Parameters
     -----------
-    jp_kappa0_arm1 - 2D array, shape(n,7)
+    jp_kappa0_arm1 - 2D array, shape(n,8)
                      Array for one arm of the jet, with distance from source 
                      and computed parameters
 
-    jp_kappa0_arm2 - 2D array, shape(n,7)
+    jp_kappa0_arm2 - 2D array, shape(n,8)
                      Array for one arm of the jet, with distance from source 
                      and computed parameters
     
@@ -312,11 +313,13 @@ def PlotJetParameters(jp_kappa0_arm1, jp_kappa0_arm2):
     -----------
     """
 
+    lastpt1 = np.shape(jp_kappa0_arm1)[0] - 2; lastpt2 = np.shape(jp_kappa0_arm2)[0] - 2    # don't plot the last point
+
     # Model with kappa=0. Internal pressure.
-    p_min = min(np.min(jp_kappa0_arm1[:,4]), np.min(jp_kappa0_arm2[:,4]))
-    p_max = max(np.max(jp_kappa0_arm1[:,4]), np.max(jp_kappa0_arm2[:,4]))
-    d_min = min(np.min(jp_kappa0_arm1[:,0]), np.min(jp_kappa0_arm2[:,0]))
-    d_max = max(np.max(jp_kappa0_arm1[:,0]), np.max(jp_kappa0_arm2[:,0]))
+    p_min = min(np.min(jp_kappa0_arm1[0:lastpt1,5]), np.min(jp_kappa0_arm2[0:lastpt2,5]))
+    p_max = max(np.max(jp_kappa0_arm1[0:lastpt1,5]), np.max(jp_kappa0_arm2[0:lastpt2,5]))
+    d_min = min(np.min(jp_kappa0_arm1[0:lastpt1,0]), np.min(jp_kappa0_arm2[0:lastpt2,0]))
+    d_max = max(np.max(jp_kappa0_arm1[0:lastpt1,0]), np.max(jp_kappa0_arm2[0:lastpt2,0]))
 
     fig, ax = plt.subplots()
     fig.suptitle(JMS.sName)
@@ -330,11 +333,67 @@ def PlotJetParameters(jp_kappa0_arm1, jp_kappa0_arm2):
     ax.set_ylabel('Pressure (Pa)')
     ax.set_xlabel('Distance (kpc)')
 
-    ax.plot(jp_kappa0_arm1[:,0], jp_kappa0_arm1[:,4], 'r-', label='Internal equipartition (N)', marker='.')
-    ax.plot(jp_kappa0_arm2[:,0], jp_kappa0_arm2[:,4], 'g-', label='Internal equipartition (S)', marker='.')
+    ax.plot(jp_kappa0_arm1[0:lastpt1,0], jp_kappa0_arm1[0:lastpt1,5], 'r-', label='Internal equipartition (N)', marker='.')
+    ax.plot(jp_kappa0_arm2[0:lastpt2,0], jp_kappa0_arm2[0:lastpt2,5], 'g-', label='Internal equipartition (S)', marker='.')
 
     ax.legend()
 
     plt.savefig(JPF.JP_kappa0_plot_pressure %(JMS.sName, str(JMS.map_number+1)))
-        
+    plt.close(fig)
+
+    # Flux
+    f_min = min(np.min(jp_kappa0_arm1[0:lastpt1,1]), np.min(jp_kappa0_arm2[0:lastpt2,1]))
+    f_max = max(np.max(jp_kappa0_arm1[0:lastpt1,1]), np.max(jp_kappa0_arm2[0:lastpt2,1]))
+    d_min = min(np.min(jp_kappa0_arm1[0:lastpt1,0]), np.min(jp_kappa0_arm2[0:lastpt2,0]))
+    d_max = max(np.max(jp_kappa0_arm1[0:lastpt1,0]), np.max(jp_kappa0_arm2[0:lastpt2,0]))
+
+    fig, ax = plt.subplots()
+    fig.suptitle(JMS.sName)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim(d_min, d_max)
+    ax.set_ylim(f_min, f_max)
+    axis.Axis.set_major_formatter(ax.xaxis, ticker.ScalarFormatter())
+
+    ax.set_ylabel('Flux (Jy)')
+    ax.set_xlabel('Distance (kpc)')
+
+    ax.plot(jp_kappa0_arm1[0:lastpt1,0], jp_kappa0_arm1[0:lastpt1,1], 'r-', label='Flux (N)', marker='.')
+    ax.plot(jp_kappa0_arm2[0:lastpt2,0], jp_kappa0_arm2[0:lastpt2,1], 'g-', label='Flux (S)', marker='.')
+
+    ax.legend()
+
+    plt.savefig(JPF.JP_flux_plot %(JMS.sName, str(JMS.map_number+1)))
+    plt.close(fig)
+
+    # Flux, averaged over area
+    plot_data_R1 = jp_kappa0_arm1[:,0]; plot_data_R2 = jp_kappa0_arm2[:,0]
+    plot_data_avgFlux1 = jp_kappa0_arm1[:,1] / jp_kappa0_arm1[:,3]; plot_data_avgFlux2 = jp_kappa0_arm2[:,1] / jp_kappa0_arm2[:,3]
+
+    fa_min = min(np.min(plot_data_avgFlux1[0:lastpt1]), np.min(plot_data_avgFlux2[0:lastpt2]))
+    fa_max = max(np.max(plot_data_avgFlux1[0:lastpt1]), np.max(plot_data_avgFlux2[0:lastpt2]))
+    d_min = min(np.min(plot_data_R1[0:lastpt1]), np.min(plot_data_R2[0:lastpt2]))
+    d_max = max(np.max(plot_data_R1[0:lastpt1]), np.max(plot_data_R2[0:lastpt2]))
+
+    fig, ax = plt.subplots()
+    fig.suptitle(JMS.sName)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim(d_min, d_max)
+    ax.set_ylim(fa_min, fa_max)
+    axis.Axis.set_major_formatter(ax.xaxis, ticker.ScalarFormatter())
+
+    ax.set_ylabel('Flux averaged over area (Jy)')
+    ax.set_xlabel('Distance (kpc)')
+
+    ax.plot(plot_data_R1[0:lastpt1], plot_data_avgFlux1[0:lastpt1], 'r-', label='Flux (N)', marker='.')
+    ax.plot(plot_data_R2[0:lastpt2], plot_data_avgFlux2[0:lastpt2], 'g-', label='Flux (S)', marker='.')
+
+    ax.legend()
+
+    plt.savefig(JPF.JP_flux_area_plot %(JMS.sName, str(JMS.map_number+1)))
+    plt.close(fig)
+       
 #############################################

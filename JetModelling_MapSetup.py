@@ -34,6 +34,12 @@ beamareas =  np.array([16.76195591180468,
 freqs =      np.array([1.636e9,
                        3.599498640499e8,
                        6.15250000000e8])                                    # Observation frequency
+# sCentres =   np.array([np.array([920.5,957.25]),
+#                        np.array([2047.5,2046.25]),
+#                        np.array([1497.75,1497.0])])                         # Map source centre in pixels (x,y); array of nan's for a map if not present
+sCentres =   np.array([np.array([nan,nan]),
+                       np.array([nan,nan]),
+                       np.array([nan,nan])])                                # Map source centre in pixels (x,y); array of nan's for a map if not present
 sRAs =       np.array([16.8217500000,
                        16.85395833273,
                        16.8537683301])                                      # Map centre RA in degrees
@@ -43,11 +49,11 @@ sDecs =      np.array([32.4255277778,
 sSizes =     np.array([np.array([500,500]),
                        np.array([500,500]),
                        np.array([500,1000])])                               # Source size in pixels (x,y sides of containing rectangle)
-bgRMSs =     np.array([0.000208,
-                       0.000285,
+bgRMSs =     np.array([0.000198,
+                       0.00026,
                        0.000313])                                           # Background flux RMS value in Jy/beam
-bgMeans =    np.array([0.00009638059,
-                       0.00015741505,
+bgMeans =    np.array([-0.000078874466,
+                       0.00014237006,
                        -0.00016326427])                                     # Background flux mean pixel value in Jy/beam
 
 ###########################################################################################################
@@ -90,7 +96,7 @@ JoinInterpolatePointss =   np.array([6,
 # Parameter used for finding section edges.
 ###########################################################################################################
 # nSig_armss =               np.array([np.array([1.5,4]),
-#                                      np.array([1.5,7.5]),
+#                                      np.array([1.5,4]),
 #                                      np.array([1.5,4])])                    # The multiple of the RMS flux threshold value for each jet arm
 nSig_armss =               np.array([np.array([1.0,1.0]),
                                      np.array([1.0,1.0]),
@@ -126,6 +132,7 @@ def InitialiseMap(current_map_number):
     global rdel; global ddel
     global beamsize; global beamarea
     global freq
+    global sCentre
     global sRA; global sDec
     global sSize
     global bgRMS; global bgMean
@@ -147,6 +154,7 @@ def InitialiseMap(current_map_number):
     rdel = rdels[map_number]; ddel = ddels[map_number]
     beamsize = beamsizes[map_number]; beamarea = beamareas[map_number]
     freq = freqs[map_number]
+    sCentre = sCentres[map_number]
     sRA = sRAs[map_number]; sDec = sDecs[map_number]
     sSize = sSizes[map_number]
     bgRMS = bgRMSs[map_number]; bgMean = bgMeans[map_number]
