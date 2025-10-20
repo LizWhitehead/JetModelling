@@ -15,7 +15,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
-from math import tan, atan2, atan, pow, isnan
+from math import tan, atan2, atan, pow, nan, isnan
 from shapely.geometry import LineString, Point, Polygon
 from regions import PixCoord, PolygonPixelRegion, Regions
 import copy
@@ -92,7 +92,8 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         edge_points2 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points2)
 
         # Get sections and section parameters (distance from source, flux, volume) of the jet
-        section_parameters1, section_parameters2, section_perimeters1, section_perimeters2 = GetJetSections(flux_array, edge_points1, edge_points2)
+        section_parameters1, section_parameters2, section_perimeters1, section_perimeters2 = \
+                             GetJetSections(flux_array, edge_points1, edge_points2, ridge1, ridge2)
 
         # Plot edgepoint and section data
         PlotEdgePointsAndSections(flux_array, JMS.sName, edge_points1, edge_points2, section_parameters1, section_parameters2)
@@ -575,7 +576,7 @@ def AddEdgePoints(flux_array, arm_number, edge_points):
 
 #############################################
 
-def GetJetSections(flux_array, edge_points1, edge_points2):
+def GetJetSections(flux_array, edge_points1, edge_points2, ridge1, ridge2):
 
     """
     Get parameters for each section of the jet.
@@ -594,6 +595,12 @@ def GetJetSections(flux_array, edge_points1, edge_points2):
                    Points on other arm of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
+
+    ridge1 - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for one arm of the jet
+    
+    ridge2 - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for other arm of the jet
     
     Constants
     ---------
@@ -637,8 +644,8 @@ def GetJetSections(flux_array, edge_points1, edge_points2):
     CheckForOverlappingSections(1, section_parameters1); CheckForOverlappingSections(2, section_parameters2)
 
     # Re-calculate the start and end distances of the sections along the jet
-    section_parameters1 = ReCalculateStartEnd_R(flux_array_valid, section_parameters1)
-    section_parameters2 = ReCalculateStartEnd_R(flux_array_valid, section_parameters2)
+    section_parameters1 = ReCalculateStartEnd_R(flux_array_valid, section_parameters1, ridge1)
+    section_parameters2 = ReCalculateStartEnd_R(flux_array_valid, section_parameters2, ridge2)
 
     # Merge sections within distance steps along the jet. Create regions for merged sections.
     print('Merging sections and creating section DS9 regions')
@@ -677,9 +684,6 @@ def Calculate_R(section_parameters):
     # Initialise updated section parameters array
     updated_section_parameters = np.empty((0,12))
 
-    # Initialise section R
-    R_section = 0.0
-
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section] in section_parameters:
 
         # Calculate the distance of the section centre
@@ -692,7 +696,7 @@ def Calculate_R(section_parameters):
 
 #############################################
 
-def ReCalculateStartEnd_R(flux_array, section_parameters):
+def ReCalculateStartEnd_R(flux_array, section_parameters, ridge):
 
     """
     Re-calculate the start and end distances of the sections along the jet,
@@ -707,6 +711,9 @@ def ReCalculateStartEnd_R(flux_array, section_parameters):
     section_parameters - 2D array, shape(n,13)
                          Array with section points (x,y * 4), distance from source
                          and computed parameters for this arm of the jet
+
+    ridge - 2D array, shape(n,2)
+             Array of ridgepoint co-ordinates for one arm of the jet
     
     Constants
     ---------
@@ -726,8 +733,8 @@ def ReCalculateStartEnd_R(flux_array, section_parameters):
 
     # Initialise starting R and max flux point
     prev_R_section_end = 0.0
-    max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([section_parameters[0,0], section_parameters[0,1]]), np.array([section_parameters[0,2], section_parameters[0,3]]))
-    prev_section_end_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+    max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, section_parameters[0,0], section_parameters[0,1], section_parameters[0,2], section_parameters[0,3])
+    prev_section_end_maxflux_pt = max_flux_pt
 
     sect_count = 0
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section] in section_parameters:
@@ -735,8 +742,8 @@ def ReCalculateStartEnd_R(flux_array, section_parameters):
 
         if sect_count < len(section_parameters):
 
-            max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([x1,y1]), np.array([x2,y2]))
-            section_start_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+            max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x1, y1, x2, y2)
+            section_start_maxflux_pt = max_flux_pt
             R_section_start = prev_R_section_end + \
                               np.sqrt( (section_start_maxflux_pt[0] - prev_section_end_maxflux_pt[0])**2 + (section_start_maxflux_pt[1] - prev_section_end_maxflux_pt[1])**2 )
 
@@ -745,18 +752,18 @@ def ReCalculateStartEnd_R(flux_array, section_parameters):
                 next_section = section_parameters[sect_count,:]
                 next_x1 = next_section[0]; next_y1 = next_section[1]; next_x2 = next_section[2]; next_y2 = next_section[3]
                 if x1 == next_x1 and y1 == next_y1:
-                    max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([x1,y1]), np.array([x3,y3]))
-                    section_end_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+                    max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x1, y1, x3, y3)
+                    section_end_maxflux_pt = max_flux_pt
                 elif x2 == next_x2 and y2 == next_y2:
-                    max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([x2,y2]), np.array([x3,y3]))
-                    section_end_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+                    max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x2, y2, x3, y3)
+                    section_end_maxflux_pt = max_flux_pt
                 else:
                     # We have jumped a gap - take the 3rd point to be the last point
                     section_end_maxflux_pt = np.array([x3, y3])
             else:
                 # 4-point section
-                max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([x3,y3]), np.array([x4,y4]))
-                section_end_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+                max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x3, y3, x4, y4)
+                section_end_maxflux_pt = max_flux_pt
 
             R_section_end = R_section_start + \
                             np.sqrt( (section_end_maxflux_pt[0] - section_start_maxflux_pt[0])**2 + (section_end_maxflux_pt[1] - section_start_maxflux_pt[1])**2 )
@@ -768,8 +775,8 @@ def ReCalculateStartEnd_R(flux_array, section_parameters):
 
         else:
             # Process the last section
-            max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([x1,y1]), np.array([x2,y2]))
-            section_start_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+            max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x1, y1, x2, y2)
+            section_start_maxflux_pt = max_flux_pt
             R_section_start = prev_R_section_end + \
                               np.sqrt( (section_start_maxflux_pt[0] - prev_section_end_maxflux_pt[0])**2 + (section_start_maxflux_pt[1] - prev_section_end_maxflux_pt[1])**2 )
 
@@ -778,15 +785,15 @@ def ReCalculateStartEnd_R(flux_array, section_parameters):
                 section_end_maxflux_pt = np.array([x3, y3])
             else:
                 # 4-point section
-                max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([x3,y3]), np.array([x4,y4]))
-                section_end_maxflux_pt = np.array([ max_flux_x, max_flux_y ])
+                max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x3, y3, x4, y4)
+                section_end_maxflux_pt = max_flux_pt
 
             R_section_end = R_section_start + \
                             np.sqrt( (section_end_maxflux_pt[0] - section_start_maxflux_pt[0])**2 + (section_end_maxflux_pt[1] - section_start_maxflux_pt[1])**2 )
 
             updated_section_parameters = np.vstack((updated_section_parameters, \
                                                     np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section])))
-
+                                
 
     return updated_section_parameters
 
@@ -876,7 +883,7 @@ def MergeSections(section_parameters, start_R):
     sect_count = 0; last_R_section_end = 0.0
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section] in section_parameters:
         sect_count += 1
-    
+
         merged_flux = last_merged_flux_section + flux_section               # Add on the flux in the latest section
         merged_volume = last_merged_volume_section + volume_section         # Add on the volume in the latest section
         merged_area = last_merged_area_section + area_section               # Add on the area in the latest section
@@ -1190,8 +1197,7 @@ def GetSectionPolygons(edge_points):
 def DoLinesIntersect(line1_x1, line1_y1, line1_x2, line1_y2, line2_x1, line2_y1, line2_x2, line2_y2):
 
     """
-    Returns the total flux in this section, sharing any overlap flux 
-    with adjacent sections.
+    Returns a flag to show if the two supplied lines intersect.
 
     Parameters
     -----------
@@ -1231,6 +1237,53 @@ def DoLinesIntersect(line1_x1, line1_y1, line1_x2, line1_y2, line2_x1, line2_y1,
     lines_intersect = not int_pt.is_empty
 
     return lines_intersect
+
+#############################################
+
+def LineIntersection(line1_x1, line1_y1, line1_x2, line1_y2, line2_x1, line2_y1, line2_x2, line2_y2):
+
+    """
+    Returns the intersection point of the two supplied lines
+    (nan if no intersection).
+
+    Parameters
+    -----------
+    line1_x1, line1_y1 - co-ordinates of one end of line 1
+
+    line1_x2, line1_y2 - co-ordinates of other end of line 1
+
+    line2_x1, line2_y1 - co-ordinates of one end of line 2
+
+    line2_x2, line2_y2 - co-ordinates of other end of line 2
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    intersection_point - 1D array shape(2)
+                         intersection co-ordinate (nan if no intersection)
+
+    Notes
+    -----------
+    """
+
+    # Setup the lines
+    line1_point1 = (line1_x1, line1_y1)
+    line1_point2 = (line1_x2, line1_y2)
+    line2_point1 = (line2_x1, line2_y1)
+    line2_point2 = (line2_x2, line2_y2)
+    line1 = LineString([line1_point1, line1_point2])
+    line2 = LineString([line2_point1, line2_point2])
+
+    # Look for an intersection
+    int_pt = line1.intersection(line2)
+    if int_pt.is_empty:
+        intersection_point = nan
+    else:
+        intersection_point = np.array([int_pt.x, int_pt.y])
+
+    return intersection_point
 
 #############################################
 
@@ -1654,6 +1707,65 @@ def Setup4PointPolygon(polypoints):
                 base_points[1,0] = top_points[1,0] - ( (top_points[1,1]-base_points[1,1]) / (- grad_side1) )
 
     return base_points, top_points
+
+#############################################
+
+def GetRidgeIntersectionPoint(flux_array, ridge, line_x1, line_y1, line_x2, line_y2):
+
+    """
+    Returns 
+
+    Parameters
+    -----------
+    flux_array - 2D array,
+                 raw image array
+
+    ridge - 2D array, shape(n,2)
+            Array of ridgepoint co-ordinates for one arm of the jet
+
+    line_x1, line_y1 - co-ordinates of one end of the section line
+
+    line_x2, line_y2 - co-ordinates of other end of the section line
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    intersection_point - 1D array shape(2)
+                         intersection co-ordinate
+    """
+
+    # Setup the section line
+    line1_point1 = (line_x1, line_y1)
+    line1_point2 = (line_x2, line_y2)
+
+    ridge_cnt = 1
+    while ridge_cnt < len(ridge) and not np.isnan(ridge[ridge_cnt]).any():
+
+        # Setup the line between the next points of the ridgeline
+        line2_point1 = (ridge[ridge_cnt-1, 0], ridge[ridge_cnt-1,1])
+        line2_point2 = (ridge[ridge_cnt,0], ridge[ridge_cnt,1])
+
+        line1 = LineString([line1_point1, line1_point2])
+        line2 = LineString([line2_point1, line2_point2])
+
+        # Look for an intersection
+        int_pt = line1.intersection(line2)
+        if int_pt.is_empty:
+            intersection_point = np.array([nan, nan])
+            ridge_cnt += 1
+        else:
+            intersection_point = np.array([int_pt.x, int_pt.y])
+            break
+
+    # if the intersection point has not been found, return the point of maximum flux along the line
+    if isnan(intersection_point[0]):
+        max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([line_x1,line_y1]), np.array([line_x2,line_y2]))
+        intersection_point = np.array([ max_flux_x, max_flux_y ])
+
+    
+    return intersection_point
 
 #############################################
 

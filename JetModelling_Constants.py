@@ -46,7 +46,7 @@ MaxIntpolSections = 4           # Maximum number of interpolated points along an
 flux_percentile = 100           # Flux percentile limit for refining jet edges (100 => no change)
 
 # Jet Sections
-MergeMaxStartRFactor = 1.1      # Multiplication factor of starting max merge distance in merge algorithm (>= 1)
+MergeMaxStartRFactor = 1.5      # Multiplication factor of starting max merge distance in merge algorithm (>= 1)
 MergeRIncreaseFactor = 1.15     # Multiplication factor of step increase in max merge distance (>=1)
 
 # Regions
