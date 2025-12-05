@@ -52,7 +52,6 @@ def Setup():
         cutout = str(RLF.fits) + JMS.sName + '.fits'
         nlhdu = fits.open(cutout) 
         d = nlhdu[0].data
-        #thres = (1e-3) * JMS.nSig * JMS.bgRMS
         thres = JMC.nSig * JMS.bgRMS
 
         d[d<thres] = np.nan

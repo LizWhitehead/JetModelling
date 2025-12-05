@@ -477,11 +477,17 @@ def LoadRidgelineDataForOneArm(ridge_coords, ridge, phi_val, Rlen):
         else:
             x = float(x); y = float(y)
             latest_R += np.sqrt( (x - last_saved_x)**2 + (y - last_saved_y)**2 )
-            if (latest_R - last_saved_R) > JMC.R_s:                 # Only save when difference in R > defined max value
-                ridge = np.vstack((ridge, np.array([x, y])))
-                Rlen = np.hstack((Rlen, latest_R))
-                phi_val = np.hstack(( phi_val, atan2((y - last_saved_y), (x - last_saved_x)) ))
-                last_saved_x = x; last_saved_y = y; last_saved_R = latest_R
+
+            while (latest_R - last_saved_R) > JMC.R:                    # Only save when difference in R > defined max value
+                fraction_R = float(JMC.R / (latest_R - last_saved_R))
+                x_save = last_saved_x + ((x - last_saved_x) * fraction_R)
+                y_save = last_saved_y + ((y - last_saved_y) * fraction_R)
+                R_save = last_saved_R + ((latest_R - last_saved_R) * fraction_R)
+
+                ridge = np.vstack((ridge, np.array([x_save, y_save])))
+                Rlen = np.hstack((Rlen, R_save))
+                phi_val = np.hstack(( phi_val, atan2((y_save - last_saved_y), (x_save - last_saved_x)) ))
+                last_saved_x = x_save; last_saved_y = y_save; last_saved_R = R_save
 
         lineidx += 1
 
@@ -569,8 +575,8 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
     x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
-    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (np.min(JMS.nSig_arms) * JMS.bgRMS), y, copy=True).mask)
-    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (np.min(JMS.nSig_arms) * JMS.bgRMS), x, copy=True).mask)
+    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMC.nSig * JMS.bgRMS), y, copy=True).mask)
+    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMC.nSig * JMS.bgRMS), x, copy=True).mask)
     xmin = np.ma.min(x_plotlimits)
     xmax = np.ma.max(x_plotlimits)
     ymin = np.ma.min(y_plotlimits)

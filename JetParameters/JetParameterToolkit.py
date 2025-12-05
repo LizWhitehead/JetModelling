@@ -157,7 +157,7 @@ def GetParametersForJetArm(section_parameters, arm_number):
                 bdme = k.bdome; uedome = k.uedome; ubdome = k.ubdome; bdomb = k.bdomb; uedomb = k.uedomb; ubdomb = k.ubdomb
 
         else:
-            print("Flux is zero in jet arm " + str(arm_number) + " section " + str(sect_count) + ". Update ridge_centre_search_points, nSig_arms and/or section merge parameters.")
+            print("Flux is zero in jet arm " + str(arm_number) + " section " + str(sect_count) + ". Update ridge_centre_search_points, nSig and/or section merge parameters.")
 
     return jp_kappa0
 
@@ -313,7 +313,7 @@ def PlotJetParameters(jp_kappa0_arm1, jp_kappa0_arm2):
     -----------
     """
 
-    lastpt1 = np.shape(jp_kappa0_arm1)[0] - 2; lastpt2 = np.shape(jp_kappa0_arm2)[0] - 2    # don't plot the last point
+    lastpt1 = np.shape(jp_kappa0_arm1)[0] - 1; lastpt2 = np.shape(jp_kappa0_arm2)[0] - 1    # don't plot the last point
 
     # Model with kappa=0. Internal pressure.
     p_min = min(np.min(jp_kappa0_arm1[0:lastpt1,5]), np.min(jp_kappa0_arm2[0:lastpt2,5]))

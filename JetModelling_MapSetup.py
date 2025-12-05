@@ -34,12 +34,12 @@ beamareas =  np.array([16.76195591180468,
 freqs =      np.array([1.636e9,
                        3.599498640499e8,
                        6.15250000000e8])                                    # Observation frequency
-# sCentres =   np.array([np.array([920.5,957.25]),
-#                        np.array([2047.5,2046.25]),
-#                        np.array([1497.75,1497.0])])                         # Map source centre in pixels (x,y); array of nan's for a map if not present
-sCentres =   np.array([np.array([nan,nan]),
-                       np.array([nan,nan]),
-                       np.array([nan,nan])])                                # Map source centre in pixels (x,y); array of nan's for a map if not present
+sCentres =   np.array([np.array([920.5,957.25]),
+                       np.array([2047.5,2046.25]),
+                       np.array([1497.75,1497.0])])                         # Map source centre in pixels (x,y); array of nan's for a map if not present
+# sCentres =   np.array([np.array([nan,nan]),
+#                        np.array([nan,nan]),
+#                        np.array([nan,nan])])                                # Map source centre in pixels (x,y); array of nan's for a map if not present
 sRAs =       np.array([16.8217500000,
                        16.85395833273,
                        16.8537683301])                                      # Map centre RA in degrees
@@ -49,7 +49,7 @@ sDecs =      np.array([32.4255277778,
 sSizes =     np.array([np.array([500,500]),
                        np.array([500,500]),
                        np.array([500,1000])])                               # Source size in pixels (x,y sides of containing rectangle)
-bgRMSs =     np.array([0.000198,
+bgRMSs =     np.array([0.0002,
                        0.00026,
                        0.000313])                                           # Background flux RMS value in Jy/beam
 bgMeans =    np.array([-0.000078874466,
@@ -93,16 +93,6 @@ JoinInterpolatePointss =   np.array([6,
                                      6])                                    # Value used if joining together skeletons for inner and outer jets
 
 ###########################################################################################################
-# Parameter used for finding section edges.
-###########################################################################################################
-# nSig_armss =               np.array([np.array([1.5,4]),
-#                                      np.array([1.5,4]),
-#                                      np.array([1.5,4])])                    # The multiple of the RMS flux threshold value for each jet arm
-nSig_armss =               np.array([np.array([1.0,1.0]),
-                                     np.array([1.0,1.0]),
-                                     np.array([1.0,1.0])])                    # The multiple of the RMS flux threshold value for each jet arm
-
-###########################################################################################################
 # Parameters used for map plotting.
 ###########################################################################################################
 ImFractions  = np.array([0.9,
@@ -129,7 +119,7 @@ def InitialiseMap(current_map_number):
 
     global map_number
     global map_file
-    global rdel; global ddel
+    global rdel; global ddel; global equiv_R_factor
     global beamsize; global beamarea
     global freq
     global sCentre
@@ -143,11 +133,13 @@ def InitialiseMap(current_map_number):
     global MaximumLoopJumpPixels
     global nSig_s
     global SplitInnerOuterSkeleton; global nSig_s_outer; global JoinInterpolatePoints
-    global nSig_arms
     global ImFraction; global vmin; global vmax
 
     # Set the map number
     map_number = current_map_number
+
+    # Set the factor which determines equivalent distances along multiple jets
+    equiv_R_factor = ddels[0] / ddels[map_number]
 
     # Initialise all map-specific parameter values for this map number
     map_file = map_files[map_number]
@@ -166,8 +158,6 @@ def InitialiseMap(current_map_number):
     MaximumLoopJumpPixels = MaximumLoopJumpPixelss[map_number]
     nSig_s = nSig_ss[map_number]
     SplitInnerOuterSkeleton = SplitInnerOuterSkeletons[map_number]; nSig_s_outer = nSig_s_outers[map_number]; JoinInterpolatePoints = JoinInterpolatePointss[map_number]
-
-    nSig_arms = nSig_armss[map_number]
 
     ImFraction = ImFractions[map_number]; vmin = vmins[map_number]; vmax = vmaxs[map_number]
 

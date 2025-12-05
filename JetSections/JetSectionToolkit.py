@@ -71,21 +71,21 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         print('Finding edge points')
 
         # Find initial edge points
-        init_edge_points1 = FindInitEdgePoints(flux_array, 1, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
+        init_edge_points1 = FindInitEdgePoints(flux_array, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
 
         # The initial edge points were ordered relative to the ridge phi for the first arm. Re-order for the second arm.
         init_edge_points2 = np.array([init_edge_points1[2], init_edge_points1[3], \
                                       init_edge_points1[0], init_edge_points1[1], init_edge_points1[4]])
 
         # Find all edgepoints for each arm of the jet
-        edge_points1 = FindAllEdgePointsForJetArm(flux_array, 1, init_edge_points1, ridge1, phi_val1, Rlen1)
-        edge_points2 = FindAllEdgePointsForJetArm(flux_array, 2, init_edge_points2, ridge2, phi_val2, Rlen2)
+        edge_points1 = FindAllEdgePointsForJetArm(flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
+        edge_points2 = FindAllEdgePointsForJetArm(flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
 
         # Interpolate extra edge points at points in the jet where significant flux or area (=> calculated volume) is cut off.
         # This will ensure that summed flux and volume are correct when merging segments.
         print('Adding extra edge points')
-        edge_points1 = AddEdgePoints(flux_array, 1, edge_points1)
-        edge_points2 = AddEdgePoints(flux_array, 2, edge_points2)
+        edge_points1 = AddEdgePoints(flux_array, edge_points1)
+        edge_points2 = AddEdgePoints(flux_array, edge_points2)
 
         # Refine the edges using a percentile of the flux distribution
         edge_points1 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points1)
@@ -110,7 +110,7 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
 
 #############################################
 
-def FindAllEdgePointsForJetArm(flux_array, arm_number, init_edge_points, ridge, phi_val, Rlen):
+def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rlen):
 
     """
     Find all edge points for one arm of the jet
@@ -119,8 +119,6 @@ def FindAllEdgePointsForJetArm(flux_array, arm_number, init_edge_points, ridge, 
     -----------
     flux_array - 2D array,
                  raw image array
-
-    arm_number - integer, 1 or 2
 
     init_edge_points - 1D array
                        Points on either side of the jet, corresponding to the 
@@ -166,9 +164,10 @@ def FindAllEdgePointsForJetArm(flux_array, arm_number, init_edge_points, ridge, 
                 break
 
             if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JMC.MaxRFactor * JMC.R_es):  # Test whether the last step size has increased by too much
-                new_edge_points = FindEdgePoints(flux_array, arm_number, ridge[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
+                new_edge_points = FindEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
             else:
-                new_edge_points = FindInitEdgePoints(flux_array, arm_number, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])  # Re-initialise edge points algorithm
+                # Re-initialise edge points algorithm
+                new_edge_points = FindInitEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
 
             if not np.isnan(new_edge_points).any(): 
                 edge_points = np.vstack((edge_points, new_edge_points))
@@ -179,7 +178,7 @@ def FindAllEdgePointsForJetArm(flux_array, arm_number, init_edge_points, ridge, 
 
 #############################################
 
-def FindEdgePoints(flux_array, arm_number, ridge_point, ridge_R, prev_edge_points):
+def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -190,10 +189,11 @@ def FindEdgePoints(flux_array, arm_number, ridge_point, ridge_R, prev_edge_point
     flux_array - 2D array,
                  raw image array
 
-    arm_number - integer, 1 or 2
-
     ridge_point - 1D array
                   ridge point co-ordinates along the ridge line
+
+    ridge_phi - float,
+                angular direction of the ridge line
 
     ridge_R - float,
               distance from the source along the jet in pixels
@@ -217,6 +217,8 @@ def FindEdgePoints(flux_array, arm_number, ridge_point, ridge_R, prev_edge_point
     Notes
     -----------
     """
+    # Initialise flags
+    invalid_edge_point = False; moving_backwards = False
 
     # Initialise edge_points array
     edge_points = np.full((1,5), np.nan)
@@ -225,116 +227,82 @@ def FindEdgePoints(flux_array, arm_number, ridge_point, ridge_R, prev_edge_point
     search_angle = JMC.search_angle * pi/180
 
     # Fill invalid (nan) values with zeroes in flux_array
-    flux_array_valid = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
+    flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
-    # Mask the jet - where flux values are above (JMS.nSig * rms)
-    jet_mask = np.ma.masked_where(flux_array_valid > (JMS.nSig_arms[arm_number-1] * JMS.bgRMS), flux_array_valid).mask
+    # Mask the flux values below the RMS value (JMC.nSig * rms)
+    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig * JMS.bgRMS), flux_array).mask
 
     # Get polar coordinates for flux_array, around the ridge point
     r, phi = PolarCoordinates(flux_array, ridge_point)
 
     # Find the r and phi values of the previous edge points
     prev_edge_pix = np.floor(prev_edge_points).astype('int')
-    phi_prev_coord1 = phi[prev_edge_pix[1], prev_edge_pix[0]]; phi_prev_coord2 = phi[prev_edge_pix[3], prev_edge_pix[2]]
-    r_prev_coord1 = r[prev_edge_pix[1], prev_edge_pix[0]]; r_prev_coord2 = r[prev_edge_pix[3], prev_edge_pix[2]]
+    phi_prev1 = phi[prev_edge_pix[1], prev_edge_pix[0]]; phi_prev2 = phi[prev_edge_pix[3], prev_edge_pix[2]]
 
-    # Start looking for the edge point at the side closest to the ridge point
-    if r_prev_coord1 < r_prev_coord2:
-        phi_prev1 = phi_prev_coord1; phi_prev2 = phi_prev_coord2
-    else:
-        phi_prev1 = phi_prev_coord2; phi_prev2 = phi_prev_coord1
+    # Find the previous edgepoint to edgepoint distance
+    r_prev = np.sqrt( (prev_edge_points[2] - prev_edge_points[0])**2 + (prev_edge_points[3] - prev_edge_points[1])**2 )
+    r_prev1 = r_prev / 2.0; r_prev2 = r_prev / 2.0
 
-    # Search within a defined angle from the previous first edge point.
-    if phi_prev1 == phi_prev_coord1:
-        phi_latest1 = PiRange(phi_prev1 - search_angle)
-    else:
-        phi_latest1 = PiRange(phi_prev1 + search_angle)
+    # Find the new search angle range on each side of the jet
+    phi_min1, phi_max1, phi_min2, phi_max2 = FindSearchAngleRanges(phi_prev1, phi_prev2, ridge_phi)
 
     # Create a mask to search for nearest edge point on this side of the ridge point
-    min_phi = min(phi_latest1, phi_prev1); max_phi = max(phi_latest1, phi_prev1)
+    min_phi = min(phi_min1, phi_max1); max_phi = max(phi_min1, phi_max1)
     quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
     diff = max_phi - min_phi
     if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-        phi_mask = np.ma.masked_inside(phi, phi_latest1, phi_prev1).mask        # search between phi_latest1 and phi_prev1
+        phi_mask = np.ma.masked_inside(phi, phi_min1, phi_max1, copy=True).mask     # search between phi_min1 and phi_max1
     else:
-        phi_mask = np.ma.masked_outside(phi, phi_latest1, phi_prev1).mask
-    if JMC.MaskPreviousEdgepoint[arm_number-1]:
-        prev_edge_mask = np.ma.masked_where(phi == phi_prev1, phi).mask                 # mask the previous edge point phi
-        search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)  # search outside the jet
-    else:
-        search_mask = np.ma.mask_or(phi_mask, jet_mask)                         # search outside the jet
+        phi_mask = np.ma.masked_outside(phi, phi_min1, phi_max1, copy=True).mask
+    r_mask = np.ma.masked_outside(r, 0, (r_prev1 * JMC.SearchRadiusIncFactor), copy=True).mask  # search inside defined radius equal to a factor of the previous r
+    search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, r_mask), rms_mask)          # create the search mask
 
-    # Find the co-ordinate of the smallest r value in the search area - the first edge point
-    r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
-    edge_coord1_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
+    # Find the co-ordinate of the largest r value in the search area - the first edge point
+    r_search = np.ma.masked_array(r, mask = search_mask)
+    edge_coord1_yx = np.unravel_index(np.argmax(r_search, axis=None), r_search.shape)
     edge_coord1 = np.array([edge_coord1_yx[1] + 0.5,edge_coord1_yx[0] + 0.5])
+    if edge_coord1_yx[0] == 0: invalid_edge_point = True
 
     # Check that we are moving forwards. Compare the angles of old and new edge points about
     # the previous edge point on the opposite edge.
-    moving_backwards = False
-    if phi_prev1 == phi_prev_coord1:
+    if not invalid_edge_point:
         r2, phi2 = PolarCoordinates(flux_array, np.array([prev_edge_pix[2], prev_edge_pix[3]]))
-        delta_phi = phi2[edge_coord1_yx[0], edge_coord1_yx[1]] - phi2[prev_edge_pix[1], prev_edge_pix[0]]
-        if delta_phi > pi: delta_phi -= 2*pi
+        delta_phi = PiRange(phi2[edge_coord1_yx[0], edge_coord1_yx[1]] - phi2[prev_edge_pix[1], prev_edge_pix[0]])
         moving_backwards = delta_phi > 0
-    else:
-        r1, phi1 = PolarCoordinates(flux_array, np.array([prev_edge_pix[0], prev_edge_pix[1]]))
-        delta_phi = phi1[edge_coord1_yx[0], edge_coord1_yx[1]] - phi1[prev_edge_pix[3], prev_edge_pix[2]]
-        if delta_phi < pi: delta_phi += 2*pi
-        moving_backwards = delta_phi < 0
 
-    if not moving_backwards:
-        # Search within a defined angle from the previous second edge point.
-        if phi_prev1 == phi_prev_coord1:
-            phi_latest2 = PiRange(phi_prev2 + search_angle)
-        else:
-            phi_latest2 = PiRange(phi_prev2 - search_angle)
-
+    if not moving_backwards and not invalid_edge_point:
         # Create a mask to search for nearest edge point on the other side of the ridge point
-        min_phi = min(phi_latest2, phi_prev2); max_phi = max(phi_latest2, phi_prev2)
+        min_phi = min(phi_min2, phi_max2); max_phi = max(phi_min2, phi_max2)
         quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
         diff = max_phi - min_phi
         if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-            phi_mask = np.ma.masked_inside(phi, phi_latest2, phi_prev2).mask        # search between phi_latest2 and phi_prev2
+            phi_mask = np.ma.masked_inside(phi, phi_min2, phi_max2, copy=True).mask     # search between phi_min2 and phi_max2
         else:
-            phi_mask = np.ma.masked_outside(phi, phi_latest2, phi_prev2).mask
-        if JMC.MaskPreviousEdgepoint[arm_number-1]:
-            prev_edge_mask = np.ma.masked_where(phi == phi_prev2, phi).mask                    # mask the previous edge point phi
-            search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, prev_edge_mask), jet_mask)     # search outside the jet
-        else:
-            search_mask = np.ma.mask_or(phi_mask, jet_mask)                         # search outside the jet
+            phi_mask = np.ma.masked_outside(phi, phi_min2, phi_max2, copy=True).mask
+        r_mask = np.ma.masked_outside(r, 0, (r_prev2 * JMC.SearchRadiusIncFactor), copy=True).mask  # search inside defined radius equal to a factor of the previous r
+        search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, r_mask), rms_mask)          # create the search mask
 
-        # Find the co-ordinate of the smallest r value in the search area - the second edge point
-        r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
-        edge_coord2_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
+        # Find the co-ordinate of the largest r value in the search area - the second edge point
+        r_search = np.ma.masked_array(r, mask = search_mask)
+        edge_coord2_yx = np.unravel_index(np.argmax(r_search, axis=None), r_search.shape)
         edge_coord2 = np.array([edge_coord2_yx[1] + 0.5,edge_coord2_yx[0] + 0.5])
+        if edge_coord2_yx[0] == 0: invalid_edge_point = True
 
         # Check that we are moving forwards. Compare the angles of old and new edge points about
         # the previous edge point on the opposite edge.
-        moving_backwards = False
-        if phi_prev1 == phi_prev_coord1:
+        if not invalid_edge_point:
             r1, phi1 = PolarCoordinates(flux_array, np.array([prev_edge_pix[0], prev_edge_pix[1]]))
-            delta_phi = phi1[edge_coord2_yx[0], edge_coord2_yx[1]] - phi1[prev_edge_pix[3], prev_edge_pix[2]]
-            if delta_phi < pi: delta_phi += 2*pi
+            delta_phi = PiRange(phi1[edge_coord2_yx[0], edge_coord2_yx[1]] - phi1[prev_edge_pix[3], prev_edge_pix[2]])
             moving_backwards = delta_phi < 0
-        else:
-            r2, phi2 = PolarCoordinates(flux_array, np.array([prev_edge_pix[2], prev_edge_pix[3]]))
-            delta_phi = phi2[edge_coord2_yx[0], edge_coord2_yx[1]] - phi2[prev_edge_pix[1], prev_edge_pix[0]]
-            if delta_phi > pi: delta_phi -= 2*pi
-            moving_backwards = delta_phi > 0
 
-        if not moving_backwards:
-            # Detemine which should be the first co-ordinate in the array.
-            if phi_prev1 == phi_prev_coord1:
-                edge_points = np.array([edge_coord1[0], edge_coord1[1], edge_coord2[0], edge_coord2[1], ridge_R])
-            else:
-                edge_points = np.array([edge_coord2[0], edge_coord2[1], edge_coord1[0], edge_coord1[1], ridge_R])
+        if not moving_backwards and not invalid_edge_point:
+            edge_points = np.array([edge_coord1[0], edge_coord1[1], edge_coord2[0], edge_coord2[1], ridge_R])
 
     return edge_points
 
 #############################################
 
-def FindInitEdgePoints(flux_array, arm_number, ridge_point, ridge_phi, ridge_R):
+def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -344,8 +312,6 @@ def FindInitEdgePoints(flux_array, arm_number, ridge_point, ridge_phi, ridge_R):
     -----------
     flux_array - 2D array,
                  raw image array
-
-    arm_number - integer, 1 or 2
 
     ridge_point - 1D array
                   ridge point co-ordinates along the ridge line
@@ -380,8 +346,8 @@ def FindInitEdgePoints(flux_array, arm_number, ridge_point, ridge_phi, ridge_R):
     # Fill invalid (nan) values with zeroes in flux_array
     flux_array_valid = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
-    # Mask the jet - where flux values are above (JMS.nSig * rms)
-    jet_mask = np.ma.masked_where(flux_array_valid > (JMS.nSig_arms[arm_number-1] * JMS.bgRMS), flux_array_valid).mask
+    # Mask the jet - where flux values are above (JMC.nSig * rms)
+    jet_mask = np.ma.masked_where(flux_array_valid > (JMC.nSig * JMS.bgRMS), flux_array_valid).mask
 
     # Search for an edge at right angles to the ridge direction
     search_phi_range1 = PiRange(ridge_phi + (pi*90/180) - (pi*5/180))     # +/- 5 degrees
@@ -433,7 +399,76 @@ def FindInitEdgePoints(flux_array, arm_number, ridge_point, ridge_phi, ridge_R):
 
 #############################################
 
-def AddEdgePoints(flux_array, arm_number, edge_points):
+def FindSearchAngleRanges(phi_prev1, phi_prev2, ridge_phi):
+
+    """
+    Returns the search ranges for finding the next edgepoints
+
+    Parameters
+    -----------
+    phi_prev1 - float,
+                 direction of the previous edge point 1
+
+    phi_prev2 - float,
+                angular direction of the previous edge point 2
+
+    ridge_phi - float,
+                angular direction of the ridgeline
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    phi_min1 - float,
+               minimum in angular search range 1
+
+    phi_max1 - float,
+               maximum in angular search range 1
+
+    phi_min2 - float,
+               minimum in angular search range 2
+
+    phi_max2 - float,
+               maximum in angular search range 2
+
+    Notes
+    -----------
+    """
+
+    # Find the angle at +90 degs to the ridge phi
+    ridge_phi_plus_90 = PiRange(ridge_phi + pi/2)
+
+    # Find which edge point this is closest to in angle, to search for the next edge point on that side of the jet
+    min_phi = min(phi_prev1, ridge_phi_plus_90); max_phi = max(phi_prev1, ridge_phi_plus_90)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_1 = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_1 > pi: diff_1 = np.abs(diff_1 - 2*pi)
+    min_phi = min(phi_prev2, ridge_phi_plus_90); max_phi = max(phi_prev2, ridge_phi_plus_90)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff_2 = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff_2 > pi: diff_2 = np.abs(diff_2 - 2*pi)
+    if diff_1 < diff_2:
+        search_phi1 = ridge_phi_plus_90             # search at +90 degs to the ridge phi
+        search_phi2 = PiRange(ridge_phi - pi/2)     # search at -90 degs to the ridge phi
+    else:
+        search_phi1 = PiRange(ridge_phi - pi/2)     # search at -90 degs to the ridge phi
+        search_phi2 = ridge_phi_plus_90             # search at +90 degs to the ridge phi
+
+    # Define the angular search range on both sides
+    semi_search_range = (pi/180) * (JMC.search_angle/2.0)
+    phi_min1 = PiRange(search_phi1 - semi_search_range)
+    phi_max1 = PiRange(search_phi1 + semi_search_range)
+    phi_min2 = PiRange(search_phi2 - semi_search_range)
+    phi_max2 = PiRange(search_phi2 + semi_search_range)
+
+    return phi_min1, phi_max1, phi_min2, phi_max2
+
+    return None
+
+#############################################
+
+def AddEdgePoints(flux_array, edge_points):
 
     """
     Interpolates extra edge points at points in the jet where
@@ -443,8 +478,6 @@ def AddEdgePoints(flux_array, arm_number, edge_points):
     -----------
     flux_array - 2D array, shape(n,2)
                  raw image array
-
-    arm_number - integer, 1 or 2
 
     edge_points - 2D array, shape(n,4)
                   Points on one arm of the jet, corresponding to the 
@@ -468,10 +501,10 @@ def AddEdgePoints(flux_array, arm_number, edge_points):
     lastpts = np.empty((0,5))
 
     # Fill invalid (nan) values with zeroes in flux_array
-    flux_array_valid = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
+    flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
-    # Mask the jet - where flux values are above (JMS.nSig * rms)
-    jet_mask = np.ma.masked_where(flux_array_valid > (JMS.nSig_arms[arm_number-1] * JMS.bgRMS), flux_array_valid).mask
+    # Mask the flux values below the RMS value (JMC.nSig * rms)
+    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig * JMS.bgRMS), flux_array).mask
 
     # Loop for each side of the jet
     jet_side = 1
@@ -497,73 +530,69 @@ def AddEdgePoints(flux_array, arm_number, edge_points):
                         # Work out the number of sections to divide the length between last 2 points.
                         num_sections = max( min(np.floor(dist/JMC.R_es + 1).astype('int'), JMC.MaxIntpolSections), 2)
 
-                        R_per_section = R_diff / num_sections                               # change in R per section
+                        R_per_section = R_diff / num_sections                           # change in R per section
 
                         # Interpolate the new edgepoint for each section
-                        section_x1_length = (x_side1 - lastpts[0]) / num_sections     # x section length on one side of the jet
-                        section_y1_length = (y_side1 - lastpts[1]) / num_sections     # y section length on one side of the jet
-                        section_x2_length = (x_side2 - lastpts[2]) / num_sections     # x section length on other side of the jet
-                        section_y2_length = (y_side2 - lastpts[3]) / num_sections     # y section length on other side of the jet
+                        section_x1_length = (x_side1 - lastpts[0]) / num_sections       # x section length on one side of the jet
+                        section_y1_length = (y_side1 - lastpts[1]) / num_sections       # y section length on one side of the jet
+                        section_x2_length = (x_side2 - lastpts[2]) / num_sections       # x section length on other side of the jet
+                        section_y2_length = (y_side2 - lastpts[3]) / num_sections       # y section length on other side of the jet
+
+                        # Take the search radius for the added edgepoints to be half of the maximum of the distance between 
+                        # the current edgepoints and the distance between the previous edgepoints
+                        r_radius = max(np.sqrt( (x_side2 - x_side1)**2 + (y_side2 - y_side1)**2 ), \
+                                       np.sqrt( (lastpts[2] - lastpts[0])**2 + (lastpts[3] - lastpts[1])**2 )) / 2.0
 
                         last_sect_x1 = lastpts[0]; last_sect_y1 = lastpts[1]
                         last_sect_x2 = lastpts[2]; last_sect_y2 = lastpts[3]
-                        stop_section_edgepoints = False
                         sect = 1
-                        while sect <= (num_sections-1) and not stop_section_edgepoints:
-                            R_section = lastpts[4] + (R_per_section * sect)           # R for this section
+                        while sect <= (num_sections-1):
+                            R_section = lastpts[4] + (R_per_section * sect)             # R for this section
 
-                            x1 = last_sect_x1 + section_x1_length                     # x section co-ord on one side of the jet
-                            y1 = last_sect_y1 + section_y1_length                     # y section co-ord on one side of the jet
-                            x2 = last_sect_x2 + section_x2_length                     # x section co-ord on other side of the jet
-                            y2 = last_sect_y2 + section_y2_length                     # y section co-ord on other side of the jet
+                            x1 = last_sect_x1 + section_x1_length                       # x section co-ord on one side of the jet
+                            y1 = last_sect_y1 + section_y1_length                       # y section co-ord on one side of the jet
+                            x2 = last_sect_x2 + section_x2_length                       # x section co-ord on other side of the jet
+                            y2 = last_sect_y2 + section_y2_length                       # y section co-ord on other side of the jet
 
-                            x_mean = (x1 + x2) / 2                                    # x co-ord of centre of the points on either side of the jet
-                            y_mean = (y1 + y2) / 2                                    # y co-ord of centre of the points on either side of the jet
+                            centre_pt = np.array([(x1 + x2) / 2, (y1 + y2) / 2])        # x/y co-ords of centre of the points on each side of the jet
 
-                            r, phi = PolarCoordinates(flux_array, np.array([x_mean,y_mean])) # polar co-ordinates around centre point
+                            r, phi = PolarCoordinates(flux_array, centre_pt)            # polar co-ordinates around centre point
 
-                            # Set up the start and end of the phi range around the section point
+                            # Find the next additional edge points
                             if jet_side == 1:
-                                x_start = np.floor(x1 - section_x1_length/2).astype('int'); y_start = np.floor(y1 - section_y1_length/2).astype('int')
-                                x_end = np.floor(x1 + section_x1_length/2).astype('int'); y_end = np.floor(y1 + section_y1_length/2).astype('int')
-                                phi_start = phi[y_start,x_start]
-                                phi_end = phi[y_end,x_end]
-                            else:
-                                x_start = np.floor(x2 - section_x2_length/2).astype('int'); y_start = np.floor(y2 - section_y2_length/2).astype('int')
-                                x_end = np.floor(x2 + section_x2_length/2).astype('int'); y_end = np.floor(y2 + section_y2_length/2).astype('int')
-                                phi_start = phi[y_start,x_start]
-                                phi_end = phi[y_end,x_end]
+                                edgepoint_yx = FindAdditionalEdgePoint(r, phi, rms_mask, x1, y1, section_x1_length, section_y1_length, r_radius)
+                                if edgepoint_yx[0] > 0:                                 # check edgepoint is valid
+                                    edgepoint_side1 = np.add(edgepoint_yx, 0.5)
+                                    edgepoint_side2 = np.array([y2,x2])                 # initialise the side2 edgepoint as the interpolated point
 
-                            min_phi = min(phi_start, phi_end); max_phi = max(phi_start, phi_end)
-                            quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
-                            diff = max_phi - min_phi
-                            if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
-                                phi_mask = np.ma.masked_inside(phi, phi_start, phi_end).mask    # search between phi_start and phi_end
-                            else:
-                                phi_mask = np.ma.masked_outside(phi, phi_start, phi_end).mask
-                            search_mask = np.ma.mask_or(phi_mask, jet_mask)                     # search outside the jet
+                                    # If the distance between points on the opposite jet side is long enough, search for new edge point on this side
+                                    dist = np.sqrt( (x_side2 - lastpts[2])**2 + (y_side2 - lastpts[3])**2 )
+                                    if dist > (JMC.MinIntpolFactor * JMC.R_es):
+                                        edgepoint_yx = FindAdditionalEdgePoint(r, phi, rms_mask, x2, y2, section_x2_length, section_y2_length, r_radius)
+                                        if edgepoint_yx[0] > 0:                         # check edgepoint is valid
+                                            edgepoint_side2 = np.add(edgepoint_yx, 0.5) # new edge point has been found
 
-                            # Find the co-ordinate of the smallest r value in the search area - the interpolated point
-                            r_search = np.ma.masked_array(r, mask = search_mask, copy = True)
-                            edgepoint_yx = np.unravel_index(np.argmin(r_search, axis=None), r_search.shape)
-
-                            # Add interpolated edge points to the array
-                            if jet_side == 1:
-                                added_edgepoint_coords = np.array([edgepoint_yx[1] + 0.5,edgepoint_yx[0] + 0.5, x2, y2, R_section])
-                                r, phi = PolarCoordinates(flux_array, np.array([x2,y2]))
-                                jet_width = r[edgepoint_yx[0], edgepoint_yx[1]]
+                                    # Check that this edgeline doesn't overlap with the previous edge line
+                                    if not CheckForIntersectingEdgeLines(edge_points_side[-1], edgepoint_side1[1] ,edgepoint_side1[0], edgepoint_side2[1], edgepoint_side2[0]):
+                                        added_edgepoint_coords = np.array([edgepoint_side1[1] ,edgepoint_side1[0], edgepoint_side2[1], edgepoint_side2[0], R_section])
+                                        edge_points_side = np.vstack((edge_points_side, added_edgepoint_coords))
                             else:
-                                added_edgepoint_coords = np.array([x1, y1, edgepoint_yx[1] + 0.5, edgepoint_yx[0] + 0.5, R_section])
-                                r, phi = PolarCoordinates(flux_array, np.array([x1,y1]))
-                                jet_width = r[edgepoint_yx[0], edgepoint_yx[1]]
+                                edgepoint_yx = FindAdditionalEdgePoint(r, phi, rms_mask, x2, y2, section_x2_length, section_y2_length, r_radius)
+                                if edgepoint_yx[0] > 0:                                 # check edgepoint is valid
+                                    edgepoint_side2 = np.add(edgepoint_yx, 0.5)
+                                    edgepoint_side1 = np.array([y1,x1])                 # initialise the side1 edgepoint as the interpolated point
 
-                            # Check that the jet width has not increased too much since the last edge points.
-                            # If so, stop adding edgepoints into this section.
-                            if jet_width > (last_jet_width * 1.5):
-                                stop_section_edgepoints = True
-                            else:
-                                last_jet_width = jet_width
-                                edge_points_side = np.vstack((edge_points_side, added_edgepoint_coords))
+                                    # If the distance between points on the opposite jet side is long enough, search for new edge point on this side
+                                    dist = np.sqrt( (x_side1 - lastpts[0])**2 + (y_side1 - lastpts[1])**2 )
+                                    if dist > (JMC.MinIntpolFactor * JMC.R_es):
+                                        edgepoint_yx = FindAdditionalEdgePoint(r, phi, rms_mask, x1, y1, section_x1_length, section_y1_length, r_radius)
+                                        if edgepoint_yx[0] > 0:                         # check edgepoint is valid
+                                            edgepoint_side1 = np.add(edgepoint_yx, 0.5) # new edge point has been found
+
+                                    # Check that this edgeline doesn't overlap with the previous edge line
+                                    if not CheckForIntersectingEdgeLines(edge_points_side[-1], edgepoint_side1[1] ,edgepoint_side1[0], edgepoint_side2[1], edgepoint_side2[0]):
+                                        added_edgepoint_coords = np.array([edgepoint_side1[1] ,edgepoint_side1[0], edgepoint_side2[1], edgepoint_side2[0], R_section])
+                                        edge_points_side = np.vstack((edge_points_side, added_edgepoint_coords))
 
                             last_sect_x1 = last_sect_x1 + section_x1_length; last_sect_y1 = last_sect_y1 + section_y1_length
                             last_sect_x2 = last_sect_x2 + section_x2_length; last_sect_y2 = last_sect_y2 + section_y2_length
@@ -573,14 +602,73 @@ def AddEdgePoints(flux_array, arm_number, edge_points):
             else:
                 edge_points_side = np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])
 
-            r, phi = PolarCoordinates(flux_array, np.array([x_side1,y_side1]))
-            last_jet_width = r[np.floor(y_side2).astype('int'), np.floor(x_side2).astype('int')]    # the last jet width
             lastpts = np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])
 
         edge_points_updated = edge_points_side
         jet_side += 1
 
     return edge_points_updated
+
+#############################################
+
+def FindAdditionalEdgePoint(r, phi, rms_mask, x, y, section_x_length, section_y_length, r_radius):
+
+    """
+    Find the co-ordinates of an additional edge point
+
+    Parameters
+    -----------
+    r - 2D array, shape(n,2)
+        r polar co-ordinates
+
+    phi - 2D array, shape(n,2)
+          phi polar co-ordinates
+
+    rms_mask - 2D array, shape(n,2)
+               mask for pixels with flux under rms value
+
+    x, y - float,
+           x/y coordinates of section edge point
+
+    section_x/y_length - float,
+                         x/y lengths of section edge line
+
+    r_radius - float,
+               search radius
+    
+    Constants
+    ---------
+
+    Returns
+    -----------
+    new_edge_point - 1D array, shape(2)
+                     y/x co-ordinates of new edge point
+
+    Notes
+    -----------
+    """
+
+    # Set up the start and end of the phi range around the section point
+    x_start = np.floor(x - section_x_length/2).astype('int'); y_start = np.floor(y - section_y_length/2).astype('int')
+    x_end = np.floor(x + section_x_length/2).astype('int'); y_end = np.floor(y + section_y_length/2).astype('int')
+    phi_start = phi[y_start,x_start]
+    phi_end = phi[y_end,x_end]
+
+    min_phi = min(phi_start, phi_end); max_phi = max(phi_start, phi_end)
+    quad_min = CheckQuadrant(min_phi); quad_max = CheckQuadrant(max_phi)
+    diff = max_phi - min_phi
+    if 3 <= quad_min <= 4 and 1 <= quad_max <= 2 and diff > pi:
+        phi_mask = np.ma.masked_inside(phi, phi_start, phi_end, copy = True).mask               # search between phi_start and phi_end
+    else:
+        phi_mask = np.ma.masked_outside(phi, phi_start, phi_end, copy = True).mask
+    r_mask = np.ma.masked_outside(r, 0, (r_radius * JMC.SearchRadiusIncFactor), copy=True).mask # search inside defined radius
+    search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, r_mask), rms_mask)                      # create the search mask
+
+    # Find the co-ordinate of the largest r value in the search area - the new edge point
+    r_search = np.ma.masked_array(r, mask = search_mask)
+    new_edge_point = np.unravel_index(np.argmax(r_search, axis=None), r_search.shape)
+
+    return new_edge_point
 
 #############################################
 
@@ -651,10 +739,6 @@ def GetJetSections(flux_array, edge_points1, edge_points2, ridge1, ridge2):
     # Check for overlapping sections before merging
     CheckForOverlappingSections(1, section_parameters1); CheckForOverlappingSections(2, section_parameters2)
 
-    # Re-calculate the start and end distances of the sections along the jet
-    section_parameters1 = ReCalculateStartEnd_R(flux_array_valid, section_parameters1, ridge1)
-    section_parameters2 = ReCalculateStartEnd_R(flux_array_valid, section_parameters2, ridge2)
-
     # Merge sections within distance steps along the jet. Create regions for merged sections.
     print('Merging sections and creating section DS9 regions')
     section_params_merged1, section_perimeters1 = MergeSections(section_parameters1)
@@ -703,109 +787,6 @@ def Calculate_R(section_parameters):
 
 #############################################
 
-def ReCalculateStartEnd_R(flux_array, section_parameters, ridge):
-
-    """
-    Re-calculate the start and end distances of the sections along the jet,
-    based on actual positions rather than initial ridgepoints. The start/end
-    postions are based on the position of maximum flux along the line.
-
-    Parameters
-    -----------
-    flux_array - 2D array,
-                 raw image array
-
-    section_parameters - 2D array, shape(n,13)
-                         Array with section points (x,y * 4), distance from source
-                         and computed parameters for this arm of the jet
-
-    ridge - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for one arm of the jet
-    
-    Constants
-    ---------
-
-    Returns
-    -----------
-    updated_section_parameters - 2D array, shape(n,13)
-                                 Array with section points (x,y * 4), distance from source
-                                 and computed parameters for this arm of the jet
-
-    Notes
-    -----------
-    """
-
-    # Initialise updated section parameters array
-    updated_section_parameters = np.empty((0,13))
-
-    # Initialise starting R and max flux point
-    prev_R_section_end = 0.0
-    max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, section_parameters[0,0], section_parameters[0,1], section_parameters[0,2], section_parameters[0,3])
-    prev_section_end_maxflux_pt = max_flux_pt
-
-    sect_count = 0
-    for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section] in section_parameters:
-        sect_count += 1
-
-        if sect_count < len(section_parameters):
-
-            max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x1, y1, x2, y2)
-            section_start_maxflux_pt = max_flux_pt
-            R_section_start = prev_R_section_end + \
-                              np.sqrt( (section_start_maxflux_pt[0] - prev_section_end_maxflux_pt[0])**2 + (section_start_maxflux_pt[1] - prev_section_end_maxflux_pt[1])**2 )
-
-            if x4 == -1:
-                # 3-point section - look for which side forms the base of the next section
-                next_section = section_parameters[sect_count,:]
-                next_x1 = next_section[0]; next_y1 = next_section[1]; next_x2 = next_section[2]; next_y2 = next_section[3]
-                if x1 == next_x1 and y1 == next_y1:
-                    max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x1, y1, x3, y3)
-                    section_end_maxflux_pt = max_flux_pt
-                elif x2 == next_x2 and y2 == next_y2:
-                    max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x2, y2, x3, y3)
-                    section_end_maxflux_pt = max_flux_pt
-                else:
-                    # We have jumped a gap - take the 3rd point to be the last point
-                    section_end_maxflux_pt = np.array([x3, y3])
-            else:
-                # 4-point section
-                max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x3, y3, x4, y4)
-                section_end_maxflux_pt = max_flux_pt
-
-            R_section_end = R_section_start + \
-                            np.sqrt( (section_end_maxflux_pt[0] - section_start_maxflux_pt[0])**2 + (section_end_maxflux_pt[1] - section_start_maxflux_pt[1])**2 )
-
-            updated_section_parameters = np.vstack((updated_section_parameters, \
-                                                    np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section])))
-
-            prev_R_section_end = R_section_end; prev_section_end_maxflux_pt = section_end_maxflux_pt
-
-        else:
-            # Process the last section
-            max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x1, y1, x2, y2)
-            section_start_maxflux_pt = max_flux_pt
-            R_section_start = prev_R_section_end + \
-                              np.sqrt( (section_start_maxflux_pt[0] - prev_section_end_maxflux_pt[0])**2 + (section_start_maxflux_pt[1] - prev_section_end_maxflux_pt[1])**2 )
-
-            if x4 == -1:
-                # 3-point section - take the 3rd point to be the last point
-                section_end_maxflux_pt = np.array([x3, y3])
-            else:
-                # 4-point section
-                max_flux_pt = GetRidgeIntersectionPoint(flux_array, ridge, x3, y3, x4, y4)
-                section_end_maxflux_pt = max_flux_pt
-
-            R_section_end = R_section_start + \
-                            np.sqrt( (section_end_maxflux_pt[0] - section_start_maxflux_pt[0])**2 + (section_end_maxflux_pt[1] - section_start_maxflux_pt[1])**2 )
-
-            updated_section_parameters = np.vstack((updated_section_parameters, \
-                                                    np.array([x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end, flux_section, volume_section, area_section])))
-                                
-
-    return updated_section_parameters
-
-#############################################
-
 def CheckForOverlappingSections(arm_number, sections):
 
     """
@@ -836,6 +817,35 @@ def CheckForOverlappingSections(arm_number, sections):
 
     if overlapping_sections:
         print("Overlapping sections in arm " + str(arm_number))
+
+#############################################
+
+def CheckForIntersectingEdgeLines(lastEdgePoints, x1, y1, x2, y2):
+
+    """
+    Check for intersecting edge lines
+
+    Parameters
+    -----------
+    lastEdgePoints - 1D array shape(5),
+                     last edgepoints
+
+    x1, y1, x2, y2 - float,
+                     x/y co-ordinates of latest edge points
+                     
+    """
+
+    intersecting_edgelines = False    # Initialise flag
+
+    last_x1, last_y1, last_x2, last_y2, ridge_R = lastEdgePoints[:]
+
+    # Check if lines intersect, other than at their end-points
+    if DoLinesIntersect(last_x1,last_y1,last_x2,last_y2,x1,y1,x2,y2) \
+        and not (last_x1 == x1 and last_y1 == y1) \
+        and not (last_x2 == x2 and last_y2 == y2):
+        intersecting_edgelines = True
+
+    return intersecting_edgelines
 
 #############################################
 
@@ -879,11 +889,11 @@ def MergeSections(section_parameters):
     merged_section_perimeters = np.empty((0,pSize))
 
     # Initialise minimum change in merge R (> beamsize)
-    min_delta_R = JMC.MergeMinDeltaRFactor * np.ceil(np.max(JMS.beamsize))
+    min_delta_R = JMC.MergeMinDeltaRFactor * np.ceil(np.max(JMS.beamsize)) * JMS.equiv_R_factor
 
-    max_R_count = 1; max_R = min_delta_R + (JMC.MergeRIncreaseFactor ** max_R_count)    # Initialise maximum merge distance                              
-    last_section_perimeter = []; pInsertPos = 0                                         # Initialise last merged section perimeter list
-    last_merged_sections = np.full((1,13), np.nan)                                      # Initialise last merged sections array
+    max_R_count = 1; max_R = min_delta_R + ((JMC.MergeRIncreaseStep ** max_R_count) * JMS.equiv_R_factor)   # Initialise maximum merge distance                              
+    last_section_perimeter = []; pInsertPos = 0                                                             # Initialise last merged section perimeter list
+    last_merged_sections = np.full((1,13), np.nan)                                                          # Initialise last merged sections array
     # Initialise last merged flux/volume/area values
     last_merged_flux_section = 0.0; last_merged_volume_section = 0.0; last_merged_area_section = 0.0
 
@@ -910,7 +920,7 @@ def MergeSections(section_parameters):
 
             # Increase the maximum R until it is greater than R_section_start
             while max_R <= R_section_start:
-                max_R_count +=1; max_R += min_delta_R + (JMC.MergeRIncreaseFactor ** max_R_count)
+                max_R_count +=1; max_R += min_delta_R + ((JMC.MergeRIncreaseStep ** max_R_count) * JMS.equiv_R_factor)
 
         # Test whether the maximum merge distance R has been achieved
         if R_section_end > max_R:
@@ -953,7 +963,7 @@ def MergeSections(section_parameters):
             last_merged_flux_section = 0.0; last_merged_volume_section = 0.0; last_merged_area_section = 0.0
 
             # Set to the new maximum R
-            max_R_count +=1; max_R += min_delta_R + (JMC.MergeRIncreaseFactor ** max_R_count)
+            max_R_count +=1; max_R += min_delta_R + ((JMC.MergeRIncreaseStep ** max_R_count) * JMS.equiv_R_factor)
 
         else:
             # Adding in this section does not exceed the maximum R
@@ -1071,7 +1081,13 @@ def SplitSectionAtR(split_R, sect_count, section_parameters):
 
     # Get the area fraction
     split1_area = GetArea(np.array([split1_x1,split1_y1, split1_x2,split1_y2, split1_x3,split1_y3, split1_x4,split1_y4]))
-    fraction_area = split1_area / GetArea(np.array([x1,y1, x2,y2, x3,y3, x4,y4]))
+    total_area = GetArea(np.array([x1,y1, x2,y2, x3,y3, x4,y4]))
+    if (abs(split1_area) > abs(total_area)) or total_area == 0:
+        # Area of the split is not a fraction of the section area (this can happen for extremely small sections).
+        # Set the fraction to zero.
+        fraction_area = 0.0
+    else:
+        fraction_area = split1_area / total_area
 
     # Get all remaining values for the two splits
     split1_R_start = R_section_start
@@ -1596,7 +1612,7 @@ def GetVolume(polypoints):
 
         # Calculate the volume.
         # Assume the volume is of the base of a cone, sliced by a slant plane down to the X axis.
-        if abs(base_points[1,0] - top_point[0]) < JMC.eqtol or abs(top_point[1]) < JMC.eqtol:   # Test the gradient of the slant plane
+        if abs(base_points[1,0] - top_point[0]) < JMC.geo_lentol or abs(top_point[1]) < JMC.geo_lentol:   # Test the gradient of the slant plane
             # Gradient of slant line is infinite or zero. Assume the volume is given by a sliced cylinder.
             cylinder_H = top_point[1]                                           # Height of cylinder
             cylinder_R = base_points[1,0] / 2                                   # Radius of cylinder
@@ -1612,7 +1628,7 @@ def GetVolume(polypoints):
             # In this case, assume the volume is given by a sliced cylinder.
             phi_rdns = atan(1.0/cone_cotPhi)
             theta_rdns = atan(cone_tanTheta)
-            if (theta_rdns + JMC.eqtol) < (pi/2 - phi_rdns):
+            if (theta_rdns + JMC.geo_angtol) < (pi/2 - phi_rdns):
 
                 # Volume of top of the cone, from the vertex down to the slant plane
                 cone_volume_top = pi/3 * cone_R**2 * cone_H * \
@@ -1636,8 +1652,8 @@ def GetVolume(polypoints):
 
         # Calculate the volume.
         # Assume the volume is of the base of a cone, sliced by a slant plane.
-        if abs(top_points[1,0] - top_points[0,0]) < JMC.eqtol or \
-           abs(top_points[0,1]) < JMC.eqtol or abs(top_points[1,1]) < JMC.eqtol:    # Test the gradient of the slant plane and heights of the top points
+        if abs(top_points[1,0] - top_points[0,0]) < JMC.geo_lentol or \
+           abs(top_points[0,1]) < JMC.geo_lentol or abs(top_points[1,1]) < JMC.geo_lentol:    # Test the gradient of the slant plane and heights of the top points
             # Gradient  of slant line is infinite or zero. Assume the volume is given by a sliced cylinder.
             cylinder_H1 = top_points[0,1]                                           # First height of cylinder
             cylinder_H2 = top_points[1,1]                                           # Second height of cylinder
@@ -1659,7 +1675,7 @@ def GetVolume(polypoints):
             # In this case, assume the volume is given by a sliced cylinder.
             phi_rdns = atan(1.0/cone_cotPhi)
             theta_rdns = atan(cone_tanTheta)
-            if (theta_rdns + JMC.eqtol) < (pi/2 - phi_rdns):
+            if (theta_rdns + JMC.geo_angtol) < (pi/2 - phi_rdns):
 
                 # Volume of top of the cone, from the vertex down to the slant plane
                 cone_volume_top = (pi/3 * pow(cone_h,3) * cone_cotPhi) / pow( (cone_cotPhi**2 - cone_tanTheta**2), 3/2)
@@ -1706,18 +1722,6 @@ def Setup3PointPolygon(polypoints):
     """
 
     # Determine the base and top co-ordinate of the polygon "partial cone".
-    # length1 = np.sqrt( (polypoints[2]-polypoints[0])**2 + (polypoints[3]-polypoints[1])**2 )
-    # length2 = np.sqrt( (polypoints[4]-polypoints[2])**2 + (polypoints[5]-polypoints[3])**2 )
-    # length3 = np.sqrt( (polypoints[4]-polypoints[0])**2 + (polypoints[5]-polypoints[1])**2 )
-    # if length1 >= length2 and length1 >= length3:
-    #     base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])        # Base co-ordinates
-    #     top_point = np.array([polypoints[4], polypoints[5]])                                            # Top co-ordinate
-    # elif length2 > length1 and length2 > length3:
-    #     base_points = np.array([[polypoints[2], polypoints[3]], [polypoints[4], polypoints[5]]])        # Base co-ordinates
-    #     top_point = np.array([polypoints[0], polypoints[1]])                                            # Top co-ordinate
-    # else:
-    #     base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[0], polypoints[1]]])        # Base co-ordinates
-    #     top_point = np.array([polypoints[2], polypoints[3]])                                            # Top co-ordinate
     length1 = np.sqrt( (polypoints[2] - polypoints[0])**2 + (polypoints[3] - polypoints[1])**2 )
     length2 = np.sqrt( (polypoints[4] - polypoints[2])**2 + (polypoints[5] - polypoints[3])**2 )
     length3 = np.sqrt( (polypoints[0] - polypoints[4])**2 + (polypoints[1] - polypoints[5])**2 )
@@ -1797,14 +1801,6 @@ def Setup4PointPolygon(polypoints):
     """
 
     # Determine the base and top co-ordinates of the polygon "partial cone".
-    # length1 = np.sqrt( (polypoints[2] - polypoints[0])**2 + (polypoints[3] - polypoints[1])**2 )
-    # length2 = np.sqrt( (polypoints[6] - polypoints[4])**2 + (polypoints[7] - polypoints[5])**2 )
-    # if length1 > length2:                                                                               # Compare possible base/top lengths
-    #     base_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])        # Base co-ordinates
-    #     top_points = np.array([[polypoints[4], polypoints[5]], [polypoints[6], polypoints[7]]])         # Top co-ordinates
-    # else:
-    #     base_points = np.array([[polypoints[4], polypoints[5]], [polypoints[6], polypoints[7]]])        # Base co-ordinates
-    #     top_points = np.array([[polypoints[0], polypoints[1]], [polypoints[2], polypoints[3]]])         # Top co-ordinates
     length1 = np.sqrt( (polypoints[2] - polypoints[0])**2 + (polypoints[3] - polypoints[1])**2 )
     length2 = np.sqrt( (polypoints[4] - polypoints[2])**2 + (polypoints[5] - polypoints[3])**2 )
     length3 = np.sqrt( (polypoints[6] - polypoints[4])**2 + (polypoints[7] - polypoints[5])**2 )
@@ -1835,10 +1831,6 @@ def Setup4PointPolygon(polypoints):
     shape_to_rotate = np.concatenate((base_points, top_points), axis = 0)
     rotated_shape = dot( shape_to_rotate-anchor, np.array([[cos(rot_angle),sin(rot_angle)], [-sin(rot_angle),cos(rot_angle)]]) ) + anchor
     base_points = np.array([[rotated_shape[0,0],rotated_shape[0,1]], [rotated_shape[1,0],rotated_shape[1,1]]])
-    # if rotated_shape[2,0] < rotated_shape[3,0]:                     # Order top points in order of increasing X
-    #     top_points = np.array([[rotated_shape[2,0],rotated_shape[2,1]], [rotated_shape[3,0],rotated_shape[3,1]]])
-    # else:
-    #     top_points = np.array([[rotated_shape[3,0],rotated_shape[3,1]], [rotated_shape[2,0],rotated_shape[2,1]]])
     top_points = np.array([[rotated_shape[3,0],rotated_shape[3,1]], [rotated_shape[2,0],rotated_shape[2,1]]])
     base_points[0,0] = 0.0; base_points[0,1] = 0.0                  # Ensure first base point is exactly at the origin
     base_points[1,1] = 0.0                                          # Ensure second base point lies exactly on the X axis
@@ -1861,93 +1853,36 @@ def Setup4PointPolygon(polypoints):
     if atan2((base_points[1,0] - top_points[1,0]), top_points[1,1]) < pi*1/180:
         top_points[1,0] = base_points[1,0] - (top_points[1,1] * tan(pi*1/180))
 
-    if abs(top_points[0,0] - base_points[0,0]) < JMC.eqtol or abs(top_points[1,0] - base_points[1,0]) < JMC.eqtol:
-        # This can still be the case if dimensions are small. In this case, leave the co-ordinates as they are.
+    if abs(top_points[0,0] - base_points[0,0]) < JMC.geo_lentol or abs(top_points[1,0] - base_points[1,0]) < JMC.geo_lentol:
+        # Side gradients are too large. This can still be the case if dimensions are small. Leave the co-ordinates as they are.
+        None
+    elif abs(top_points[0,1]) < JMC.geo_lentol or abs(top_points[1,1]) < JMC.geo_lentol:
+        # One or both of the top points lie too close to the x axis. Leave the co-ordinates as they are.
         None
     else:
-        # Make an approximation. Move the co-ordinates such that the gradient of the shortest
-        # side is the same (although opposite) as that of the longest side.
+        # Make an approximation. Ensure that the side gradients are equal (although opposite).
         length_side1 = np.sqrt( (top_points[0,0]-base_points[0,0])**2 + (top_points[0,1]-base_points[0,1])**2 )
         length_side2 = np.sqrt( (top_points[1,0]-base_points[1,0])**2 + (top_points[1,1]-base_points[1,1])**2 )
         grad_side1 = (top_points[0,1] - base_points[0,1]) / (top_points[0,0] - base_points[0,0])
         grad_side2 = (top_points[1,1] - base_points[1,1]) / (top_points[1,0] - base_points[1,0])
-        if length_side1 < length_side2:
-            if abs(grad_side2) > 0:                                         # If gradient is 0, leave the co-ordinates as they are
-                base_points[0,0] = top_points[0,0] - ( (top_points[0,1]-base_points[0,1]) / (- grad_side2) )
-                offset = np.array([base_points[0,0], base_points[0,1]])
-                base_points -= offset; top_points -= offset 
-                base_points[0,0] = 0.0; base_points[0,1] = 0.0              # Ensure first base point is exactly at the origin
-                base_points[1,1] = 0.0                                      # Ensure second base point lies exactly on the X axis
-        else:
-            if abs(grad_side1) > 0:                                         # If gradient is 0, leave the co-ordinates as they are
-                base_points[1,0] = top_points[1,0] - ( (top_points[1,1]-base_points[1,1]) / (- grad_side1) )
+
+        if abs(grad_side1) > 0 and abs(grad_side2) > 0:                                         # If either gradient is 0, leave the co-ordinates as they are
+            if (length_side1 > length_side2 and length_side2/length_side1 > 0.5) or \
+               (length_side2 > length_side1 and length_side1/length_side2 > 0.5):               # Sides have similar lengths. Set both to have the average gradient.
+                grad = (abs(grad_side1) + abs(grad_side2)) / 2.0
+                grad_side1 = grad; grad_side2 = - grad
+            elif length_side1 < length_side2:                                                   # Side 1 much smaller than side 2. Set to have the side 2 gradient.
+                grad_side1 = - grad_side2
+            else:
+                grad_side2 = - grad_side1                                                       # Side 2 much smaller than side 1. Set to have the side 1 gradient.
+            topx_side1 = base_points[0,0] + (top_points[0,1] / grad_side1)                      # Adjust the top points
+            topx_side2 = base_points[1,0] + (top_points[1,1] / grad_side2)
+            if topx_side1 < topx_side2:
+                top_points[0,0] = topx_side1; top_points[1,0] = topx_side2
+            else:
+                top_points[0,0] = topx_side2; top_points[1,0] = topx_side1                      # Top points have crossed. Un-cross them.
 
     return base_points, top_points
-
-#############################################
-
-def GetRidgeIntersectionPoint(flux_array, ridge, line_x1, line_y1, line_x2, line_y2):
-
-    """
-    Returns 
-
-    Parameters
-    -----------
-    flux_array - 2D array,
-                 raw image array
-
-    ridge - 2D array, shape(n,2)
-            Array of ridgepoint co-ordinates for one arm of the jet
-
-    line_x1, line_y1 - co-ordinates of one end of the section line
-
-    line_x2, line_y2 - co-ordinates of other end of the section line
-    
-    Constants
-    ---------
-
-    Returns
-    -----------
-    intersection_point - 1D array shape(2)
-                         intersection co-ordinate
-    """
-
-    # Setup the section line
-    line1_point1 = (line_x1, line_y1)
-    line1_point2 = (line_x2, line_y2)
-
-    # Check the length of the line
-    if abs(line_x2 - line_x1) > 0.0 or abs(line_y2 - line_y1) > 0.0:
-
-        ridge_cnt = 1
-        while ridge_cnt < len(ridge) and not np.isnan(ridge[ridge_cnt]).any():
-
-            # Setup the line between the next points of the ridgeline
-            line2_point1 = (ridge[ridge_cnt-1, 0], ridge[ridge_cnt-1,1])
-            line2_point2 = (ridge[ridge_cnt,0], ridge[ridge_cnt,1])
-
-            line1 = LineString([line1_point1, line1_point2])
-            line2 = LineString([line2_point1, line2_point2])
-
-            # Look for an intersection
-            int_pt = line1.intersection(line2)
-            if int_pt.is_empty:
-                intersection_point = np.array([nan, nan])
-                ridge_cnt += 1
-            else:
-                intersection_point = np.array([int_pt.x, int_pt.y])
-                break
-
-        # if the intersection point has not been found, return the point of maximum flux along the line
-        if isnan(intersection_point[0]):
-            max_flux_x, max_flux_y = JMA.GetMaximumFluxAlongLine(flux_array, np.array([line_x1,line_y1]), np.array([line_x2,line_y2]))
-            intersection_point = np.array([ max_flux_x, max_flux_y ])
-
-    else:
-        # The length of the line is zero (i.e. a point). Return the point co-ordinates.
-        intersection_point = np.array([ line_x1, line_y1 ])
-    
-    return intersection_point
 
 #############################################
 
@@ -2135,8 +2070,8 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
     x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
-    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (np.min(JMS.nSig_arms) * JMS.bgRMS), y, copy=True).mask)
-    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (np.min(JMS.nSig_arms) * JMS.bgRMS), x, copy=True).mask)
+    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMC.nSig * JMS.bgRMS), y, copy=True).mask)
+    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMC.nSig * JMS.bgRMS), x, copy=True).mask)
     xmin = np.ma.min(x_plotlimits)
     xmax = np.ma.max(x_plotlimits)
     ymin = np.ma.min(y_plotlimits)
