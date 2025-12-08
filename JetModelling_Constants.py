@@ -22,7 +22,7 @@ geo_lentol = 0.2                # Tolerance for calculation of geometric lengths
 geo_angtol = 0.01               # Tolerance for calculation of geometric angles (radians)
 nSig = 2.0                      # The multiple of the RMS flux threshold value
 
-# Ridgelines (general)
+# Ridgelines
 ridgeline_method = RidgelineMethod.FROMDATA  # Method for creating ridgelines
 ridge_centre_search_points = 7  # Number of ridgepoints on either side of first point to search for source position
 R = 10                          # Maximum step size of ridgeline in pixels
@@ -30,10 +30,6 @@ R = 10                          # Maximum step size of ridgeline in pixels
 # Ridgelines (RL-Xid)
 R_rl = 5                        # Step size of ridgeline in pixels
 dphi = 60                       # Half angle of search cone
-
-# Ridgelines (from data)
-ridgelines_from_data_arm1 = 'C:/JetModelling_FromData/3C31_ridge_coords1.txt'    # Input data file for arm1
-ridgelines_from_data_arm2 = 'C:/JetModelling_FromData/3C31_ridge_coords2.txt'    # Input data file for arm2
 
 # Edgepoints
 search_angle = 5                # Edgepoint search angle in degrees

@@ -238,7 +238,7 @@ def SetRequiredUnits(section_parameters):
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, volume_section, area_section] in section_parameters:
         
         # Distance along the jet in arcsec
-        R_section_= R_section * JMS.ddel * 3600
+        R_section = R_section * JMS.ddel * 3600
 
         # Flux in Janskys (rather than Jy/beam)
         flux_section = flux_section / JMS.beamarea

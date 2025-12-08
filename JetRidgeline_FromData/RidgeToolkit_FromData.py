@@ -55,11 +55,11 @@ def LoadRidgelineData(flux_array):
     """
     # Read ridgeline data file for first arm
     ridge1 = np.empty((0,2)); phi_val1 = np.empty((0)); Rlen1 = np.empty((0))
-    ridge1, phi_val1, Rlen1 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm1, ridge1, phi_val1, Rlen1)
+    ridge1, phi_val1, Rlen1 = LoadRidgelineDataForOneArm(JMS.ridgelines_from_data_arm1, ridge1, phi_val1, Rlen1)
 
     # Read ridgeline data file for other arm
     ridge2 = np.empty((0,2)); phi_val2 = np.empty((0)); Rlen2 = np.empty((0))
-    ridge2, phi_val2, Rlen2 = LoadRidgelineDataForOneArm(JMC.ridgelines_from_data_arm2, ridge2, phi_val2, Rlen2)
+    ridge2, phi_val2, Rlen2 = LoadRidgelineDataForOneArm(JMS.ridgelines_from_data_arm2, ridge2, phi_val2, Rlen2)
 
     # Determine the source position and update all data to be relative to this position
     sCentre, ridge1, ridge2, Rlen1, Rlen2, phi_val1, phi_val2 = \

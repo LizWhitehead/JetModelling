@@ -600,7 +600,8 @@ def AddEdgePoints(flux_array, edge_points):
 
                 edge_points_side = np.vstack((edge_points_side, np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])))
             else:
-                edge_points_side = np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])
+                edge_points_side = np.empty((0,5))
+                edge_points_side = np.vstack((edge_points_side, np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])))
 
             lastpts = np.array([x_side1, y_side1, x_side2, y_side2, ridge_R])
 
@@ -889,11 +890,11 @@ def MergeSections(section_parameters):
     merged_section_perimeters = np.empty((0,pSize))
 
     # Initialise minimum change in merge R (> beamsize)
-    min_delta_R = JMC.MergeMinDeltaRFactor * np.ceil(np.max(JMS.beamsize)) * JMS.equiv_R_factor
+    min_delta_R = JMC.MergeMinDeltaRFactor * np.ceil(JMS.max_beamsize)
 
-    max_R_count = 1; max_R = min_delta_R + ((JMC.MergeRIncreaseStep ** max_R_count) * JMS.equiv_R_factor)   # Initialise maximum merge distance                              
-    last_section_perimeter = []; pInsertPos = 0                                                             # Initialise last merged section perimeter list
-    last_merged_sections = np.full((1,13), np.nan)                                                          # Initialise last merged sections array
+    max_R_count = 1; max_R = ( min_delta_R + (JMC.MergeRIncreaseStep ** max_R_count) ) * JMS.equiv_R_factor     # Initialise maximum merge distance                              
+    last_section_perimeter = []; pInsertPos = 0                                                                 # Initialise last merged section perimeter list
+    last_merged_sections = np.full((1,13), np.nan)                                                              # Initialise last merged sections array
     # Initialise last merged flux/volume/area values
     last_merged_flux_section = 0.0; last_merged_volume_section = 0.0; last_merged_area_section = 0.0
 
@@ -920,7 +921,7 @@ def MergeSections(section_parameters):
 
             # Increase the maximum R until it is greater than R_section_start
             while max_R <= R_section_start:
-                max_R_count +=1; max_R += min_delta_R + ((JMC.MergeRIncreaseStep ** max_R_count) * JMS.equiv_R_factor)
+                max_R_count +=1; max_R += ( min_delta_R + (JMC.MergeRIncreaseStep ** max_R_count) ) * JMS.equiv_R_factor
 
         # Test whether the maximum merge distance R has been achieved
         if R_section_end > max_R:
@@ -963,7 +964,7 @@ def MergeSections(section_parameters):
             last_merged_flux_section = 0.0; last_merged_volume_section = 0.0; last_merged_area_section = 0.0
 
             # Set to the new maximum R
-            max_R_count +=1; max_R += min_delta_R + ((JMC.MergeRIncreaseStep ** max_R_count) * JMS.equiv_R_factor)
+            max_R_count +=1; max_R += ( min_delta_R + (JMC.MergeRIncreaseStep ** max_R_count) ) * JMS.equiv_R_factor
 
         else:
             # Adding in this section does not exceed the maximum R
@@ -1628,7 +1629,7 @@ def GetVolume(polypoints):
             # In this case, assume the volume is given by a sliced cylinder.
             phi_rdns = atan(1.0/cone_cotPhi)
             theta_rdns = atan(cone_tanTheta)
-            if (theta_rdns + JMC.geo_angtol) < (pi/2 - phi_rdns):
+            if abs(theta_rdns + JMC.geo_angtol) < (pi/2 - abs(phi_rdns)):
 
                 # Volume of top of the cone, from the vertex down to the slant plane
                 cone_volume_top = pi/3 * cone_R**2 * cone_H * \
@@ -1675,7 +1676,7 @@ def GetVolume(polypoints):
             # In this case, assume the volume is given by a sliced cylinder.
             phi_rdns = atan(1.0/cone_cotPhi)
             theta_rdns = atan(cone_tanTheta)
-            if (theta_rdns + JMC.geo_angtol) < (pi/2 - phi_rdns):
+            if abs(theta_rdns + JMC.geo_angtol) < (pi/2 - abs(phi_rdns)):
 
                 # Volume of top of the cone, from the vertex down to the slant plane
                 cone_volume_top = (pi/3 * pow(cone_h,3) * cone_cotPhi) / pow( (cone_cotPhi**2 - cone_tanTheta**2), 3/2)
@@ -1875,12 +1876,8 @@ def Setup4PointPolygon(polypoints):
                 grad_side1 = - grad_side2
             else:
                 grad_side2 = - grad_side1                                                       # Side 2 much smaller than side 1. Set to have the side 1 gradient.
-            topx_side1 = base_points[0,0] + (top_points[0,1] / grad_side1)                      # Adjust the top points
-            topx_side2 = base_points[1,0] + (top_points[1,1] / grad_side2)
-            if topx_side1 < topx_side2:
-                top_points[0,0] = topx_side1; top_points[1,0] = topx_side2
-            else:
-                top_points[0,0] = topx_side2; top_points[1,0] = topx_side1                      # Top points have crossed. Un-cross them.
+            top_points[0,0] = base_points[0,0] + (top_points[0,1] / grad_side1)                 # Adjust the top point x values
+            top_points[1,0] = base_points[1,0] + (top_points[1,1] / grad_side2)
 
     return base_points, top_points
 

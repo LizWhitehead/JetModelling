@@ -48,13 +48,23 @@ sDecs =      np.array([32.4255277778,
                        32.4125070566])                                      # Map centre Dec in degrees
 sSizes =     np.array([np.array([500,500]),
                        np.array([500,500]),
-                       np.array([500,1000])])                               # Source size in pixels (x,y sides of containing rectangle)
+                       np.array([500,500])])                                # Source size in pixels (x,y sides of containing rectangle)
 bgRMSs =     np.array([0.0002,
-                       0.00026,
-                       0.000313])                                           # Background flux RMS value in Jy/beam
+                       0.00036,
+                       0.00038])                                            # Background flux RMS value in Jy/beam
 bgMeans =    np.array([-0.000078874466,
-                       0.00014237006,
-                       -0.00016326427])                                     # Background flux mean pixel value in Jy/beam
+                       -0.0000017,
+                       -0.000083])                                          # Background flux mean pixel value in Jy/beam
+
+###########################################################################################################
+# Parameters used for from-data ridgelines.
+###########################################################################################################
+ridgelines_from_data_arm1s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords1.txt',
+                                       'C:/JetModelling_FromData/3C31_360MHz_ridge_coords1.txt',
+                                       'C:/JetModelling_FromData/3C31_615MHz_ridge_coords1.txt'])   # Input data file for arm1
+ridgelines_from_data_arm2s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords2.txt',
+                                       'C:/JetModelling_FromData/3C31_360MHz_ridge_coords2.txt',
+                                       'C:/JetModelling_FromData/3C31_615MHz_ridge_coords2.txt'])   # Input data file for arm2
 
 ###########################################################################################################
 # Parameters used for skeletonize ridgelines (these parameters are highly sensitive to the map).
@@ -120,7 +130,7 @@ def InitialiseMap(current_map_number):
     global map_number
     global map_file
     global rdel; global ddel; global equiv_R_factor
-    global beamsize; global beamarea
+    global beamsize; global beamarea; global max_beamsize
     global freq
     global sCentre
     global sRA; global sDec
@@ -133,6 +143,7 @@ def InitialiseMap(current_map_number):
     global MaximumLoopJumpPixels
     global nSig_s
     global SplitInnerOuterSkeleton; global nSig_s_outer; global JoinInterpolatePoints
+    global ridgelines_from_data_arm1; global ridgelines_from_data_arm2
     global ImFraction; global vmin; global vmax
 
     # Set the map number
@@ -140,6 +151,9 @@ def InitialiseMap(current_map_number):
 
     # Set the factor which determines equivalent distances along multiple jets
     equiv_R_factor = ddels[0] / ddels[map_number]
+
+    # Set the maximum beamsize for multiple jets
+    max_beamsize = np.max(beamsizes)
 
     # Initialise all map-specific parameter values for this map number
     map_file = map_files[map_number]
@@ -158,6 +172,9 @@ def InitialiseMap(current_map_number):
     MaximumLoopJumpPixels = MaximumLoopJumpPixelss[map_number]
     nSig_s = nSig_ss[map_number]
     SplitInnerOuterSkeleton = SplitInnerOuterSkeletons[map_number]; nSig_s_outer = nSig_s_outers[map_number]; JoinInterpolatePoints = JoinInterpolatePointss[map_number]
+
+    ridgelines_from_data_arm1 = ridgelines_from_data_arm1s[map_number]
+    ridgelines_from_data_arm2 = ridgelines_from_data_arm2s[map_number]
 
     ImFraction = ImFractions[map_number]; vmin = vmins[map_number]; vmax = vmaxs[map_number]
 
