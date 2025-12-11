@@ -15,7 +15,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
-from math import tan, atan2, atan, pow, nan, isnan
+from math import tan, atan2, atan, pow, nan, isnan, floor
 from shapely.geometry import LineString, Point, Polygon
 from regions import PixCoord, PolygonPixelRegion, Regions
 import copy
@@ -2056,48 +2056,27 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                           distance from source and computed parameters
     """
 
+    # Cut down map for plotting
     flux_array_plot = JMC.flux_factor * flux_array.copy()
+    imCentre = np.array([ (edge_points1[0,0] + edge_points1[0,2]) / 2.0, (edge_points1[0,1] + edge_points1[0,3]) / 2.0 ])
+    xmin = floor(imCentre[0] - (JMS.sSize[0] / 2.0)); xmax = floor(imCentre[0] + (JMS.sSize[0] / 2.0))
+    ymin = floor(imCentre[1] - (JMS.sSize[1] / 2.0)); ymax = floor(imCentre[1] + (JMS.sSize[1] / 2.0))
+    flux_array_plot  = flux_array_plot[ymin : ymax, xmin : xmax]
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
     palette.set_bad('k',0.0)
-    imCentre = ( (edge_points1[0,0] + edge_points1[0,2]) / 2.0, (edge_points1[0,1] + edge_points1[0,3]) / 2.0 )
 
     y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
     x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
-    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMC.nSig * JMS.bgRMS), y, copy=True).mask)
-    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMC.nSig * JMS.bgRMS), x, copy=True).mask)
-    xmin = np.ma.min(x_plotlimits)
-    xmax = np.ma.max(x_plotlimits)
-    ymin = np.ma.min(y_plotlimits)
-    ymax = np.ma.max(y_plotlimits)
-                        
-    x_source_min = float(imCentre[0]) - JMS.ImFraction * float(JMS.sSize[0])
-    x_source_max = float(imCentre[0]) + JMS.ImFraction * float(JMS.sSize[0])
-    y_source_min = float(imCentre[1]) - JMS.ImFraction * float(JMS.sSize[1])
-    y_source_max = float(imCentre[1]) + JMS.ImFraction * float(JMS.sSize[1])
-                        
-    if x_source_min < xmin:
-        xplotmin = xmin
-    else:
-        xplotmin = x_source_min
-                                
-    if x_source_max < xmax:
-        xplotmax = x_source_max
-    else:
-        xplotmax = xmax
-                        
-    if y_source_min < ymin:
-        yplotmin = ymin
-    else:
-        yplotmin = y_source_min
-                                
-    if y_source_max < ymax:
-        yplotmax = y_source_max
-    else:
-        yplotmax = ymax
+    x_pixels_not_plotted = (1.0 - JMS.ImFraction) * float(JMS.sSize[0])
+    xplotmin = x_pixels_not_plotted / 2.0
+    xplotmax = float(JMS.sSize[0]) - (x_pixels_not_plotted / 2.0)
+    y_pixels_not_plotted = (1.0 - JMS.ImFraction) * float(JMS.sSize[1])
+    yplotmin = y_pixels_not_plotted / 2.0
+    yplotmax = float(JMS.sSize[1]) - (y_pixels_not_plotted / 2.0)
 
     # Plot edge points
     fig, ax = plt.subplots(figsize=(10,10))
@@ -2108,11 +2087,22 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     ax.set_ylim(yplotmin, yplotmax)
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
-    c = ax.pcolormesh(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
-    c.set_array(A)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
+
+    # Setup offsets for cutdown map
+    edge_plot1 = edge_points1.copy(); edge_plot1[:,0] -= xmin;  edge_plot1[:,2] -= xmin;  edge_plot1[:,1] -= ymin; edge_plot1[:,3] -= ymin
+    edge_plot2 = edge_points2.copy(); edge_plot2[:,0] -= xmin;  edge_plot2[:,2] -= xmin;  edge_plot2[:,1] -= ymin; edge_plot2[:,3] -= ymin
+    section_plot1 = section_parameters1.copy(); section_plot1[:,0] -= xmin; section_plot1[:,2] -= xmin; section_plot1[:,4] -= xmin
+    section_plot1[:,6] = np.where(section_plot1[:,6] != -1, section_plot1[:,6] - xmin, section_plot1[:,6])
+    section_plot1[:,1] -= ymin; section_plot1[:,3] -= ymin; section_plot1[:,5] -= ymin
+    section_plot1[:,7] = np.where(section_plot1[:,7] != -1, section_plot1[:,7] - ymin, section_plot1[:,7])
+    section_plot2 = section_parameters2.copy(); section_plot2[:,0] -= xmin; section_plot2[:,2] -= xmin; section_plot2[:,4] -= xmin
+    section_plot2[:,6] = np.where(section_plot2[:,6] != -1, section_plot2[:,6] - xmin, section_plot2[:,6])
+    section_plot2[:,1] -= ymin; section_plot2[:,3] -= ymin; section_plot2[:,5] -= ymin
+    section_plot2[:,7] = np.where(section_plot2[:,7] != -1, section_plot2[:,7] - ymin, section_plot2[:,7])
 
     epcount = 0
-    for ep in edge_points1:
+    for ep in edge_plot1:
         epcount += 1
         x_values = np.array([ep[0], ep[2]])
         y_values = np.array([ep[1], ep[3]])
@@ -2130,7 +2120,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         last_ep = ep
 
     epcount = 0
-    for ep in edge_points2:
+    for ep in edge_plot2:
         epcount += 1
         x_values = np.array([ep[0], ep[2]])
         y_values = np.array([ep[1], ep[3]])
@@ -2148,7 +2138,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         last_ep = ep
 
     # Plot centre line in red, to make it obvious
-    ep = edge_points1[0,:]
+    ep = edge_plot1[0,:]
     x_values = np.array([ep[0], ep[2]])
     y_values = np.array([ep[1], ep[3]])
     ax.plot(x_values, y_values, 'r-', linewidth=0.8)
@@ -2169,11 +2159,10 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     ax.set_ylim(yplotmin, yplotmax)
     
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
-    c = ax.pcolormesh(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
-    c.set_array(A)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
 
     spcount = 0
-    for sp in section_parameters1:
+    for sp in section_plot1:
         spcount += 1
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
@@ -2184,7 +2173,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     PlotLastSegment(ax, sp)                                                             # Plot last separator
 
     spcount = 0
-    for sp in section_parameters2:
+    for sp in section_plot2:
         spcount += 1
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
@@ -2195,7 +2184,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     PlotLastSegment(ax, sp)                                                             # Plot last separator
 
     # Plot centre line in red, to make it obvious
-    sp = section_parameters1[0,:]
+    sp = section_plot1[0,:]
     x_values = np.array([sp[0], sp[2]])
     y_values = np.array([sp[1], sp[3]])
     ax.plot(x_values, y_values, 'r-', linewidth=0.8)

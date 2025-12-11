@@ -46,9 +46,9 @@ sRAs =       np.array([16.8217500000,
 sDecs =      np.array([32.4255277778,
                        32.41255555384,
                        32.4125070566])                                      # Map centre Dec in degrees
-sSizes =     np.array([np.array([500,500]),
-                       np.array([500,500]),
-                       np.array([500,500])])                                # Source size in pixels (x,y sides of containing rectangle)
+sSizes =     np.array([np.array([550,850]),
+                       np.array([550,920]),
+                       np.array([525,950])])                                # Source size in pixels (x,y sides of containing rectangle)
 bgRMSs =     np.array([0.0002,
                        0.00036,
                        0.00038])                                            # Background flux RMS value in Jy/beam
@@ -105,7 +105,7 @@ JoinInterpolatePointss =   np.array([6,
 ###########################################################################################################
 # Parameters used for map plotting.
 ###########################################################################################################
-ImFractions  = np.array([0.9,
+ImFractions  = np.array([1.0,
                          1.0,
                          1.0])                                              # The fraction of the source the final image is cut down to for plotting
 vmins        = np.array([0,

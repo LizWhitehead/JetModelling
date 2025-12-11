@@ -565,7 +565,11 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
 
     """
 
+    # Cut down map for plotting
     flux_array_plot = JMC.flux_factor * flux_array.copy()
+    xmin = floor(sCentre[0] - (JMS.sSize[0] / 2.0)); xmax = floor(sCentre[0] + (JMS.sSize[0] / 2.0))
+    ymin = floor(sCentre[1] - (JMS.sSize[1] / 2.0)); ymax = floor(sCentre[1] + (JMS.sSize[1] / 2.0))
+    flux_array_plot  = flux_array_plot[ymin : ymax, xmin : xmax]
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
@@ -575,37 +579,12 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
     x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
-    y_plotlimits = np.ma.masked_array(y, mask=np.ma.masked_where(y < (JMC.nSig * JMS.bgRMS), y, copy=True).mask)
-    x_plotlimits = np.ma.masked_array(x, np.ma.masked_where(x < (JMC.nSig * JMS.bgRMS), x, copy=True).mask)
-    xmin = np.ma.min(x_plotlimits)
-    xmax = np.ma.max(x_plotlimits)
-    ymin = np.ma.min(y_plotlimits)
-    ymax = np.ma.max(y_plotlimits)
-                        
-    x_source_min = float(sCentre[0]) - JMS.ImFraction * float(JMS.sSize[0])
-    x_source_max = float(sCentre[0]) + JMS.ImFraction * float(JMS.sSize[0])
-    y_source_min = float(sCentre[1]) - JMS.ImFraction * float(JMS.sSize[1])
-    y_source_max = float(sCentre[1]) + JMS.ImFraction * float(JMS.sSize[1])
-                        
-    if x_source_min < xmin:
-        xplotmin = xmin
-    else:
-        xplotmin = x_source_min
-                                
-    if x_source_max < xmax:
-        xplotmax = x_source_max
-    else:
-        xplotmax = xmax
-                        
-    if y_source_min < ymin:
-        yplotmin = ymin
-    else:
-        yplotmin = y_source_min
-                                
-    if y_source_max < ymax:
-        yplotmax = y_source_max
-    else:
-        yplotmax = ymax
+    x_pixels_not_plotted = (1.0 - JMS.ImFraction) * float(JMS.sSize[0])
+    xplotmin = x_pixels_not_plotted / 2.0
+    xplotmax = float(JMS.sSize[0]) - (x_pixels_not_plotted / 2.0)
+    y_pixels_not_plotted = (1.0 - JMS.ImFraction) * float(JMS.sSize[1])
+    yplotmin = y_pixels_not_plotted / 2.0
+    yplotmax = float(JMS.sSize[1]) - (y_pixels_not_plotted / 2.0)
 
     # Plot ridgeline
     fig, ax = plt.subplots(figsize=(10,10))
@@ -618,8 +597,12 @@ def PlotRidgelines(flux_array, sCentre, ridge1, ridge2):
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
     c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
 
-    ax.plot(ridge1[:,0], ridge1[:,1], 'r-', label='ridge 1', marker='.')
-    ax.plot(ridge2[:,0], ridge2[:,1], 'r-', label='ridge 2', marker='.')
+    # Setup offsets for cutdown map
+    ridge_plot1 = ridge1.copy(); ridge_plot1[:,0] -= xmin; ridge_plot1[:,1] -= ymin
+    ridge_plot2 = ridge2.copy(); ridge_plot2[:,0] -= xmin; ridge_plot2[:,1] -= ymin
+
+    ax.plot(ridge_plot1[:,0], ridge_plot1[:,1], 'r-', label='ridge 1', marker='.')
+    ax.plot(ridge_plot2[:,0], ridge_plot2[:,1], 'r-', label='ridge 2', marker='.')
     ax.plot(sCentre[0], sCentre[1], 'g-', marker='x')   # source centre
 
     divider = make_axes_locatable(ax)
