@@ -10,6 +10,7 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
 
     import JetModelling_Constants as JMC
     import JetModelling_MapSetup as JMS
+    import JetModelling_MapAnalysis as JMA
     import JetRidgeline.Ridgelines as RL
     import JetRidgeline_FromData.Ridgelines_FromData as RLFD
     import JetRidgeline_Skeletonize.Ridgelines_Skeletonize as RLS
@@ -33,6 +34,9 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
             flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLS.CreateRidgelines()
 
         if not JMC.ridgeline_only:
+
+            # Remove any specified bright stars
+            flux_array = JMA.RemoveBrightStars(flux_array, JMS.rmStar)
 
             # Divide the jet into sections by finding edge points
             section_parameters1, section_parameters2 = JS.CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)

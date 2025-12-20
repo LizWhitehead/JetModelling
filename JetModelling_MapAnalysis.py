@@ -8,9 +8,7 @@ Created by LizWhitehead - 06/05/2025
 
 import JetModelling_Constants as JMC
 import numpy as np
-from scipy.optimize import curve_fit
-from scipy.stats import norm, kstest
-import matplotlib.pyplot as plt
+from math import isnan
 
 def GetFluxDistributionAlongLine(flux_array, start_point, end_point):
 
@@ -251,7 +249,7 @@ def RefineEdgesAlongJetArm(flux_array, edge_points):
     flux_array - 2D array,
                  raw image array
 
-    edge_points - 2D array, shape(n,5)
+    edge_points - 2D array, shape(n,7)
                   Points on one arm of the jet, corresponding to the 
                   closest distance to that edge from the corresponding ridge point.
 
@@ -265,20 +263,54 @@ def RefineEdgesAlongJetArm(flux_array, edge_points):
     """
 
     # Initialise updated edge points array
-    updated_edge_points = np.empty((0,5))
+    updated_edge_points = np.empty((0,7))
 
     if JMC.flux_percentile == 100:
         # Edges are returned unchanged
         updated_edge_points = edge_points
     else:
         # Update all edgepoints to be the limits of the flux percentile width
-        for x1,y1, x2,y2, R in edge_points:
+        for x1,y1, x2,y2, R, ridge_x,ridge_y in edge_points:
 
             start_point = np.array([x1,y1]); end_point = np.array([x2,y2])
 
             if x1 != x2 or y1 != y2:
                 start_point, end_point = RefineEdgesFromFluxPercentileWidth(flux_array, start_point, end_point)
 
-            updated_edge_points = np.vstack((updated_edge_points, np.hstack((start_point, end_point, R)) ))
+            updated_edge_points = np.vstack((updated_edge_points, np.hstack((start_point, end_point, R, ridge_x, ridge_y)) ))
 
     return updated_edge_points
+
+#############################################
+
+def RemoveBrightStars(flux_array, star_data):
+
+    """
+    Remove bright stars by setting the flux to zero in specified pixels
+
+    Parameters
+    -----------
+    flux_array - 2D array,
+                 raw image array
+
+    star_data - 2D array, shape(n,3)
+                centre x, centre y, +/- pixel range to remove
+
+    Returns
+    -----------
+    updated_flux_array - 2D array, shape(n,5)
+                         raw image image with bright stars removed
+
+    Notes
+    -----------
+    """
+
+    # Remove flux in +/- specified number of pixels in x/y directions around the stars' centre
+    for centre_x, centre_y, num_pix in star_data.astype('int'):
+        if centre_x != -1:
+            pixel_range = range(-num_pix,num_pix)
+            for pix_y in pixel_range:
+                for pix_x in pixel_range:
+                    flux_array[centre_y + pix_y, centre_x + pix_x] = 0.0
+
+    return flux_array
