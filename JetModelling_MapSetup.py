@@ -55,9 +55,9 @@ bgRMSs =     np.array([0.0002,
 bgMeans =    np.array([-0.000078874466,
                        -0.0000017,
                        -0.000083])                                          # Background flux mean pixel value in Jy/beam
-rmStars =    np.array([np.array([[798,860,10],[952,1090,8],[894,732,15]]),
-                       np.array([[2075,2161,9],[1918,1847,20],[-1,-1,-1]]),
-                       np.array([[1538,1668,10],[-1,-1,-1],[-1,-1,-1]])])   # Data to remove bright stars (centre x, centre y, +/- no. of pixels); array of -1's if none
+rmStars =    np.array([np.array([[798,860,10],[952,1090,8],[894,732,15],[764,735,16],[761,780,12],[1038,1098,12]]),
+                       np.array([[2075,2161,9],[1918,1847,20],[1922,1889,12],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]),    # Data to remove bright stars
+                       np.array([[1538,1668,10],[1516,1884,15],[1402,1756,15],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]])])  # (centre x, centre y, +/- no. of pixels); array of -1's if none
 
 ###########################################################################################################
 # Parameters used for from-data ridgelines.

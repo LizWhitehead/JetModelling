@@ -71,21 +71,21 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         print('Finding edge points')
 
         # Find initial edge points
-        init_edge_points1 = FindInitEdgePoints(flux_array, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
+        init_edge_points1 = FindInitEdgePoints(1, flux_array, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
 
         # The initial edge points were ordered relative to the ridge phi for the first arm. Re-order for the second arm.
         init_edge_points2 = np.array([init_edge_points1[2], init_edge_points1[3], \
                                       init_edge_points1[0], init_edge_points1[1], init_edge_points1[4], init_edge_points1[5], init_edge_points1[6]])
 
         # Find all edgepoints for each arm of the jet
-        edge_points1 = FindAllEdgePointsForJetArm(flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
-        edge_points2 = FindAllEdgePointsForJetArm(flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
+        edge_points1 = FindAllEdgePointsForJetArm(1, flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
+        edge_points2 = FindAllEdgePointsForJetArm(2, flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
 
         # Interpolate extra edge points at points in the jet where significant flux or area (=> calculated volume) is cut off.
         # This will ensure that summed flux and volume are correct when merging segments.
         print('Adding extra edge points')
-        edge_points1 = AddEdgePoints(flux_array, edge_points1)
-        edge_points2 = AddEdgePoints(flux_array, edge_points2)
+        edge_points1 = AddEdgePoints(1, flux_array, edge_points1)
+        edge_points2 = AddEdgePoints(2, flux_array, edge_points2)
 
         # Refine the edges using a percentile of the flux distribution
         edge_points1 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points1)
@@ -110,13 +110,16 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
 
 #############################################
 
-def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rlen):
+def FindAllEdgePointsForJetArm(arm_number, flux_array, init_edge_points, ridge, phi_val, Rlen):
 
     """
     Find all edge points for one arm of the jet
 
     Parameters
     -----------
+    arm_number - integer
+                 jet arm being processed
+
     flux_array - 2D array,
                  raw image array
 
@@ -164,10 +167,10 @@ def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rle
                 break
 
             if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JMC.MaxRFactor * JMC.R_es):  # Test whether the last step size has increased by too much
-                new_edge_points = FindEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
+                new_edge_points = FindEdgePoints(arm_number, flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
             else:
                 # Re-initialise edge points algorithm
-                new_edge_points = FindInitEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
+                new_edge_points = FindInitEdgePoints(arm_number,flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
 
             if not np.isnan(new_edge_points).any(): 
                 edge_points = np.vstack((edge_points, new_edge_points))
@@ -178,7 +181,7 @@ def FindAllEdgePointsForJetArm(flux_array, init_edge_points, ridge, phi_val, Rle
 
 #############################################
 
-def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
+def FindEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -186,6 +189,9 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
 
     Parameters
     -----------
+    arm_number - integer
+                 jet arm being processed
+
     flux_array - 2D array,
                  raw image array
 
@@ -230,7 +236,7 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the flux values below the RMS value (JMC.nSig * rms)
-    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig * JMS.bgRMS), flux_array).mask
+    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[arm_number-1] * JMS.bgRMS), flux_array).mask
 
     # Get polar coordinates for flux_array, around the ridge point
     r, phi = PolarCoordinates(flux_array, ridge_point)
@@ -254,7 +260,7 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
         ridge_dist = np.sqrt( (prev_edge_points[5] - ridge_point[0])**2 + (prev_edge_points[6] - ridge_point[1])**2 )
         if (ridge_dist / JMC.R) > 3:
 
-            # If an edge point is exactly at the radius, extend the radius up to 3 times, until the edge point is found within the radius
+            # If an edge point is exactly at the radius, extend the radius up to a defined number of times, until the edge point is found within the radius
             search_cnt = 1
             while search_cnt <= 3:
                 latest_edge_pix = np.floor(latest_edge_points).astype('int')
@@ -377,7 +383,7 @@ def GetEdgepointsInRadius(flux_array, r, phi, rms_mask, prev_edge_pix, r_radius1
 
 #############################################
 
-def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
+def FindInitEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -385,6 +391,9 @@ def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
 
     Parameters
     -----------
+    arm_number - integer
+                 jet arm being processed
+
     flux_array - 2D array,
                  raw image array
 
@@ -422,7 +431,7 @@ def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
     flux_array_valid = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the jet - where flux values are above (JMC.nSig * rms)
-    jet_mask = np.ma.masked_where(flux_array_valid > (JMC.nSig * JMS.bgRMS), flux_array_valid).mask
+    jet_mask = np.ma.masked_where(flux_array_valid > (JMC.nSig[arm_number-1] * JMS.bgRMS), flux_array_valid).mask
 
     # Search for an edge at right angles to the ridge direction
     search_phi_range1 = PiRange(ridge_phi + (pi*90/180) - (pi*5/180))     # +/- 5 degrees
@@ -541,7 +550,7 @@ def FindSearchAngleRanges(phi_prev1, phi_prev2, ridge_phi):
 
 #############################################
 
-def AddEdgePoints(flux_array, edge_points):
+def AddEdgePoints(arm_number, flux_array, edge_points):
 
     """
     Interpolates extra edge points at points in the jet where
@@ -549,6 +558,9 @@ def AddEdgePoints(flux_array, edge_points):
 
     Parameters
     -----------
+    arm_number - integer
+                 jet arm being processed
+
     flux_array - 2D array, shape(n,2)
                  raw image array
 
@@ -578,7 +590,7 @@ def AddEdgePoints(flux_array, edge_points):
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the flux values below the RMS value (JMC.nSig * rms)
-    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig * JMS.bgRMS), flux_array).mask
+    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[arm_number-1] * JMS.bgRMS), flux_array).mask
 
     # Loop for each side of the jet
     jet_side = 1
@@ -738,7 +750,7 @@ def FindAdditionalEdgePoint(r, phi, rms_mask, x, y, section_x_length, section_y_
         phi_mask = np.ma.masked_inside(phi, phi_start, phi_end, copy = True).mask               # search between phi_start and phi_end
     else:
         phi_mask = np.ma.masked_outside(phi, phi_start, phi_end, copy = True).mask
-    r_mask = np.ma.masked_outside(r, 0, r_radius, copy=True).mask # search inside defined radius
+    r_mask = np.ma.masked_outside(r, 0, r_radius, copy=True).mask                               # search inside defined radius
     search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, r_mask), rms_mask)                      # create the search mask
 
     # Find the co-ordinate of the largest r value in the search area - the new edge point
@@ -2258,6 +2270,37 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
             PlotLastSegment(ax, last_sp)
         last_sp = sp
     PlotLastSegment(ax, sp)                                                             # Plot last separator
+
+    # Add in side edge lines, so as to see the shape of the edge
+    epcount = 0
+    for ep in edge_plot1:
+        epcount += 1
+        if epcount > 1:
+            if (ep[4] - last_ep[4]) < (JMC.MaxRFactor * JMC.R_es):    # If gap is too big, don't draw edge lines 
+                x_values = np.array([ep[0], last_ep[0]])
+                y_values = np.array([ep[1], last_ep[1]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 1
+                x_values = np.array([ep[2], last_ep[2]])
+                y_values = np.array([ep[3], last_ep[3]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
+            else:
+                ep_count = 1    # reset counter
+        last_ep = ep
+
+    epcount = 0
+    for ep in edge_plot2:
+        epcount += 1
+        if epcount > 1:
+            if (ep[4] - last_ep[4]) < (JMC.MaxRFactor * JMC.R_es):    # If gap is too big, don't draw edge lines 
+                x_values = np.array([ep[0], last_ep[0]])
+                y_values = np.array([ep[1], last_ep[1]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 1
+                x_values = np.array([ep[2], last_ep[2]])
+                y_values = np.array([ep[3], last_ep[3]])
+                ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
+            else:
+                ep_count = 1    # reset counter
+        last_ep = ep
 
     # Plot centre line in red, to make it obvious
     sp = section_plot1[0,:]

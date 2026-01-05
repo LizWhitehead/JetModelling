@@ -52,7 +52,7 @@ def Setup():
         cutout = str(RLF.fits) + JMS.sName + '.fits'
         nlhdu = fits.open(cutout) 
         d = nlhdu[0].data
-        thres = JMC.nSig * JMS.bgRMS
+        thres = JMC.nSig[0] * JMS.bgRMS
 
         d[d<thres] = np.nan
         print ("Max val of thresholded array is:", np.nanmax(d))

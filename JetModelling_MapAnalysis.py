@@ -308,9 +308,8 @@ def RemoveBrightStars(flux_array, star_data):
     # Remove flux in +/- specified number of pixels in x/y directions around the stars' centre
     for centre_x, centre_y, num_pix in star_data.astype('int'):
         if centre_x != -1:
-            pixel_range = range(-num_pix,num_pix)
-            for pix_y in pixel_range:
-                for pix_x in pixel_range:
-                    flux_array[centre_y + pix_y, centre_x + pix_x] = 0.0
+            xmin = centre_x - num_pix; xmax = centre_x + num_pix
+            ymin = centre_y - num_pix; ymax = centre_y + num_pix
+            flux_array[ymin:ymax, xmin:xmax] = 0.0
 
     return flux_array
