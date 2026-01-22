@@ -262,7 +262,7 @@ def FindEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R, prev
 
             # If an edge point is exactly at the radius, extend the radius up to a defined number of times, until the edge point is found within the radius
             search_cnt = 1
-            while search_cnt <= 3:
+            while search_cnt <= JMC.NumRetryAttempts:
                 latest_edge_pix = np.floor(latest_edge_points).astype('int')
                 r_edgepoint1 = r[latest_edge_pix[1],latest_edge_pix[0]]; r_edgepoint2 = r[latest_edge_pix[3],latest_edge_pix[2]]
                 if (abs(r_edgepoint1 - r_radius1) < JMC.geo_lentol) or (abs(r_edgepoint2 - r_radius2) < JMC.geo_lentol):
@@ -618,7 +618,7 @@ def AddEdgePoints(arm_number, flux_array, edge_points):
 
                         R_per_section = R_diff / num_sections                           # change in R per section
 
-                        # Interpolate the new edgepoint for each section
+                        # Calculate x and y side lengths for each additional section
                         section_x1_length = (x_side1 - lastpts[0]) / num_sections       # x section length on one side of the jet
                         section_y1_length = (y_side1 - lastpts[1]) / num_sections       # y section length on one side of the jet
                         section_x2_length = (x_side2 - lastpts[2]) / num_sections       # x section length on other side of the jet
@@ -635,14 +635,15 @@ def AddEdgePoints(arm_number, flux_array, edge_points):
                             x2 = last_sect_x2 + section_x2_length                       # x section co-ord on other side of the jet
                             y2 = last_sect_y2 + section_y2_length                       # y section co-ord on other side of the jet
 
-                            # Calculate the next search radius for both sides
-                            last_edgepoints = edge_points_side[-1]
-                            r_radius1 = np.sqrt( (last_edgepoints[5] - last_edgepoints[0])**2 + (last_edgepoints[6] - last_edgepoints[1])**2 ) * JMC.SearchRadiusIncFactor
-                            r_radius2 = np.sqrt( (last_edgepoints[5] - last_edgepoints[2])**2 + (last_edgepoints[6] - last_edgepoints[3])**2 ) * JMC.SearchRadiusIncFactor
-
-                            # Calculate the interpolated ridge point and take polar co-ordinates around it
+                            # Calculate the interpolated ridge point
                             ridge_section_x = lastpts[5] + ((ridge_x - lastpts[5]) / num_sections * sect)
                             ridge_section_y = lastpts[6] + ((ridge_y - lastpts[6]) / num_sections * sect)
+
+                            # Calculate the search radius for each side of the section
+                            r_radius1 = np.sqrt( (x1 - ridge_section_x)**2 + (y1 - ridge_section_y)**2 ) * JMC.SearchRadiusIncFactor
+                            r_radius2 = np.sqrt( (x2 - ridge_section_x)**2 + (y2 - ridge_section_y)**2 ) * JMC.SearchRadiusIncFactor
+
+                            # Take polar co-ordinates around the interpolated ridge point
                             ridge_point = np.array([ridge_section_x, ridge_section_y])
                             r, phi = PolarCoordinates(flux_array, ridge_point)
 
@@ -756,6 +757,28 @@ def FindAdditionalEdgePoint(r, phi, rms_mask, x, y, section_x_length, section_y_
     # Find the co-ordinate of the largest r value in the search area - the new edge point
     r_search = np.ma.masked_array(r, mask = search_mask)
     new_edge_point = np.unravel_index(np.argmax(r_search, axis=None), r_search.shape)
+
+    if not np.isnan(new_edge_point).any(): 
+        # If an edge point is exactly at the radius, extend the radius up to a defined number of times, until the edge point is found within the radius
+        search_cnt = 1
+        while search_cnt <= JMC.NumRetryAttempts:
+            latest_edge_pix = np.floor(new_edge_point).astype('int')
+            r_edgepoint = r[latest_edge_pix[0],latest_edge_pix[1]]
+            if (abs(r_edgepoint - r_radius) < JMC.geo_lentol):
+
+                # The edge point is exactly on the search radius. Extend the radius of search and search again.
+                r_radius = r_radius * JMC.SearchRadiusIncFactor
+                r_mask = np.ma.masked_outside(r, 0, r_radius, copy=True).mask                               # search inside defined radius
+                search_mask = np.ma.mask_or(np.ma.mask_or(phi_mask, r_mask), rms_mask)                      # create the search mask
+                r_search = np.ma.masked_array(r, mask = search_mask)
+                latest_edge_point = np.unravel_index(np.argmax(r_search, axis=None), r_search.shape)
+                if not np.isnan(latest_edge_point).any():
+                    new_edge_point = latest_edge_point
+                else:
+                    break
+            else:
+                break
+            search_cnt += 1  
 
     return new_edge_point
 
@@ -2107,7 +2130,7 @@ def SaveRegions(source_name, section_perimeters1, section_perimeters2):
         all_regions.append(PolygonPixelRegion(pix))
 
     # Save as a DS9 region file
-    Regions(all_regions).write(JSF.RGS %(source_name, str(JMS.map_number+1)), format='ds9')
+    Regions(all_regions).write(JSF.RGS %(source_name, str(JMS.map_number+1)), format='ds9', overwrite=True)
 
 #############################################
 

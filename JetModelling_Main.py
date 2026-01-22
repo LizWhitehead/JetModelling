@@ -35,8 +35,8 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
 
         if not JMC.ridgeline_only:
 
-            # Remove any specified bright stars
-            flux_array = JMA.RemoveBrightStars(flux_array, JMS.rmStar)
+            # Remove any specified bright sources
+            flux_array = JMA.RemoveBrightSources(flux_array, JMS.rmSource)
 
             # Divide the jet into sections by finding edge points
             section_parameters1, section_parameters2 = JS.CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)

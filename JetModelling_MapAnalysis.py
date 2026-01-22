@@ -283,18 +283,18 @@ def RefineEdgesAlongJetArm(flux_array, edge_points):
 
 #############################################
 
-def RemoveBrightStars(flux_array, star_data):
+def RemoveBrightSources(flux_array, source_data):
 
     """
-    Remove bright stars by setting the flux to zero in specified pixels
+    Remove bright sources by setting the flux to zero in specified pixels
 
     Parameters
     -----------
     flux_array - 2D array,
                  raw image array
 
-    star_data - 2D array, shape(n,3)
-                centre x, centre y, +/- pixel range to remove
+    source_data - 2D array, shape(n,3)
+                  centre x, centre y, +/- pixel range to remove
 
     Returns
     -----------
@@ -305,8 +305,8 @@ def RemoveBrightStars(flux_array, star_data):
     -----------
     """
 
-    # Remove flux in +/- specified number of pixels in x/y directions around the stars' centre
-    for centre_x, centre_y, num_pix in star_data.astype('int'):
+    # Remove flux in +/- specified number of pixels in x/y directions around the sources' centre
+    for centre_x, centre_y, num_pix in source_data.astype('int'):
         if centre_x != -1:
             xmin = centre_x - num_pix; xmax = centre_x + num_pix
             ymin = centre_y - num_pix; ymax = centre_y + num_pix

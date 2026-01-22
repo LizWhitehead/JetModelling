@@ -50,12 +50,12 @@ sSizes =     np.array([np.array([550,900]),
                        np.array([550,920]),
                        np.array([505,1020])])                               # Source size in pixels (x,y sides of containing rectangle, centred on sCentre)
 bgRMSs =     np.array([0.0002,
-                       0.00036,
-                       0.00038])                                            # Background flux RMS value in Jy/beam
-bgMeans =    np.array([-0.000078874466,
-                       -0.0000017,
-                       -0.000083])                                          # Background flux mean pixel value in Jy/beam
-rmStars =    np.array([np.array([[798,860,10],[952,1090,8],[894,732,15],[764,735,16],[761,780,12],[1038,1098,12]]),
+                       0.00030,
+                       0.0004])                                            # Background flux RMS value in Jy/beam
+bgMeans =    np.array([-0.000079,
+                       -0.000062,
+                       -0.000081])                                          # Background flux mean pixel value in Jy/beam
+rmSources =  np.array([np.array([[798,860,10],[952,1090,8],[894,732,15],[764,735,16],[761,780,12],[1038,1098,12]]),
                        np.array([[2075,2161,9],[1918,1847,20],[1922,1889,12],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]),    # Data to remove bright stars
                        np.array([[1538,1668,10],[1516,1884,15],[1402,1756,15],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]])])  # (centre x, centre y, +/- no. of pixels); array of -1's if none
 
@@ -139,7 +139,7 @@ def InitialiseMap(current_map_number):
     global sRA; global sDec
     global sSize
     global bgRMS; global bgMean
-    global rmStar
+    global rmSource
     global CutdownSize0; global CutDownSize1
     global GaussSigmaFilter 
     global ContoursLevelPerc
@@ -168,7 +168,7 @@ def InitialiseMap(current_map_number):
     sRA = sRAs[map_number]; sDec = sDecs[map_number]
     sSize = sSizes[map_number]
     bgRMS = bgRMSs[map_number]; bgMean = bgMeans[map_number]
-    rmStar = rmStars[map_number]
+    rmSource = rmSources[map_number]
 
     CutdownSize0 = CutdownSize0s[map_number]; CutDownSize1 = CutDownSize1s[map_number]
     GaussSigmaFilter = GaussSigmaFilters[map_number]

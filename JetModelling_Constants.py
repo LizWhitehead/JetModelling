@@ -36,6 +36,7 @@ search_angle = 5                # Edgepoint search angle in degrees
 MaxRFactor = 100                # Maximum factor for increase of step size before re-initialising edgepoint algorithm 
 R_es = 5                        # Step size along the jet in pixels
 SearchRadiusIncFactor = 1.25    # Factor (>1) to increase the edgepoint search radius for each ridgepoint (large value <=> no search radius)
+NumRetryAttempts = 3            # Number of retry attempts if edgepoint lies exactly on the search radius
 MinIntpolFactor = 4             # Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6           # Maximum number of interpolated points along an edgeline
 flux_percentile = 95            # Flux percentile limit for refining jet edges (100 => no change)
