@@ -192,10 +192,10 @@ def CreateCutouts():
     
     centre_pos = SkyCoord(JMS.sRA*u.deg,JMS.sDec*u.deg,frame='fk5')
     lmsize = JMS.sSize          # size in pixels
-    print('Making cutout for source',JMS.sName,'with size',lmsize,'pixels')
+    print('Making cutout for source',JMS.sName,'with size',np.max(lmsize),'pixels')
     hdu = DefineHDU(JMS.sName)
     data = hdu[0].data
-    size = (lmsize, lmsize)
+    size = np.max(lmsize)
     wcs = WCS(hdu[0].header)    # Keep world coordinate system
     cutout = Cutout2D(data, centre_pos, size, wcs = wcs)
     hdu[0].data = cutout.data
@@ -1809,7 +1809,7 @@ def TrialSeries():
     dphi = JMC.dphi
     Lra = JMS.sRA
     Ldec = JMS.sDec
-    lmsize = JMS.sSize      # pixels
+    lmsize = np.max(JMS.sSize)      # pixels
     flux_array = GetCutoutArray(source_name)
         
     optical_pos = (float(lmsize), float(lmsize))

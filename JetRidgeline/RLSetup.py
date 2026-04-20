@@ -45,7 +45,7 @@ def Setup():
                 print ("Made directory ", newd)
 
     # Create flattened 2D cutout of source. This will work, even if input map file is already 2D.
-    flag = get_fits(JMS.sRA, JMS.sDec, JMS.sName, JMS.sSize*JMS.ddel)     # pass size in degrees
+    flag = get_fits(JMS.sRA, JMS.sDec, JMS.sName, np.max(JMS.sSize)*JMS.ddel)     # pass size in degrees
 
     # Get thresholded npy array
     if flag == 0:

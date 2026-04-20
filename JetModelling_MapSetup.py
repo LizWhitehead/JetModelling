@@ -10,113 +10,56 @@ import numpy as np
 from math import nan
 
 # Parameters for all maps in this run
-map_count = 3                   # count of map files in this run
-sName = '3C31'                  # Source name
+map_count = 1                   # count of map files in this run
+sName = 'NGC1044'               # Source name
 
 ###########################################################################################################
 # Set these parameters from the map FITS file
 ###########################################################################################################
-map_files =  np.array(['C:/Maps/3C31.HGEOM2.FITS',
-                       'C:/Maps/3C31_VLA_360MHz_9arcs.fits',
-                       'C:/Maps/3C31_GMRT_615MHz_5arcs.fits'])              # FITS map file
-rdels =      np.array([-0.0003611111024,
-                       -0.0004166666666667,
-                       -0.0002777777845])                                   # Equivalent pixel value for RA in FITS file in degrees
-ddels =      np.array([0.0003611111024,
-                       0.0004166666666667,
-                       0.0002777777845])                                    # Equivalent pixel value for Dec in FITS file in degrees
-beamsizes =  np.array([3.846184708166425,
-                       5.7979838053387365,
-                       5.414759868962811])                                  # Beam size (width along semi-major axis) in pixels
-beamareas =  np.array([16.76195591180468,
-                       20.79097537021711,
-                       27.43927279185161])                                  # Beam area in pixels squared
-freqs =      np.array([1.636e9,
-                       3.599498640499e8,
-                       6.15250000000e8])                                    # Observation frequency
-sCentres =   np.array([np.array([920.5,957.25]),
-                       np.array([2047.5,2046.25]),
-                       np.array([1497.75,1497.0])])                         # Map source centre in pixels (x,y); array of nan's for a map if not present
-# sCentres =   np.array([np.array([nan,nan]),
-#                        np.array([nan,nan]),
-#                        np.array([nan,nan])])                                # Map source centre in pixels (x,y); array of nan's for a map if not present
-sRAs =       np.array([16.8217500000,
-                       16.85395833273,
-                       16.8537683301])                                      # Map centre RA in degrees
-sDecs =      np.array([32.4255277778,
-                       32.41255555384,
-                       32.4125070566])                                      # Map centre Dec in degrees
-sSizes =     np.array([np.array([550,900]),
-                       np.array([550,920]),
-                       np.array([505,1020])])                               # Source size in pixels (x,y sides of containing rectangle, centred on sCentre)
-bgRMSs =     np.array([0.0002,
-                       0.00030,
-                       0.0004])                                            # Background flux RMS value in Jy/beam
-bgMeans =    np.array([-0.000079,
-                       -0.000062,
-                       -0.000081])                                          # Background flux mean pixel value in Jy/beam
-rmSources =  np.array([np.array([[798,860,10],[952,1090,8],[894,732,15],[764,735,16],[761,780,12],[1038,1098,12]]),
-                       np.array([[2075,2161,9],[1918,1847,20],[1922,1889,12],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]),    # Data to remove bright stars
-                       np.array([[1538,1668,10],[1516,1884,15],[1402,1756,15],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]])])  # (centre x, centre y, +/- no. of pixels); array of -1's if none
+map_files =  np.array(['C:/Maps/img_do_not_touch_1728590175_sdp_l0_1024ch_NGC1044.k-cal_manualr0-MFS-I-image.fits'])               # FITS map file
+rdels =      np.array([-0.000305555555555556 ])                                   # Equivalent pixel value for RA in FITS file in degrees
+ddels =      np.array([0.000305555555555556 ])                                    # Equivalent pixel value for Dec in FITS file in degrees
+beamsizes =  np.array([9.8])                                         # Beam size (width along semi-major axis) in pixels
+beamareas =  np.array([73.774828994279])                                  # Beam area in pixels squared
+freqs =      np.array([1283895507.8125])                                    # Observation frequency
+sCentres =   np.array([np.array([1281,1281])])                          # Map source centre in pixels (x,y); array of nan's for a map if not present
+# sCentres =   np.array([np.array([nan,nan])])                                # Map source centre in pixels (x,y); array of nan's for a map if not present
+sRAs =       np.array([40.278375])                                          # Map centre RA in degrees
+sDecs =      np.array([8.7338333333333])                                        # Map centre Dec in degrees
+sSizes =     np.array([np.array([1200,2200])])                               # Source size in pixels (x,y sides of containing rectangle, centred on sCentre)
+#bgRMSs =     np.array([0.000006])                                           # Background flux RMS value in Jy/beam
+bgRMSs =     np.array([1e-05])                                           # Background flux RMS value in Jy/beam
+bgMeans =    np.array([0.0])                                                # Background flux mean pixel value in Jy/beam
+rmSources =    np.array([np.array([[1283,1534,12],[1289,1593,5],[1142,1579,20],[1201,795,10],[1235,1440,5],[1456,1475,25]])])        # Data to remove bright sources (centre x, centre y, +/- no. of pixels); array of -1's if none
 
 ###########################################################################################################
 # Parameters used for from-data ridgelines.
 ###########################################################################################################
-ridgelines_from_data_arm1s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords1.txt',
-                                       'C:/JetModelling_FromData/3C31_360MHz_ridge_coords1.txt',
-                                       'C:/JetModelling_FromData/3C31_615MHz_ridge_coords1.txt'])   # Input data file for arm1
-ridgelines_from_data_arm2s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords2.txt',
-                                       'C:/JetModelling_FromData/3C31_360MHz_ridge_coords2.txt',
-                                       'C:/JetModelling_FromData/3C31_615MHz_ridge_coords2.txt'])   # Input data file for arm2
+ridgelines_from_data_arm1s = np.array(['C:/JetModelling_FromData/NGC1044_Lucy_ridge1_new.txt'])   # Input data file for arm1
+ridgelines_from_data_arm2s = np.array(['C:/JetModelling_FromData/NGC1044_Lucy_ridge2_new.txt'])   # Input data file for arm2
 
 ###########################################################################################################
 # Parameters used for skeletonize ridgelines (these parameters are highly sensitive to the map).
 # Modify these parameters to achieve the best ridgeline. Run multiple times with the ridgeline_only flag
 # set to True until the best ridgeline is achieved.
 ###########################################################################################################
-CutdownSize0s =            np.array([1000,
-                                     1270,
-                                     1000])                                 # Cut-down size of image (y axis) for skeletonize
-CutDownSize1s =            np.array([1000,
-                                     1270,
-                                     1000])                                 # Cut-down size of image (x axis) for skeletonize
-GaussSigmaFilters =        np.array([35,
-                                     40,
-                                     35])                                   # Sigma level for thresholding
-ContoursLevelPercs =       np.array([80,
-                                     80,
-                                     80])                                   # Percentile level for finding contours
-MaxRemoveSmallHolesAreas = np.array([200,
-                                     1000,
-                                     1000])                                 # Maximum area of "holes" in skeleton that will be removed
-MaximumLoopJumpPixelss =   np.array([20,
-                                     20,
-                                     20])                                   # Maximum jump between points, used in finding "loops"
-nSig_ss =                  np.array([12,
-                                     20,
-                                     20])                                   # The multiple of sigma for RMS reduction; nan if not required
-SplitInnerOuterSkeletons = np.array([True,
-                                     True,
-                                     True])                                 # Flag for joining together skeletons for inner and outer jets
-nSig_s_outers =            np.array([nan,
-                                     nan,
-                                     nan])                                  # Value used if joining together skeletons for inner and outer jets
-JoinInterpolatePointss =   np.array([6,
-                                     30,
-                                     6])                                    # Value used if joining together skeletons for inner and outer jets
+CutdownSize0s =            np.array([1000])                                 # Cut-down size of image (y axis) for skeletonize
+CutDownSize1s =            np.array([1000])                                 # Cut-down size of image (x axis) for skeletonize
+GaussSigmaFilters =        np.array([35])                                   # Sigma level for thresholding
+ContoursLevelPercs =       np.array([80])                                   # Percentile level for finding contours
+MaxRemoveSmallHolesAreas = np.array([200])                                 # Maximum area of "holes" in skeleton that will be removed
+MaximumLoopJumpPixelss =   np.array([10])                                   # Maximum jump between points, used in finding "loops"
+nSig_ss =                  np.array([12])                                   # The multiple of sigma for RMS reduction; nan if not required
+SplitInnerOuterSkeletons = np.array([True])                                 # Flag for joining together skeletons for inner and outer jets
+nSig_s_outers =            np.array([nan])                                  # Value used if joining together skeletons for inner and outer jets
+JoinInterpolatePointss =   np.array([6])                                    # Value used if joining together skeletons for inner and outer jets
 
 ###########################################################################################################
 # Parameters used for map plotting.
 ###########################################################################################################
-ImFractions  = np.array([1.0,
-                         1.0,
-                         1.0])                                              # The fraction of the source the final image is cut down to for plotting
-vmins        = np.array([0,
-                         0,
-                         0])                                                # Linear mapping colour range minimum
-vmaxs        = np.array([0.010,
-                         0.010,
-                         0.010])                                            # Linear mapping colour range maximum
+ImFractions  = np.array([1.0])                                              # The fraction of the source the final image is cut down to for plotting
+vmins        = np.array([21e-6])                                                # Linear mapping colour range minimum
+vmaxs        = np.array([0.00175])                                            # Linear mapping colour range maximum
 
 #############################################
 
