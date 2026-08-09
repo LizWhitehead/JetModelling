@@ -16,14 +16,14 @@ from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
 from math import tan, atan2, atan, pow, nan, isnan, floor
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, Polygon
 from regions import PixCoord, PolygonPixelRegion, Regions
 import copy
 
 def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
 
     """
-    Divide both arms of the jet into sections by finding edge points.
+    Divide both sides of the jet into sections by finding edge points.
 
     Parameters
     -----------
@@ -31,22 +31,22 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
                  raw image array
 
     ridge1 - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for one arm of the jet
+             Array of ridgepoint co-ordinates for one side of the jet
     
     ridge2 - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for other arm of the jet
+             Array of ridgepoint co-ordinates for other side of the jet
 
     phi_val1 - 1D array of ridgeline angles for each ridgepoint on
-               one arm of the jet
+               one side of the jet
     
     phi_val2 - 1D array of ridgeline angles for each ridgepoint on
-               other arm of the jet
+               other side of the jet
 
     Rlen1 - 1D array of distance from source for each ridgepoint on
-            one arm of the jet
+            one side of the jet
     
     Rlen2 - 1D array of distance from source for each ridgepoint on
-            other arm of the jet
+            other side of the jet
     
     Constants
     ---------
@@ -55,11 +55,11 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
     -----------
     section_parameters1 - 2D array, shape(n,12)
                           Array with section points (x,y * 4), distance from source,
-                          flux, volume and area for one arm of the jet
+                          flux, volume and area for one side of the jet
 
     section_parameters2 - 2D array, shape(n,12)
                           Array with section points (x,y * 4), distance from source
-                          flux, volume and area for other arm of the jet
+                          flux, volume and area for other side of the jet
 
     Notes
     -----------
@@ -73,13 +73,13 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         # Find initial edge points
         init_edge_points1 = FindInitEdgePoints(1, flux_array, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
 
-        # The initial edge points were ordered relative to the ridge phi for the first arm. Re-order for the second arm.
+        # The initial edge points were ordered relative to the ridge phi for the first side. Re-order for the second side.
         init_edge_points2 = np.array([init_edge_points1[2], init_edge_points1[3], \
                                       init_edge_points1[0], init_edge_points1[1], init_edge_points1[4], init_edge_points1[5], init_edge_points1[6]])
 
-        # Find all edgepoints for each arm of the jet
-        edge_points1 = FindAllEdgePointsForJetArm(1, flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
-        edge_points2 = FindAllEdgePointsForJetArm(2, flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
+        # Find all edgepoints for each side of the jet
+        edge_points1 = FindAllEdgePointsForJetSide(1, flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
+        edge_points2 = FindAllEdgePointsForJetSide(2, flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
 
         # Interpolate extra edge points at points in the jet where significant flux or area (=> calculated volume) is cut off.
         # This will ensure that summed flux and volume are correct when merging segments.
@@ -88,8 +88,8 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         edge_points2 = AddEdgePoints(2, flux_array, edge_points2)
 
         # Refine the edges using a percentile of the flux distribution
-        edge_points1 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points1)
-        edge_points2 = JMA.RefineEdgesAlongJetArm(flux_array, edge_points2)
+        edge_points1 = JMA.RefineEdgesAlongJetSide(flux_array, edge_points1)
+        edge_points2 = JMA.RefineEdgesAlongJetSide(flux_array, edge_points2)
 
         # Get sections and section parameters (distance from source, flux, volume) of the jet
         section_parameters1, section_parameters2, section_perimeters1, section_perimeters2 = \
@@ -110,15 +110,15 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
 
 #############################################
 
-def FindAllEdgePointsForJetArm(arm_number, flux_array, init_edge_points, ridge, phi_val, Rlen):
+def FindAllEdgePointsForJetSide(side_number, flux_array, init_edge_points, ridge, phi_val, Rlen):
 
     """
-    Find all edge points for one arm of the jet
+    Find all edge points for one side of the jet
 
     Parameters
     -----------
-    arm_number - integer
-                 jet arm being processed
+    side_number - integer
+                  jet side being processed
 
     flux_array - 2D array,
                  raw image array
@@ -130,13 +130,13 @@ def FindAllEdgePointsForJetArm(arm_number, flux_array, init_edge_points, ridge, 
                        (x1,y1,x2,y2,R,ridge_x,ridge_y)
 
     ridge - 2D array, shape(n,2)
-            Array of ridgepoint co-ordinates for one arm of the jet
+            Array of ridgepoint co-ordinates for one side of the jet
 
     phi_val - 1D array of ridgeline angles for each ridgepoint on
-              one arm of the jet
+              one side of the jet
 
     Rlen - 1D array of distance from source for each ridgepoint on
-            one arm of the jet
+            one side of the jet
     
     Constants
     ---------
@@ -159,7 +159,7 @@ def FindAllEdgePointsForJetArm(arm_number, flux_array, init_edge_points, ridge, 
     # Loop through the ridge points and find the corresponding edgepoints
     if not np.all(np.isnan(ridge)):
 
-        # Find edgepoints for one arm of the jet
+        # Find edgepoints for one side of the jet
         ridge_count = 1; ridge_total = len(ridge)
         while ridge_count < ridge_total:
 
@@ -167,10 +167,10 @@ def FindAllEdgePointsForJetArm(arm_number, flux_array, init_edge_points, ridge, 
                 break
 
             if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JMC.MaxRFactor * JMC.R_es):  # Test whether the last step size has increased by too much
-                new_edge_points = FindEdgePoints(arm_number, flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
+                new_edge_points = FindEdgePoints(side_number, flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
             else:
                 # Re-initialise edge points algorithm
-                new_edge_points = FindInitEdgePoints(arm_number,flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
+                new_edge_points = FindInitEdgePoints(side_number,flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
 
             if not np.isnan(new_edge_points).any(): 
                 edge_points = np.vstack((edge_points, new_edge_points))
@@ -181,7 +181,7 @@ def FindAllEdgePointsForJetArm(arm_number, flux_array, init_edge_points, ridge, 
 
 #############################################
 
-def FindEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
+def FindEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -189,8 +189,8 @@ def FindEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R, prev
 
     Parameters
     -----------
-    arm_number - integer
-                 jet arm being processed
+    side_number - integer
+                  jet side being processed
 
     flux_array - 2D array,
                  raw image array
@@ -236,7 +236,7 @@ def FindEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R, prev
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the flux values below the RMS value (JMC.nSig * rms)
-    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[arm_number-1] * JMS.bgRMS), flux_array).mask
+    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[side_number-1] * JMS.bgRMS), flux_array).mask
 
     # Get polar coordinates for flux_array, around the ridge point
     r, phi = PolarCoordinates(flux_array, ridge_point)
@@ -383,7 +383,7 @@ def GetEdgepointsInRadius(flux_array, r, phi, rms_mask, prev_edge_pix, r_radius1
 
 #############################################
 
-def FindInitEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R):
+def FindInitEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -391,8 +391,8 @@ def FindInitEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R):
 
     Parameters
     -----------
-    arm_number - integer
-                 jet arm being processed
+    side_number - integer
+                  jet side being processed
 
     flux_array - 2D array,
                  raw image array
@@ -431,7 +431,7 @@ def FindInitEdgePoints(arm_number, flux_array, ridge_point, ridge_phi, ridge_R):
     flux_array_valid = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the jet - where flux values are above (JMC.nSig * rms)
-    jet_mask = np.ma.masked_where(flux_array_valid > (JMC.nSig[arm_number-1] * JMS.bgRMS), flux_array_valid).mask
+    jet_mask = np.ma.masked_where(flux_array_valid > (JMC.nSig[side_number-1] * JMS.bgRMS), flux_array_valid).mask
 
     # Search for an edge at right angles to the ridge direction
     search_phi_range1 = PiRange(ridge_phi + (pi*90/180) - (pi*5/180))     # +/- 5 degrees
@@ -550,7 +550,7 @@ def FindSearchAngleRanges(phi_prev1, phi_prev2, ridge_phi):
 
 #############################################
 
-def AddEdgePoints(arm_number, flux_array, edge_points):
+def AddEdgePoints(side_number, flux_array, edge_points):
 
     """
     Interpolates extra edge points at points in the jet where
@@ -558,14 +558,14 @@ def AddEdgePoints(arm_number, flux_array, edge_points):
 
     Parameters
     -----------
-    arm_number - integer
-                 jet arm being processed
+    side_number - integer
+                  jet side being processed
 
     flux_array - 2D array, shape(n,2)
                  raw image array
 
     edge_points - 2D array, shape(n,7)
-                  Points on one arm of the jet, corresponding to the 
+                  Points on one side of the jet, corresponding to the 
                   closest distance to that edge from the corresponding ridge point
                   and their distance from source
     
@@ -590,7 +590,7 @@ def AddEdgePoints(arm_number, flux_array, edge_points):
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the flux values below the RMS value (JMC.nSig * rms)
-    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[arm_number-1] * JMS.bgRMS), flux_array).mask
+    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[side_number-1] * JMS.bgRMS), flux_array).mask
 
     # Loop for each side of the jet
     jet_side = 1
@@ -795,20 +795,20 @@ def GetJetSections(flux_array, edge_points1, edge_points2, ridge1, ridge2):
                  raw image array
 
     edge_points1 - 2D array, shape(n,7)
-                   Points on one arm of the jet, corresponding to the 
+                   Points on one side of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
     edge_points2 - 2D array, shape(n,7)
-                   Points on other arm of the jet, corresponding to the 
+                   Points on other side of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
     ridge1 - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for one arm of the jet
+             Array of ridgepoint co-ordinates for one side of the jet
     
     ridge2 - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for other arm of the jet
+             Array of ridgepoint co-ordinates for other side of the jet
     
     Constants
     ---------
@@ -817,19 +817,19 @@ def GetJetSections(flux_array, edge_points1, edge_points2, ridge1, ridge2):
     -----------
     section_params_merged1 - 2D array, shape(n,13)
                              Array with section points (x,y * 4), distance from source
-                             and computed parameters for one arm of the jet
+                             and computed parameters for one side of the jet
 
     section_params_merged2 - 2D array, shape(n,13)
                              Array with section points (x,y * 4), distance from source
-                             and computed parameters for other arm of the jet
+                             and computed parameters for other side of the jet
 
     section_perimeters1 - 2D array, shape(n,pSize)
                           Array of perimeter co-ordinates for each merged section (-1 filled)
-                          for one arm of the jet
+                          for one side of the jet
 
     section_perimeters2 - 2D array, shape(n,pSize)
                           Array of perimeter co-ordinates for each merged section (-1 filled)
-                          for other arm of the jet
+                          for other side of the jet
 
     Notes
     -----------
@@ -843,7 +843,7 @@ def GetJetSections(flux_array, edge_points1, edge_points2, ridge1, ridge2):
     polygon_points1 = GetSectionPolygons(edge_points1)
     polygon_points2 = GetSectionPolygons(edge_points2)
 
-    # Get flux and volume for each arm of the jet
+    # Get flux and volume for each side of the jet
     print('Calculating flux and volume for sections')
     section_parameters1 = GetSectionParameters(flux_array_valid, polygon_points1, initial_polygon_points = polygon_points2[0,0:8])
     section_parameters2 = GetSectionParameters(flux_array_valid, polygon_points2, initial_polygon_points = polygon_points1[0,0:8])
@@ -869,7 +869,7 @@ def Calculate_R(section_parameters):
     -----------
     section_parameters - 2D array, shape(n,13)
                          Array with section points (x,y * 4), distance from source
-                         and computed parameters for this arm of the jet
+                         and computed parameters for this side of the jet
     
     Constants
     ---------
@@ -878,7 +878,7 @@ def Calculate_R(section_parameters):
     -----------
     updated_section_parameters - 2D array, shape(n,12)
                                  Array with section points (x,y * 4), distance from source
-                                 and computed parameters for this arm of the jet
+                                 and computed parameters for this side of the jet
 
     Notes
     -----------
@@ -899,19 +899,19 @@ def Calculate_R(section_parameters):
 
 #############################################
 
-def CheckForOverlappingSections(arm_number, sections):
+def CheckForOverlappingSections(side_number, sections):
 
     """
     Check for overlapping sections.
 
     Parameters
     -----------
-    arm_number - integer
-                 jet arm to which the sections belong
+    side_number - integer
+                  jet side to which the sections belong
 
     section_parameters - 2D array, shape(n,13)
                          Array with section polygon points (x,y * 4), distance from
-                         the source and computed parameters for one arm of the jet
+                         the source and computed parameters for one side of the jet
     """
 
     overlapping_sections = False    # Initalise flag
@@ -928,7 +928,7 @@ def CheckForOverlappingSections(arm_number, sections):
         last_x1 = x1; last_y1 = y1; last_x2 = x2; last_y2 = y2
 
     if overlapping_sections:
-        print("Overlapping sections in arm " + str(arm_number))
+        print("Overlapping sections in side " + str(side_number))
 
 #############################################
 
@@ -964,14 +964,14 @@ def CheckForIntersectingEdgeLines(lastEdgePoints, x1, y1, x2, y2):
 def MergeSections(section_parameters):
 
     """
-    Merge sections to a required number for one arm of the jet.
+    Merge sections to a required number for one side of the jet.
     Create an perimeter array that can be used to create SAOImageDS9 regions for the jet.
 
     Parameters
     -----------
     section_parameters - 2D array, shape(n,13)
                          Array with section points (x,y * 4), distance from source
-                         and computed parameters for one arm of the jet
+                         and computed parameters for one side of the jet
     
     Constants
     ---------
@@ -980,7 +980,7 @@ def MergeSections(section_parameters):
     -----------
     section_params_merged - 2D array, shape(n,13)
                             Array with merged section points (x,y * 4), distance from
-                            source and computed parameters for one arm of the jet
+                            source and computed parameters for one side of the jet
 
     merged_section_perimeters - 2D array, shape(n,pSize)
                                 Array of perimeter co-ordinates for each merged section (-1 filled)
@@ -1131,7 +1131,7 @@ def SplitSectionAtR(split_R, sect_count, section_parameters):
 
     section_parameters - 2D array, shape(n,13)
                          Array with section points (x,y * 4), distance from source
-                         and computed parameters for one arm of the jet
+                         and computed parameters for one side of the jet
     
     Constants
     ---------
@@ -1337,7 +1337,7 @@ def GetSectionParameters(flux_array, polygon_points, initial_polygon_points):
     -----------
     section_parameters - 2D array, shape(n,13)
                          Array with section polygon points (x,y * 4), distance from
-                         the source and computed parameters for one arm of the jet
+                         the source and computed parameters for one side of the jet
 
 
     Notes
@@ -1350,7 +1350,7 @@ def GetSectionParameters(flux_array, polygon_points, initial_polygon_points):
     # Initialise the initial polygon points (used for pixel overlap masking)
     last_polypoints = initial_polygon_points
 
-    # Loop through the section polygons for one arm of the jet
+    # Loop through the section polygons for one side of the jet
     sect_count = 0
     for [x1,y1, x2,y2, x3,y3, x4,y4, R_section_start, R_section_end] in polygon_points:
         sect_count += 1
@@ -1385,7 +1385,7 @@ def GetSectionPolygons(edge_points):
     Parameters
     -----------
     edge_points - 2D array, shape(n,7)
-                  Points on one arm of the jet, corresponding to the 
+                  Points on one side of the jet, corresponding to the 
                   closest distance to that edge from the corresponding ridge point.
     
     Constants
@@ -1997,7 +1997,7 @@ def Setup4PointPolygon(polypoints):
 def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, section_parameters1, section_parameters2, section_perimeters1, section_perimeters2):
 
     """
-    Saves the edge point and section files for each arm of the jet
+    Saves the edge point and section files for each side of the jet
 
     Parameters
     -----------
@@ -2005,30 +2005,30 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
                   the name of the source
 
     edge_points1 - 2D array, shape(n,7)
-                   Points on one arm of the jet, corresponding to the 
+                   Points on one side of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
     edge_points2 - 2D array, shape(n,7)
-                   Points on the other arm of the jet, corresponding to the 
+                   Points on the other side of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
     section_parameters1 - 2D array, shape(n,12)
-                          Array for one arm of the jet, with section points (x/y * 4), 
+                          Array for one side of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
 
     section_parameters2 - 2D array, shape(n,12)
-                          Array for other arm of the jet, with section points (x/y * 4), 
+                          Array for other side of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
 
     section_perimeters1 - 2D array, shape(n,pSize)
                           Array of perimeter co-ordinates for each merged section (-1 filled)
-                          for one arm of the jet
+                          for one side of the jet
 
     section_perimeters2 - 2D array, shape(n,pSize)
                           Array of perimeter co-ordinates for each merged section (-1 filled)
-                          for other arm of the jet
+                          for other side of the jet
     """
 
     fileEP1 = np.column_stack((edge_points1[:,0], edge_points1[:,1], edge_points1[:,2], edge_points1[:,3], edge_points1[:,4]))
@@ -2088,11 +2088,11 @@ def SaveRegions(source_name, section_perimeters1, section_perimeters2):
 
     section_perimeters1 - 2D array, shape(n,pSize)
                           Array of perimeter co-ordinates for each merged section (-1 filled)
-                          for one arm of the jet
+                          for one side of the jet
 
     section_perimeters2 - 2D array, shape(n,pSize)
                           Array of perimeter co-ordinates for each merged section (-1 filled)
-                          for other arm of the jet
+                          for other side of the jet
     """
     
     # Create a single perimeter array
@@ -2102,6 +2102,7 @@ def SaveRegions(source_name, section_perimeters1, section_perimeters2):
     all_regions = []
 
     # Loop through all the section perimeters
+    cutout_offset = JMA.GetCutoutOffset(JMS.mCentre, np.array([JMS.sSize[1],JMS.sSize[0]]))     # Get the cutout offset
     for sp in section_perimeters:
 
         # Loop through all sets of x/y co-ordinates
@@ -2124,8 +2125,8 @@ def SaveRegions(source_name, section_perimeters1, section_perimeters2):
         spCoordsArray = np.array(spCoords)
 
         # Convert to polygon and append polygon to list of regions
-        spCoordsArray[:,0] += JMC.x_offset              # Translate co-ordinates (based on cutout) to full image co-ordinates
-        spCoordsArray[:,1] += JMC.y_offset
+        spCoordsArray[:,0] += cutout_offset[0]          # Translate co-ordinates (based on cutout) to full image co-ordinates
+        spCoordsArray[:,1] += cutout_offset[1]
         pix = PixCoord(x = spCoordsArray[:,0], y = spCoordsArray[:,1])
         all_regions.append(PolygonPixelRegion(pix))
 
@@ -2149,30 +2150,26 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                   the name of the source
 
     edge_points1 - 2D array, shape(n,7)
-                   Points on one arm of the jet, corresponding to the 
+                   Points on one side of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
     edge_points2 - 2D array, shape(n,7)
-                   Points on the other arm of the jet, corresponding to the 
+                   Points on the other side of the jet, corresponding to the 
                    closest distance to that edge from the corresponding ridge point,
                    and their distance from source.
 
     section_parameters1 - 2D array, shape(n,12)
-                          Array for one arm of the jet, with section points (x/y * 4), 
+                          Array for one side of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
 
     section_parameters2 - 2D array, shape(n,12)
-                          Array for other arm of the jet, with section points (x/y * 4), 
+                          Array for other side of the jet, with section points (x/y * 4), 
                           distance from source and computed parameters
     """
 
-    # Cut down map for plotting
+    # Amplify flux by specfied factor
     flux_array_plot = JMC.flux_factor * flux_array.copy()
-    imCentre = np.array([ (edge_points1[0,0] + edge_points1[0,2]) / 2.0, (edge_points1[0,1] + edge_points1[0,3]) / 2.0 ])
-    xmin = floor(imCentre[0] - (JMS.sSize[0] / 2.0)); xmax = floor(imCentre[0] + (JMS.sSize[0] / 2.0))
-    ymin = floor(imCentre[1] - (JMS.sSize[1] / 2.0)); ymax = floor(imCentre[1] + (JMS.sSize[1] / 2.0))
-    flux_array_plot  = flux_array_plot[ymin : ymax, xmin : xmax]
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
@@ -2182,6 +2179,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
     x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
 
+    # Reduce plotted region by specified factor
     x_pixels_not_plotted = (1.0 - JMS.ImFraction) * float(JMS.sSize[0])
     xplotmin = x_pixels_not_plotted / 2.0
     xplotmax = float(JMS.sSize[0]) - (x_pixels_not_plotted / 2.0)
@@ -2200,20 +2198,8 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
     c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
 
-    # Setup offsets for cutdown map
-    edge_plot1 = edge_points1.copy(); edge_plot1[:,0] -= xmin;  edge_plot1[:,2] -= xmin;  edge_plot1[:,1] -= ymin; edge_plot1[:,3] -= ymin
-    edge_plot2 = edge_points2.copy(); edge_plot2[:,0] -= xmin;  edge_plot2[:,2] -= xmin;  edge_plot2[:,1] -= ymin; edge_plot2[:,3] -= ymin
-    section_plot1 = section_parameters1.copy(); section_plot1[:,0] -= xmin; section_plot1[:,2] -= xmin; section_plot1[:,4] -= xmin
-    section_plot1[:,6] = np.where(section_plot1[:,6] != -1, section_plot1[:,6] - xmin, section_plot1[:,6])
-    section_plot1[:,1] -= ymin; section_plot1[:,3] -= ymin; section_plot1[:,5] -= ymin
-    section_plot1[:,7] = np.where(section_plot1[:,7] != -1, section_plot1[:,7] - ymin, section_plot1[:,7])
-    section_plot2 = section_parameters2.copy(); section_plot2[:,0] -= xmin; section_plot2[:,2] -= xmin; section_plot2[:,4] -= xmin
-    section_plot2[:,6] = np.where(section_plot2[:,6] != -1, section_plot2[:,6] - xmin, section_plot2[:,6])
-    section_plot2[:,1] -= ymin; section_plot2[:,3] -= ymin; section_plot2[:,5] -= ymin
-    section_plot2[:,7] = np.where(section_plot2[:,7] != -1, section_plot2[:,7] - ymin, section_plot2[:,7])
-
     epcount = 0
-    for ep in edge_plot1:
+    for ep in edge_points1:
         epcount += 1
         x_values = np.array([ep[0], ep[2]])
         y_values = np.array([ep[1], ep[3]])
@@ -2231,7 +2217,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         last_ep = ep
 
     epcount = 0
-    for ep in edge_plot2:
+    for ep in edge_points2:
         epcount += 1
         x_values = np.array([ep[0], ep[2]])
         y_values = np.array([ep[1], ep[3]])
@@ -2249,7 +2235,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         last_ep = ep
 
     # Plot centre line in red, to make it obvious
-    ep = edge_plot1[0,:]
+    ep = edge_points1[0,:]
     x_values = np.array([ep[0], ep[2]])
     y_values = np.array([ep[1], ep[3]])
     ax.plot(x_values, y_values, 'r-', linewidth=0.8)
@@ -2273,7 +2259,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     c = ax.pcolor(x, y, A, cmap=palette, vmin=JMS.vmin, vmax=JMS.vmax)
 
     spcount = 0
-    for sp in section_plot1:
+    for sp in section_parameters1:
         spcount += 1
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
@@ -2284,7 +2270,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     PlotLastSegment(ax, sp)                                                             # Plot last separator
 
     spcount = 0
-    for sp in section_plot2:
+    for sp in section_parameters2:
         spcount += 1
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
@@ -2296,7 +2282,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
 
     # Add in side edge lines, so as to see the shape of the edge
     epcount = 0
-    for ep in edge_plot1:
+    for ep in edge_points1:
         epcount += 1
         if epcount > 1:
             if (ep[4] - last_ep[4]) < (JMC.MaxRFactor * JMC.R_es):    # If gap is too big, don't draw edge lines 
@@ -2311,7 +2297,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         last_ep = ep
 
     epcount = 0
-    for ep in edge_plot2:
+    for ep in edge_points2:
         epcount += 1
         if epcount > 1:
             if (ep[4] - last_ep[4]) < (JMC.MaxRFactor * JMC.R_es):    # If gap is too big, don't draw edge lines 
@@ -2326,7 +2312,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         last_ep = ep
 
     # Plot centre line in red, to make it obvious
-    sp = section_plot1[0,:]
+    sp = section_parameters1[0,:]
     x_values = np.array([sp[0], sp[2]])
     y_values = np.array([sp[1], sp[3]])
     ax.plot(x_values, y_values, 'r-', linewidth=0.8)

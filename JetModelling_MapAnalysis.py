@@ -7,8 +7,13 @@ Created by LizWhitehead - 06/05/2025
 """
 
 import JetModelling_Constants as JMC
+import JetModelling_MapSetup as JMS
+from astropy.io import fits
+from astropy import units as u
+from radio_beam import Beam
 import numpy as np
-from math import isnan
+from warnings import simplefilter, resetwarnings
+from math import floor
 
 def GetFluxDistributionAlongLine(flux_array, start_point, end_point):
 
@@ -238,10 +243,10 @@ def RefineEdgesFromFluxPercentileWidth(flux_array, start_point, end_point):
 
 #############################################
 
-def RefineEdgesAlongJetArm(flux_array, edge_points):
+def RefineEdgesAlongJetSide(flux_array, edge_points):
 
     """
-    For each edge line along a jet arm, use a defined percentile width 
+    For each edge line along a jet side, use a defined percentile width 
     of the flux distribution to refine the edges.
 
     Parameters
@@ -250,7 +255,7 @@ def RefineEdgesAlongJetArm(flux_array, edge_points):
                  raw image array
 
     edge_points - 2D array, shape(n,7)
-                  Points on one arm of the jet, corresponding to the 
+                  Points on one side of the jet, corresponding to the 
                   closest distance to that edge from the corresponding ridge point.
 
     Returns
@@ -306,10 +311,164 @@ def RemoveBrightSources(flux_array, source_data):
     """
 
     # Remove flux in +/- specified number of pixels in x/y directions around the sources' centre
+    cutout_offset = GetCutoutOffset(JMS.mCentre, np.array([JMS.sSize[1],JMS.sSize[0]]))
     for centre_x, centre_y, num_pix in source_data.astype('int'):
         if centre_x != -1:
-            xmin = centre_x - num_pix; xmax = centre_x + num_pix
-            ymin = centre_y - num_pix; ymax = centre_y + num_pix
+            cutout_centre_x = centre_x - cutout_offset[0]; cutout_centre_y = centre_y - cutout_offset[1]
+            xmin = cutout_centre_x - num_pix; xmax = cutout_centre_x + num_pix
+            ymin = cutout_centre_y - num_pix; ymax = cutout_centre_y + num_pix
             flux_array[ymin:ymax, xmin:xmax] = 0.0
 
     return flux_array
+
+#############################################
+
+def GetCutoutOffset(centre_coords, cutout_shape):
+
+    """
+    Get the x,y offset of the cutout array relative to the original array
+
+    Parameters
+    -----------
+    centre_coords - original x,y coordinates of the map centre
+
+    cutout_shape - shape of the cutout
+
+    Returns
+    -----------
+    cutout_offset - x,y offset of the cutout relative to the original array
+    """
+
+    cutout_offset_x = floor(centre_coords[0] - cutout_shape[1]/2.0)
+    cutout_offset_y = floor(centre_coords[1] - cutout_shape[0]/2.0)
+    cutout_offset = np.array([cutout_offset_x, cutout_offset_y])
+
+    return cutout_offset
+
+#############################################
+
+def PopulateMapData():
+
+    """
+    Populates map data from the FITS file header
+    """
+    simplefilter(action="ignore")
+
+    for map_number in range(JMS.map_count):
+        with fits.open(JMS.map_files[map_number]) as map_file_hdu: 
+            map_hdr = map_file_hdu[0].header
+
+            the_beam = Beam.from_fits_header(map_hdr)
+            bmaj = the_beam.major.to(u.arcsec).value; bmin = the_beam.minor.to(u.arcsec).value
+
+            JMS.rdels[map_number] = abs(map_hdr['CDELT1']); JMS.ddels[map_number] = abs(map_hdr['CDELT2'])
+            JMS.sRAs[map_number] = map_hdr['CRVAL1']; JMS.sDecs[map_number] = map_hdr['CRVAL2']
+            JMS.mCentres[map_number] = np.array([map_hdr['CRPIX1'], map_hdr['CRPIX2']])
+            JMS.freqs[map_number] = map_hdr['CRVAL3']
+            JMS.beamsizes[map_number] = bmaj / (JMS.ddels[map_number] * 3600)
+            pix_area_arcsec = (JMS.rdels[map_number] * 3600) * (JMS.ddels[map_number] * 3600)
+            beamarea_arcsec = bmaj * bmin * (np.pi / (4 * np.log(2))) 
+            JMS.beamareas[map_number] = beamarea_arcsec / pix_area_arcsec
+
+            if JMC.use_manual_RMS_and_mean:
+                JMS.bgRMSs[map_number] = JMS.bgRMSs_manual[map_number]; JMS.bgMeans[map_number] = JMS.bgMeans_manual[map_number]
+            else:
+                bgRMS , bgMean  = GetRMSAndMean(map_file_hdu, JMS.mCentres[map_number], JMS.sSizes[map_number])
+                JMS.bgRMSs[map_number] = bgRMS; JMS.bgMeans[map_number] = bgMean
+
+    resetwarnings()
+
+#############################################
+
+def GetRMSAndMean(map_file_hdu, mCentre, sSize):
+
+    """
+    Returns the background flux RMS and mean values by finding the values in small regions
+    around the edge of the rectangle containing the source.
+
+    Parameters
+    -----------
+    map_file_hdu - map hdu
+
+    mCentre - map centre (x,y) in pixels
+
+    sSize - Source size in pixels (x,y sides of containing rectangle)
+
+    Returns
+    -----------
+    bgRMS - Background flux RMS value in Jy/beam
+
+    bgMean - Background flux mean pixel value in Jy/beam
+    """
+    CALC_PTS_PER_SIDE = 4       # Number of points of RMS/mean measurements on one side of containing rectangle
+    PERC_REG_SIZE = 5           # Region size as a percentage of the map cutout size
+
+    # Initialise arrays of RMS and means
+    all_RMS = np.empty(0); all_mean = np.empty(0)
+
+    # Get cut-out area
+    cutout_offset = GetCutoutOffset(mCentre, np.array([sSize[1],sSize[0]]))
+    xmin = cutout_offset[0]; xmax = xmin + sSize[0]
+    ymin = cutout_offset[1]; ymax = ymin + sSize[1]
+    x1y1 = np.array([xmin, ymax]); x2y1 = np.array([xmax, ymax]); x1y2 = np.array([xmin, ymin])
+
+    # Get the RMS and mean flux values around the sides of the enclosing rectangle.
+    # For each side, remove the maximum RMS value, in case it is picking up part of the jet or other sources.
+
+    reg_halfsize = floor(np.min(sSize) * (PERC_REG_SIZE/100.) / 2)      # square region half-size
+    stepsize_x = float((x2y1[0] - x1y1[0]) / CALC_PTS_PER_SIDE)         # step size in x
+    stepsize_y = float((x1y1[1] - x1y2[1]) / CALC_PTS_PER_SIDE)         # step size in y
+    image_data = map_file_hdu[0].data.squeeze()                         # image data
+
+    # Along the top and bottom
+    side_RMS = np.empty(0); side_mean = np.empty(0)
+    for icnt in range(CALC_PTS_PER_SIDE):
+        regcentre = np.array([floor(x1y1[0] + (icnt*stepsize_x) + stepsize_x/2.0), floor(x1y1[1] - stepsize_y/2.0)])            # Get region centre
+        rms, mean = GetRMSAndMeanForRegion(image_data, regcentre, reg_halfsize)                                                 # Get rms and mean for region
+        side_RMS = np.hstack((side_RMS,rms)); side_mean = np.hstack((side_mean,mean))
+    arg_maxRMS = np.argmax(side_RMS); side_RMS = np.delete(side_RMS, arg_maxRMS); side_mean = np.delete(side_mean, arg_maxRMS)  # Remove the maximum RMS value
+    all_RMS = np.hstack((all_RMS,side_RMS)); all_mean = np.hstack((all_mean,side_mean))
+
+    side_RMS = np.empty(0); side_mean = np.empty(0)
+    for icnt in range(CALC_PTS_PER_SIDE):
+        regcentre = np.array([floor(x1y2[0] + (icnt*stepsize_x) + stepsize_x/2.0), floor(x1y2[1] + stepsize_y/2.0)])            # Get region centre
+        rms, mean = GetRMSAndMeanForRegion(image_data, regcentre, reg_halfsize)                                                 # Get rms and mean for region
+        side_RMS = np.hstack((side_RMS,rms)); side_mean = np.hstack((side_mean,mean))
+    arg_maxRMS = np.argmax(side_RMS); side_RMS = np.delete(side_RMS, arg_maxRMS); side_mean = np.delete(side_mean, arg_maxRMS)  # Remove the maximum RMS value
+    all_RMS = np.hstack((all_RMS,side_RMS)); all_mean = np.hstack((all_mean,side_mean))
+
+    # Down the sides
+    side_RMS = np.empty(0); side_mean = np.empty(0)
+    for icnt in range(CALC_PTS_PER_SIDE):
+        regcentre = np.array([floor(x1y1[0] + stepsize_x/2.0), floor(x1y1[1] - (icnt*stepsize_y) - stepsize_y/2.0)])            # Get region centre
+        rms, mean = GetRMSAndMeanForRegion(image_data, regcentre, reg_halfsize)                                                 # Get rms and mean for region
+        side_RMS = np.hstack((side_RMS,rms)); side_mean = np.hstack((side_mean,mean))
+    arg_maxRMS = np.argmax(side_RMS); side_RMS = np.delete(side_RMS, arg_maxRMS); side_mean = np.delete(side_mean, arg_maxRMS)  # Remove the maximum RMS value
+    all_RMS = np.hstack((all_RMS,side_RMS)); all_mean = np.hstack((all_mean,side_mean))
+
+    side_RMS = np.empty(0); side_mean = np.empty(0)
+    for icnt in range(CALC_PTS_PER_SIDE):
+        regcentre = np.array([floor(x2y1[0] - stepsize_x/2.0), floor(x2y1[1] - (icnt*stepsize_y) - stepsize_y/2.0)])            # Get region centre
+        rms, mean = GetRMSAndMeanForRegion(image_data, regcentre, reg_halfsize)                                                 # Get rms and mean for region
+        side_RMS = np.hstack((side_RMS,rms)); side_mean = np.hstack((side_mean,mean))
+    arg_maxRMS = np.argmax(side_RMS); side_RMS = np.delete(side_RMS, arg_maxRMS); side_mean = np.delete(side_mean, arg_maxRMS)  # Remove the maximum RMS value
+    all_RMS = np.hstack((all_RMS,side_RMS)); all_mean = np.hstack((all_mean,side_mean))
+
+    return np.mean(all_RMS), np.mean(all_mean)
+
+#############################################
+
+def GetRMSAndMeanForRegion(image_data, regcentre, reg_halfsize):
+
+    """
+    Get the Flux RMS and mean for this region
+    """
+
+    xmin = regcentre[0] - reg_halfsize; xmax = regcentre[0] + reg_halfsize
+    ymin = regcentre[1] - reg_halfsize; ymax = regcentre[1] + reg_halfsize
+    region_data = np.ma.masked_invalid(image_data[ymin:ymax, xmin:xmax])
+
+    rms = np.std(region_data)
+    mean = np.mean(region_data)
+
+    return rms, mean

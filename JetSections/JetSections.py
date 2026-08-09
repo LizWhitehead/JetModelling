@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 """
 JetSections.py
-Divide both arms of the jet into sections.
+Divide both sides of the jet into sections.
 Created by LizWhitehead - 30/04/2025
 """
 
 import JetSections.JSSetup as JSS
 from JetSections.JetSectionToolkit import GetEdgepointsAndSections
-from warnings import resetwarnings
 import time
 
 def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
 
     """
-    Divide both arms of the jet into sections by finding edge points.
+    Divide both sides of the jet into sections by finding edge points.
 
     Parameters
     -----------
@@ -22,22 +21,22 @@ def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rle
                  raw image array
 
     ridge1 - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for one arm of the jet
+             Array of ridgepoint co-ordinates for one side of the jet
     
     ridge2 - 2D array, shape(n,2)
-             Array of ridgepoint co-ordinates for other arm of the jet
+             Array of ridgepoint co-ordinates for other side of the jet
 
     phi_val1 - 1D array of ridgeline angles for each ridgepoint on
-               one arm of the jet
+               one side of the jet
     
     phi_val2 - 1D array of ridgeline angles for each ridgepoint on
-               other arm of the jet
+               other side of the jet
 
     Rlen1 - 1D array of disance from source for each ridgepoint on
-            one arm of the jet
+            one side of the jet
     
     Rlen2 - 1D array of disance from source for each ridgepoint on
-            other arm of the jet
+            other side of the jet
     
     Constants
     ---------
@@ -46,11 +45,11 @@ def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rle
     -----------
     section_parameters1 - 2D array, shape(n,12)
                           Array with section points (x,y * 4), distance from source,
-                          flux, volume and area for one arm of the jet
+                          flux, volume and area for one side of the jet
 
     section_parameters2 - 2D array, shape(n,12)
                           Array with section points (x,y * 4), distance from source
-                          flux, volume and area for other arm of the jet
+                          flux, volume and area for other side of the jet
 
     Notes
     -----------
@@ -66,6 +65,5 @@ def CreateJetSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rle
     section_parameters1, section_parameters2 = GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2)
 
     print('Time taken for jet sections processing = ' + str((time.time()-start_time)/60),'m')
-    resetwarnings()
 
     return section_parameters1, section_parameters2

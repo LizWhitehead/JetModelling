@@ -10,11 +10,13 @@
 
 import time
 import JetModelling_MapSetup as JMS
+import JetModelling_MapAnalysis as JMA
 import JetRidgeline.RLSetup as RLS
 import JetRidgeline.RidgeToolkit as RTK
-from warnings import resetwarnings
+from warnings import simplefilter, resetwarnings
 
 def CreateRidgelines():
+    simplefilter(action="ignore")
 
     print('Starting ridgeline drawing process')
     print('-------------------------------------------')
@@ -37,4 +39,3 @@ def CreateRidgelines():
     resetwarnings()
 
     return flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2
-

@@ -17,7 +17,10 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
     import JetSections.JetSections as JS
     import JetParameters.JetParameters as JP
     from warnings import simplefilter
-    simplefilter('ignore')  # Counteract a matplotlib issue with shading on the graphs
+    simplefilter(action="ignore", category=DeprecationWarning)
+
+    # Populate map data from map file headers
+    JMA.PopulateMapData()
 
     # Loop through all maps included in this run (same AGN, different frequencies)
     for map_number in range(JMS.map_count):

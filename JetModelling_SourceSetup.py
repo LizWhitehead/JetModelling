@@ -7,7 +7,6 @@ Created by LizWhitehead - 25/07/2025
 """
 
 import numpy as np
-from math import nan
 
 rShift = 0.021208       # Red shift of source
 sourceR = 83.40         # Distance to source in Mpc
@@ -23,5 +22,5 @@ logkmax = 20           # maximum allowed kappa
 #########################################################################
 
 # External pressure (Pa)
-ext_pressure_arm1 = np.nan
-ext_pressure_arm2 = np.nan
+ext_pressure_side1 = np.nan
+ext_pressure_side2 = np.nan
