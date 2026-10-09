@@ -323,6 +323,39 @@ def RemoveBrightSources(flux_array, source_data):
 
 #############################################
 
+def GetCutout(map_file, map_centre, cutout_size):
+
+    """
+    Get the map cutout data array
+
+    Parameters
+    -----------
+    map_centre - original x,y coordinates of the map centre
+
+    cutout_size - size (x,y) of the cutout (centred on map_centre) in pixels
+
+    Returns
+    -----------
+    cutout_flux_array - cutout data array
+    """
+    simplefilter(action="ignore")
+    
+    # Get the flux array from the map file
+    hdu = fits.open(map_file)
+    flux_array = hdu[0].data.squeeze()
+    hdu.close()
+
+    # Create the cutout array
+    cutout_offset = GetCutoutOffset(map_centre, np.array([cutout_size[1],cutout_size[0]]))
+    x_start = cutout_offset[0]; x_end = floor(x_start + cutout_size[0])
+    y_start = cutout_offset[1]; y_end = floor(y_start + cutout_size[1])
+    cutout_flux_array = np.copy(flux_array[y_start:y_end, x_start:x_end])
+
+    resetwarnings()
+    return cutout_flux_array
+
+#############################################
+
 def GetCutoutOffset(centre_coords, cutout_shape):
 
     """

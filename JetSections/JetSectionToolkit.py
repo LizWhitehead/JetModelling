@@ -10,14 +10,16 @@ import JetModelling_MapSetup as JMS
 import JetSections.JetSectionFiles as JSF
 import JetModelling_Constants as JMC
 import JetModelling_MapAnalysis as JMA
+import JetRidgeline.RidgelineFiles as RLF
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
-from math import tan, atan2, atan, pow, nan, isnan, floor
+from math import tan, atan2, atan, pow, nan, isnan, ceil
 from shapely.geometry import LineString, Polygon
 from regions import PixCoord, PolygonPixelRegion, Regions
+import io
 import copy
 
 def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
@@ -2076,6 +2078,44 @@ def SaveEdgepointAndSectionFiles(source_name, edge_points1, edge_points2, sectio
 
 #############################################
 
+def SaveSpectralIndexSectionFiles(source_name, map_number, section_parameters1, section_parameters2):
+
+    """
+    Saves the edge point and section files for each side of the jet
+
+    Parameters
+    -----------
+    source_name - str,
+                  the name of the source
+
+    map_number - number of the map for files being saved
+
+    section_parameters1 - 2D array, shape(n,11)
+                          Array for one side of the jet, with section points (x/y * 4), 
+                          distance from source and computed parameters
+
+    section_parameters2 - 2D array, shape(n,11)
+                          Array for other side of the jet, with section points (x/y * 4), 
+                          distance from source and computed parameters
+    """
+
+    fileSI1 = np.column_stack((section_parameters1[:,0], section_parameters1[:,1], section_parameters1[:,2], section_parameters1[:,3], \
+                               section_parameters1[:,4], section_parameters1[:,5], section_parameters1[:,6], section_parameters1[:,7], \
+                               section_parameters1[:,8], section_parameters1[:,9], section_parameters1[:,10]))
+    fileSI2 = np.column_stack((section_parameters2[:,0], section_parameters2[:,1], section_parameters2[:,2], section_parameters2[:,3], \
+                               section_parameters2[:,4], section_parameters2[:,5], section_parameters2[:,6], section_parameters2[:,7], \
+                               section_parameters2[:,8], section_parameters2[:,9], section_parameters2[:,10]))
+    np.savetxt(JSF.SI1 %(source_name, str(map_number+1)), fileSI1, delimiter=' ', \
+               header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
+                      'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
+                      'section R (pix), section flux (Jy/beam), section area (pix**2)')
+    np.savetxt(JSF.SI2 %(source_name, str(map_number+1)), fileSI2, delimiter=' ', \
+               header='section x1-coord (pix), section y1-coord (pix), section x2-coord (pix), section y2-coord (pix), ' + \
+                      'section x3-coord (pix), section y3-coord (pix), section x4-coord (pix), section y4-coord (pix), ' + \
+                      'section R (pix), section flux (Jy/beam), section area (pix**2)')
+
+#############################################
+
 def SaveRegions(source_name, section_perimeters1, section_perimeters2):
 
     """
@@ -2168,7 +2208,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                           distance from source and computed parameters
     """
 
-    # Amplify flux by specfied factor
+    # Amplify flux by specified factor
     flux_array_plot = JMC.flux_factor * flux_array.copy()
 
     palette = plt.cm.cividis
@@ -2213,7 +2253,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                 y_values = np.array([ep[3], last_ep[3]])
                 ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
             else:
-                ep_count = 1    # reset counter
+                epcount = 1    # reset counter
         last_ep = ep
 
     epcount = 0
@@ -2231,7 +2271,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                 y_values = np.array([ep[3], last_ep[3]])
                 ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
             else:
-                ep_count = 1    # reset counter
+                epcount = 1    # reset counter
         last_ep = ep
 
     # Plot centre line in red, to make it obvious
@@ -2293,7 +2333,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                 y_values = np.array([ep[3], last_ep[3]])
                 ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
             else:
-                ep_count = 1    # reset counter
+                epcount = 1    # reset counter
         last_ep = ep
 
     epcount = 0
@@ -2308,7 +2348,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
                 y_values = np.array([ep[3], last_ep[3]])
                 ax.plot(x_values, y_values, 'r-', linewidth=0.6)      # Edge line 2
             else:
-                ep_count = 1    # reset counter
+                epcount = 1    # reset counter
         last_ep = ep
 
     # Plot centre line in red, to make it obvious
@@ -2322,6 +2362,95 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
     fig.colorbar(c, cax = cax)
     
     fig.savefig(JSF.SCimage %(source_name, str(JMS.map_number+1)))
+    plt.close(fig)
+
+#############################################
+
+def PlotSpectralIndexSections(flux_array, source_name, map_number, section_parameters1, section_parameters2):
+
+    """
+    Plots the jet sections, common to all maps, on the source.
+
+    Parameters
+    -----------
+    flux_array - 2D array,
+                 raw image array
+
+    source_name - str,
+                  the name of the source
+
+    map_number - number of the map being plotted
+
+    section_parameters1 - 2D array, shape(n,11)
+                          Array for one side of the jet, with section points (x/y * 4), 
+                          distance from source and computed parameters
+
+    section_parameters2 - 2D array, shape(n,11)
+                          Array for other side of the jet, with section points (x/y * 4), 
+                          distance from source and computed parameters
+    """
+
+    ImFraction = JMS.ImFractions[map_number]
+    sSize = JMS.sSizes[map_number]
+    vmin = JMS.vmins[map_number]; vmax = JMS.vmaxs[map_number]
+
+    # Amplify flux by specified factor
+    flux_array_plot = JMC.flux_factor * flux_array.copy()
+
+    palette = plt.cm.cividis
+    palette = copy.copy(plt.get_cmap("cividis"))
+    palette.set_bad('k',0.0)
+
+    y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
+    y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
+    x = np.ma.masked_array(x, mask=np.ma.masked_invalid(flux_array_plot).mask)
+
+    # Reduce plotted region by specified factor
+    x_pixels_not_plotted = (1.0 - ImFraction) * float(sSize[0])
+    xplotmin = x_pixels_not_plotted / 2.0
+    xplotmax = float(sSize[0]) - (x_pixels_not_plotted / 2.0)
+    y_pixels_not_plotted = (1.0 - ImFraction) * float(sSize[1])
+    yplotmin = y_pixels_not_plotted / 2.0
+    yplotmax = float(sSize[1]) - (y_pixels_not_plotted / 2.0)
+
+    # Plot jet sections
+    fig, ax = plt.subplots(figsize=(10,10))
+    fig.suptitle('Source: %s' %source_name)
+    fig.subplots_adjust(top=0.9)
+    ax.set_aspect('equal')
+    ax.set_xlim(xplotmin, xplotmax)
+    ax.set_ylim(yplotmin, yplotmax)
+    
+    A = np.ma.array(flux_array_plot, mask=np.ma.masked_invalid(flux_array_plot).mask)
+    c = ax.pcolor(x, y, A, cmap=palette, vmin=vmin, vmax=vmax)
+
+    spcount = 0
+    for sp in section_parameters1:
+        spcount += 1
+        x_values = np.array([sp[0], sp[2]])
+        y_values = np.array([sp[1], sp[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
+    PlotLastSegment(ax, sp)                                                             # Plot last separator
+
+    spcount = 0
+    for sp in section_parameters2:
+        spcount += 1
+        x_values = np.array([sp[0], sp[2]])
+        y_values = np.array([sp[1], sp[3]])
+        ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
+    PlotLastSegment(ax, sp)                                                             # Plot last separator
+
+    # Plot centre line in red, to make it obvious
+    sp = section_parameters1[0,:]
+    x_values = np.array([sp[0], sp[2]])
+    y_values = np.array([sp[1], sp[3]])
+    ax.plot(x_values, y_values, 'r-', linewidth=0.8)
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.1)
+    fig.colorbar(c, cax = cax)
+    
+    fig.savefig(JSF.SIimage %(source_name, str(map_number+1)))
     plt.close(fig)
 
 #############################################
@@ -2345,6 +2474,281 @@ def PlotLastSegment(ax, sp):
         ax.plot(np.array([sp[4]-0.1, sp[4]+0.1]), np.array([sp[5]-0.1, sp[5]+0.1]), 'g-', linewidth=0.6)     # Plot a small line around the 3rd point
     else:
         ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)
+
+#############################################
+
+def CommonJetSectionsAcrossMultipleMaps():
+
+    """
+    Find the set of common sections, which can be applied to all the maps.
+    Determination of the flux for all maps within the set of common sections 
+    will allow the spectral index to be calculated along the jet.
+
+    Returns
+    -----------
+    allmaps_section_params1 - 3D array, shape(m,n,11)
+                              Array for all maps, for one side of jet, with section points (x,y * 4),
+                              distance from source, flux and area for one side of the jet.
+                              n: number of sections
+                              m: number of maps
+
+    allmaps_section_params2 - 3D array, shape(m,n,11)
+                              Array for all maps, for other side of jet, with section points (x,y * 4),
+                              distance from source, flux and area for other side of the jet.
+                              n: number of sections
+                              m: number of maps
+    """
+
+    print('Find a set of common jet sections for all maps')
+
+    # Find the source centres (in pixels) for all maps
+    src_centres = np.empty((0,2))                               # Initialise the source centres (x,y) for the maps
+    for map_number in range(JMS.map_count):
+        r1 = np.loadtxt(RLF.R1 %(JMS.sName, str(map_number+1)), delimiter=' ')
+        src_centres = np.vstack((src_centres, r1[0,0:2]))
+
+    # Get the set of common jet sections
+    cn_map_number, cn_section_params1, cn_section_params2 = GetCommonJetSections()
+
+    # Find the maximum number of sections that can be used across all maps
+    max_1_sections, max_2_sections = FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params2)
+    cn_section_params1 = np.array(cn_section_params1[:max_1_sections])
+    cn_section_params2 = np.array(cn_section_params2[:max_2_sections])
+
+    lst_allmaps_section_params1 = []                            # Initialise list of common section parameters for all maps
+    lst_allmaps_section_params2 = []
+    for dest_map_number in range(0, JMS.map_count):
+
+        # Update the co-ordinates of the common sections to apply to this map
+        if dest_map_number != cn_map_number:
+            map_section_params1 = UpdateCoordinates(cn_map_number, dest_map_number, src_centres, cn_section_params1)
+            map_section_params2 = UpdateCoordinates(cn_map_number, dest_map_number, src_centres, cn_section_params2)
+        else:
+            map_section_params1 = cn_section_params1            # Common sections were derived from this map so don't update co-ordinates
+            map_section_params2 = cn_section_params2
+
+        # Update the flux and area for this map. Ensure that we only include flux for areas > than the sigma of the background RMS.
+        flux_array = JMA.GetCutout(JMS.map_files[dest_map_number], JMS.mCentres[dest_map_number], JMS.sSizes[dest_map_number])
+        flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)  # Mask invalid pixels
+        flux_array_side1 = np.ma.filled(np.ma.masked_where(flux_array <= (JMC.nSig[0] * JMS.bgRMSs[dest_map_number]), flux_array), JMS.bgMeans[dest_map_number])
+        UpdateFluxForCommonSections(flux_array_side1, map_section_params1, map_section_params2[0])
+        flux_array_side2 = np.ma.filled(np.ma.masked_where(flux_array <= (JMC.nSig[1] * JMS.bgRMSs[dest_map_number]), flux_array), JMS.bgMeans[dest_map_number])
+        UpdateFluxForCommonSections(flux_array_side2, map_section_params2, map_section_params1[0])
+
+        # Save the file of section parameters and plot the sections for this map
+        SaveSpectralIndexSectionFiles(JMS.sName, dest_map_number, map_section_params1, map_section_params2)
+        PlotSpectralIndexSections(flux_array, JMS.sName, dest_map_number, map_section_params1, map_section_params2)
+
+        lst_allmaps_section_params1.append(map_section_params1)
+        lst_allmaps_section_params2.append(map_section_params2)
+
+    allmaps_section_params1 = np.array(lst_allmaps_section_params1)
+    allmaps_section_params2 = np.array(lst_allmaps_section_params2)
+
+    return allmaps_section_params1, allmaps_section_params2
+
+#############################################
+
+def FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params2):
+
+    """
+    Find the maximum number of sections that can be used across all maps
+
+    Parameters
+    -----------
+    cn_map_number - number of the map used for the common set of sections
+
+    cn_section_params1 - sections parameters of the common sections for one side of the jet
+                         2D array, shape(n,11)
+                         Array with section points (x,y * 4), distance from source,
+                         flux and area for one side of the jet.
+
+    cn_section_params2 - sections parameters of the common sections for the other side of the jet
+                         2D array, shape(n,11)
+                         Array with section points (x,y * 4), distance from source,
+                         flux and area for one side of the jet.
+
+    Returns
+    -----------
+    max_1_sections - maximum number of sections for one side of the jet
+
+    max_2_sections - maximum number of sections for other side of the jet
+
+    """
+
+    # Find the maximum common distance from source across all maps other than the common sections map
+    maxR_1_deg = cn_section_params1[-1,8] * JMS.ddels[cn_map_number]; maxR_2_deg = cn_section_params2[-1,8] * JMS.ddels[cn_map_number]
+    for map_number in range(0, JMS.map_count):
+        if map_number != cn_map_number:
+            sp1, sp2 = LoadSectionParamsForMap(map_number)
+            R_1_deg = sp1[-1,8] * JMS.ddels[map_number]; R_2_deg = sp2[-1,8] * JMS.ddels[map_number]
+            if R_1_deg < maxR_1_deg: maxR_1_deg = R_1_deg
+            if R_2_deg < maxR_2_deg: maxR_2_deg = R_2_deg
+
+    # Find the maximum number of sections in the common sections map, which lie within the max common distance (side 1)
+    if cn_section_params1[-1,8] * JMS.ddels[cn_map_number] <= maxR_1_deg:
+        max_1_sections = np.size(cn_section_params1, 0)
+    else:
+        for sect in range(2, np.size(cn_section_params1, 0)):
+            R_1_deg = cn_section_params1[-sect,8] * JMS.ddels[cn_map_number]
+            if R_1_deg <= maxR_1_deg:
+                max_1_sections = np.size(cn_section_params1, 0) - sect + 1
+                break
+
+    # Find the maximum number of sections in the common sections map, which lie within the max common distance (side 2)
+    if cn_section_params2[-1,8] * JMS.ddels[cn_map_number] <= maxR_2_deg:
+        max_2_sections = np.size(cn_section_params2, 0)
+    else:
+        for sect in range(2, np.size(cn_section_params2, 0)):
+            R_2_deg = cn_section_params2[-sect,8] * JMS.ddels[cn_map_number]
+            if R_2_deg <= maxR_2_deg:
+                max_2_sections = np.size(cn_section_params2, 0) - sect + 1
+                break
+
+    return max_1_sections, max_2_sections
+
+#############################################
+
+def GetCommonJetSections():
+
+    """
+    Get the section parameters the set of common sections
+
+    Parameters
+    -----------
+    map_number - number of the map for which to get the section parameters
+
+    Returns
+    -----------
+    section_params1 - 2D array, shape(n,11)
+                      Array with section points (x,y * 4), distance from source,
+                      flux and area for one side of the jet.
+
+    section_params2 - 2D array, shape(n,11)
+                      Array with section points (x,y * 4), distance from source
+                      flux and area for other side of the jet.
+    """
+
+    ordered_freqs = (JMS.freqs).argsort()
+    cn_map_number = ordered_freqs[0]            # Use the sections from the low frequency map as the common sections
+
+    # Load the section parameters for the common sections
+    cn_section_params1, cn_section_params2 = LoadSectionParamsForMap(cn_map_number)
+
+    return cn_map_number, cn_section_params1, cn_section_params2
+
+#############################################
+
+def LoadSectionParamsForMap(map_number):
+
+    """
+    Load the section paramters for the specified map number
+
+    Parameters
+    -----------
+    map_number - number of the map for which to load the section parameters
+
+    Returns
+    -----------
+    section_params1 - 2D array, shape(n,11)
+                      Array with section points (x,y * 4), distance from source,
+                      flux and area for one side of the jet.
+
+    section_params2 - 2D array, shape(n,11)
+                      Array with section points (x,y * 4), distance from source
+                      flux and area for other side of the jet.
+    """
+
+    # Load the section parameters for both sides of the this map
+    section_params1 = np.loadtxt(JSF.SP1 %(JMS.sName, str(map_number+1)), delimiter=' ')
+    section_params2 = np.loadtxt(JSF.SP2 %(JMS.sName, str(map_number+1)), delimiter=' ')
+
+    # Remove the section volume parameter value, as this is not required to compute the spectral index
+    section_params1 = np.delete(section_params1, 10, axis=1)
+    section_params2 = np.delete(section_params2, 10, axis=1)
+
+    return section_params1, section_params2
+
+#############################################
+
+def UpdateCoordinates(from_map_number, to_map_number, src_centres, from_coords):
+
+    """
+    Update distance parameters for one set of co-ordinates
+
+    Parameters
+    -----------
+    from_map_number - map number from which the co-ordinates are derived
+
+    to_map_number - map number to which the co-ordinates will be applied
+
+    src_centres - source centres for all maps
+
+    from_coords - array of co-ordinates to be updated
+
+    Returns
+    -----------
+    coords - as input, but with updated values 
+    """
+
+    coords = np.copy(from_coords)       # Intialise updated co-ordinates
+
+    # Update the section co-ordinates and distance from source
+    coords[:,0] = src_centres[to_map_number,0] + ((coords[:,0] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+    coords[:,2] = src_centres[to_map_number,0] + ((coords[:,2] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+    coords[:,4] = src_centres[to_map_number,0] + ((coords[:,4] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+    coords[:,1] = src_centres[to_map_number,1] + ((coords[:,1] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+    coords[:,3] = src_centres[to_map_number,1] + ((coords[:,3] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+    coords[:,5] = src_centres[to_map_number,1] + ((coords[:,5] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+    coords[:,6] = np.where(coords[:,6] == -1, coords[:,6], src_centres[to_map_number,0] + ((coords[:,6] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
+    coords[:,7] = np.where(coords[:,7] == -1, coords[:,7], src_centres[to_map_number,1] + ((coords[:,7] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
+    coords[:,8] = coords[:,8] * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]       # Distance from source
+
+    return coords
+
+#############################################
+
+def UpdateFluxForCommonSections(flux_array, section_params, last_coords):
+
+    """
+    Update the flux and section area for the set of common sections
+
+    Parameters
+    -----------
+    flux_array - flux array for the map to which these sections will be applied
+
+    section_params - group of sections on one side of the jet
+                     2D array, shape(n,12)
+                     Array with section points (x,y * 4), distance from source,
+                     flux, volume and area for one side of the jet
+
+    last_coords - initial value of co-ordinates of the previous section
+
+    Returns
+    -----------
+    section_params - as input, but with updated flux and area
+    """
+
+    # Get the flux and area for the section group
+    last_polypoints = last_coords[0:8]
+    sect_count = 0
+    for [x1,y1, x2,y2, x3,y3, x4,y4, R, old_flux, old_area] in section_params:
+        sect_count += 1
+
+        polypoints = np.array([x1,y1, x2,y2, x3,y3, x4,y4])         # Set the current section polygon points
+        if sect_count + 1 > np.size(section_params, 0):             # Set the next section polygon points
+            next_polypoints = np.full((1,8), np.nan)
+        else:
+            next_polypoints = section_params[sect_count,0:8]
+
+        # Get the section flux and area
+        section_flux, section_area = GetFlux(flux_array, polypoints, last_polypoints, next_polypoints)
+        section_params[sect_count-1,9] = section_flux
+        section_params[sect_count-1,10] = section_area
+
+        last_polypoints = np.array([x1,y1, x2,y2, x3,y3, x4,y4])    # Save the last section polygon points          
+
+    return section_params
 
 #############################################
 

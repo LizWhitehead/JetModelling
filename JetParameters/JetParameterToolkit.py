@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt, ticker, axis
 from astropy.cosmology import FlatLambdaCDM
 import numpy as np
 from numpy import pi
-from math import nan, isnan
+from math import nan, isnan, log10
 
 #############################################
 
@@ -300,7 +300,7 @@ def PlotJetParameters(jp_kappa0_side1, jp_kappa0_side2):
                       and computed parameters
 
     jp_kappa0_side2 - 2D array, shape(n,8)
-                      Array for one side of the jet, with distance from source 
+                      Array for other side of the jet, with distance from source 
                       and computed parameters
     
     Constants
@@ -341,33 +341,7 @@ def PlotJetParameters(jp_kappa0_side1, jp_kappa0_side2):
     plt.savefig(JPF.JP_kappa0_plot_pressure %(JMS.sName, str(JMS.map_number+1)))
     plt.close(fig)
 
-    # Flux
-    f_min = min(np.min(jp_kappa0_side1[0:lastpt1,1]), np.min(jp_kappa0_side2[0:lastpt2,1]))
-    f_max = max(np.max(jp_kappa0_side1[0:lastpt1,1]), np.max(jp_kappa0_side2[0:lastpt2,1]))
-    d_min = min(np.min(jp_kappa0_side1[0:lastpt1,0]), np.min(jp_kappa0_side2[0:lastpt2,0]))
-    d_max = max(np.max(jp_kappa0_side1[0:lastpt1,0]), np.max(jp_kappa0_side2[0:lastpt2,0]))
-
-    fig, ax = plt.subplots()
-    fig.suptitle(JMS.sName)
-
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_xlim(d_min, d_max)
-    ax.set_ylim(f_min, f_max)
-    axis.Axis.set_major_formatter(ax.xaxis, ticker.ScalarFormatter())
-
-    ax.set_ylabel('Flux (Jy)')
-    ax.set_xlabel('Distance (kpc)')
-
-    ax.plot(jp_kappa0_side1[0:lastpt1,0], jp_kappa0_side1[0:lastpt1,1], 'r-', label='Flux (N)', marker='.')
-    ax.plot(jp_kappa0_side2[0:lastpt2,0], jp_kappa0_side2[0:lastpt2,1], 'g-', label='Flux (S)', marker='.')
-
-    ax.legend()
-
-    plt.savefig(JPF.JP_flux_plot %(JMS.sName, str(JMS.map_number+1)))
-    plt.close(fig)
-
-    # Flux, averaged over area
+    # Surface brightness (flux per unit area)
     plot_data_R1 = jp_kappa0_side1[:,0]; plot_data_R2 = jp_kappa0_side2[:,0]
     plot_data_avgFlux1 = jp_kappa0_side1[:,1] / jp_kappa0_side1[:,3]; plot_data_avgFlux2 = jp_kappa0_side2[:,1] / jp_kappa0_side2[:,3]
 
@@ -385,7 +359,7 @@ def PlotJetParameters(jp_kappa0_side1, jp_kappa0_side2):
     ax.set_ylim(fa_min, fa_max)
     axis.Axis.set_major_formatter(ax.xaxis, ticker.ScalarFormatter())
 
-    ax.set_ylabel('Flux averaged over area (Jy)')
+    ax.set_ylabel('Surface Brightness (Jy/kpc2)')
     ax.set_xlabel('Distance (kpc)')
 
     ax.plot(plot_data_R1[0:lastpt1], plot_data_avgFlux1[0:lastpt1], 'r-', label='Flux (N)', marker='.')
@@ -397,3 +371,195 @@ def PlotJetParameters(jp_kappa0_side1, jp_kappa0_side2):
     plt.close(fig)
        
 #############################################
+
+def GetSpectralIndexParameters(common_section_params1, common_section_params2):
+
+    """
+    Compute the spectral index down the jet.
+
+    Parameters
+    -----------
+
+    common_section_params1 - 3D array, shape(m,n,11)
+                             Array for all maps, for one side of jet, with section points (x,y * 4),
+                             distance from source, flux and area for one side of the jet.
+                             n: number of sections
+                             m: number of maps
+
+    common_section_params2 - 3D array, shape(m,n,11)
+                             Array for all maps, for other side of jet, with section points (x,y * 4),
+                             distance from source, flux and area for other side of the jet.
+                             n: number of sections
+                             m: number of maps
+
+    Returns
+    -----------
+    """
+
+    print('Compute the spectral index along the jet')
+
+    arcsec_to_kpc = JSS.angScale    # arcsec to kpc conversion (kpc/arcsec)
+    
+    lst_spectralindex_params1 = []          # Initialise list of spectral index parameters
+    lst_spectralindex_params2 = []
+    for map_number in range(JMS.map_count):
+        section_params1 = np.array(common_section_params1[map_number])
+        section_params2 = np.array(common_section_params2[map_number])
+
+        # Initialise spectral index parameter arrays for map
+        map_spectralindex_parameters1 = np.empty((0,3)); map_spectralindex_parameters2 = np.empty((0,3))
+
+        for [x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, area_section] in section_params1:
+            R_section = R_section * JMS.ddels[map_number] * 3600                                    # Distance from source in kpc
+            flux_section = flux_section / JMS.beamareas[map_number]                                 # Flux in Janskys (rather than Jy/beam)
+            area_section = area_section * pow((JMS.ddels[map_number] * 3600 * arcsec_to_kpc), 2)    # Area in kpc squared
+            map_spectralindex_parameters1 = np.vstack((map_spectralindex_parameters1, np.array([R_section, flux_section, area_section])))
+
+        for [x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, area_section] in section_params2:
+            R_section = R_section * JMS.ddels[map_number] * 3600                                    # Distance from source in kpc
+            flux_section = flux_section / JMS.beamareas[map_number]                                 # Flux in Janskys (rather than Jy/beam)
+            area_section = area_section * pow((JMS.ddels[map_number] * 3600 * arcsec_to_kpc), 2)    # Area in kpc squared
+            map_spectralindex_parameters2 = np.vstack((map_spectralindex_parameters2, np.array([R_section, flux_section, area_section])))
+
+        PlotSpectralIndexSurfaceBrightness(map_number, map_spectralindex_parameters1, map_spectralindex_parameters2)
+        SaveSpectralIndexFilesForMap(map_number, map_spectralindex_parameters1, map_spectralindex_parameters2)
+
+        lst_spectralindex_params1.append(map_spectralindex_parameters1)
+        lst_spectralindex_params2.append(map_spectralindex_parameters2)
+
+    SaveSpectralIndexFileForSide(JPF.JP_spindex_side1, np.array(lst_spectralindex_params1))
+    SaveSpectralIndexFileForSide(JPF.JP_spindex_side2, np.array(lst_spectralindex_params2))
+
+#############################################
+
+def PlotSpectralIndexSurfaceBrightness(map_number, spectralindex_params1, spectralindex_params2):
+
+    """
+    Plots surface brightness data for both sides of the jet.
+
+    Parameters
+    -----------
+    map_number - number for the map being plotted
+
+    spectralindex_params1 - 2D array, shape(n,3)
+                            Array for one side of the jet, with distance from source, flux and area 
+
+    spectralindex_params2 - 2D array, shape(n,3)
+                            Array for other side of the jet, with distance from source, flux and area 
+
+    Returns
+    -----------
+    """
+
+    plot_data_R1 = spectralindex_params1[:,0]; plot_data_R2 = spectralindex_params2[:,0]
+    plot_data_avgFlux1 = spectralindex_params1[:,1] / spectralindex_params1[:,2]
+    plot_data_avgFlux2 = spectralindex_params2[:,1] / spectralindex_params2[:,2]
+
+    fa_min = min(np.min(plot_data_avgFlux1), np.min(plot_data_avgFlux2))
+    fa_max = max(np.max(plot_data_avgFlux1), np.max(plot_data_avgFlux2))
+    d_min = min(np.min(plot_data_R1), np.min(plot_data_R2))
+    d_max = max(np.max(plot_data_R1), np.max(plot_data_R2))
+
+    fig, ax = plt.subplots()
+    fig.suptitle(JMS.sName)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim(d_min, d_max)
+    ax.set_ylim(fa_min, fa_max)
+    axis.Axis.set_major_formatter(ax.xaxis, ticker.ScalarFormatter())
+
+    ax.set_ylabel('Surface Brightness (Jy/kpc2)')
+    ax.set_xlabel('Distance (kpc)')
+
+    ax.plot(plot_data_R1, plot_data_avgFlux1, 'r-', label='Flux (N)', marker='.')
+    ax.plot(plot_data_R2, plot_data_avgFlux2, 'g-', label='Flux (S)', marker='.')
+
+    ax.legend()
+
+    plt.savefig(JPF.JP_spindex_fluxarea_plot %(JMS.sName, str(map_number+1)))
+    plt.close(fig)
+
+#############################################
+
+def SaveSpectralIndexFilesForMap(map_number, spectralindex_params1, spectralindex_params2):
+
+    """
+    Saves the spectral index files for both sides of the jet.
+
+    Parameters
+    -----------
+    map_number - map number for the data being saved
+
+    spectralindex_params1 - 2D array, shape(n,3)
+                            Array for one side of the jet, with distance from source, flux and area 
+
+    spectralindex_params2 - 2D array, shape(n,3)
+                            Array for other side of the jet, with distance from source, flux and area 
+
+    Returns
+    -----------
+    """
+
+    np.savetxt(JPF.JP_spindex_fluxarea_side1 %(JMS.sName, str(map_number+1)), spectralindex_params1, delimiter=' ',
+               header='section R (kpc), section flux (Jy), section area (kpc**2)')
+    np.savetxt(JPF.JP_spindex_fluxarea_side2 %(JMS.sName, str(map_number+1)), spectralindex_params2, delimiter=' ',
+               header='section R (kpc), section flux (Jy), section area (kpc**2)')
+
+#############################################
+
+def SaveSpectralIndexFileForSide(filename, spectralindex_params):
+
+    """
+    Saves the spectral index file for one side of the jet in all maps.
+
+    Parameters
+    -----------
+    filename - name of output file
+
+    spectralindex_params - 3D array, shape(m,n,3)
+                           Array for all maps, for one side of the jet, with distance from source, flux and area.
+                           n: number of sections
+                           m: number of maps
+
+    Returns
+    -----------
+    """
+
+    ordered_freqs = (JMS.freqs).argsort()                                                       # Order output by frequency
+
+    # Construct output data
+    output = np.empty((0, (JMS.map_count * 4) + 2))                                             # Initialise the output array
+    sect_count = np.size(spectralindex_params, 1)                                               # Section count
+    for sect_num in range(sect_count):
+        line = np.array([spectralindex_params[0,sect_num,0]])                                   # Distance from source
+        spindex_data = np.empty((0,2))                                                          # Data for calculation of section spectral index
+        for map_number in ordered_freqs:
+            norm_area = spectralindex_params[map_number,0,2]                                    # Normalising area
+            norm_factor = norm_area / spectralindex_params[map_number,sect_num,2]               # Normalisation factor
+
+            freq = JMS.freqs[map_number] / 1e6                                                  # Freq (MHz)
+            log_freq = log10(freq)                                                              # Log freq
+            section_flux = spectralindex_params[map_number,sect_num,1] * norm_factor            # Flux (Jy)
+            log_section_flux = log10(section_flux)                                              # Log flux
+
+            flux_for_freq = np.array([freq, log_freq, section_flux, log_section_flux])          # All freq and flux data for this map section
+            logfreq_logflux = np.array([log_freq,log_section_flux])                             # Freq and flux log values for this map section
+            
+            line = np.hstack((line, flux_for_freq))
+            spindex_data = np.vstack((spindex_data, logfreq_logflux))
+
+        logfreq = spindex_data[:,0]; logflux = spindex_data[:,1]                                # Calculate spectral index
+        a = np.vstack((np.ones_like(logfreq), logfreq)).T
+        first_part = np.linalg.inv(np.dot(a.T, a))
+        intercept, gradient = np.dot(first_part, np.dot(a.T, logflux))                          # Find gradient of logflux/logfreq plot
+        spindex = - gradient                                                                    # Spectral index = -(gradient)
+
+        line = np.hstack((line, spindex))
+        output = np.vstack((output, line))
+
+    # Header
+    header_text = "section R (kpc)"
+    for map_number in range(JMS.map_count): header_text += ", freq(MHz), log freq, flux (Jy), log flux, spectral index"
+
+    np.savetxt(filename %(JMS.sName), output, delimiter=' ', header=header_text)

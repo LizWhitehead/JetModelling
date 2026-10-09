@@ -6,9 +6,7 @@
 # Modified to work on a single source radio map by Liz
 
 import JetModelling_MapSetup as JMS
-import JetModelling_SourceSetup as JSS
 import JetModelling_Constants as JMC
-import JetModelling_MapAnalysis as JMA
 import JetRidgeline.RidgelineFiles as RLF
 import JetRidgeline.RLConstants as RLC
 from astropy.io import fits
@@ -1766,7 +1764,7 @@ def RetryDirections(new_iparray, init_point):
 
 #############################################
 
-def TrialSeries():
+def TrialSeries(flux_array):
 
     """
     Performs ridge finding and output plotting for the source with given 
@@ -1810,7 +1808,10 @@ def TrialSeries():
     Lra = JMS.sRA
     Ldec = JMS.sDec
     lmsize = np.max(JMS.sSize)      # pixels
-    flux_array = GetCutoutArray(source_name)
+    
+    # Get thresholded flux array
+    thres = JMC.nSig[0] * JMS.bgRMS
+    flux_array[flux_array < thres] = np.nan
         
     optical_pos = (float(lmsize), float(lmsize))
         

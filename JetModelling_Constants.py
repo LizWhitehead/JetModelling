@@ -21,7 +21,7 @@ ridgeline_only = False          # Run ridgeline code only
 use_manual_RMS_and_mean = True  # Use background RMS and mean flux values read manually from the map
 geo_lentol = 0.2                # Tolerance for calculation of geometric lengths (pixels)
 geo_angtol = 0.01               # Tolerance for calculation of geometric angles (radians)
-nSig = np.array([4,4])          # The sigma of the RMS flux threshold value (side1, side2)
+nSig = np.array([2.0, 2.0])     # The sigma of the RMS flux threshold value (side1, side2)
 
 # Ridgelines
 ridgeline_method = RidgelineMethod.FROMDATA  # Method for creating ridgelines
@@ -30,7 +30,7 @@ ridgeline_method = RidgelineMethod.FROMDATA  # Method for creating ridgelines
 R = 10                          # Maximum step size of ridgeline in pixels
 
 # Ridgelines (RL-Xid)
-R_rl = 4                        # Step size of ridgeline in pixels
+R_rl = 5                        # Step size of ridgeline in pixels
 dphi = 60                       # Half angle of search cone
 
 # Edgepoints
@@ -39,7 +39,7 @@ MaxRFactor = 100                # Maximum factor for increase of step size befor
 R_es = 5                        # Step size along the jet in pixels
 SearchRadiusIncFactor = 1.25    # Factor (>1) to increase the edgepoint search radius for each ridgepoint (large value <=> no search radius)
 NumRetryAttempts = 3            # Number of retry attempts if edgepoint lies exactly on the search radius
-MinIntpolFactor = 4             # Minimum length factor for an edgeline for an edgepoint to be added
+MinIntpolFactor = 3             # Minimum length factor for an edgeline for an edgepoint to be added
 MaxIntpolSections = 6           # Maximum number of interpolated points along an edgeline
 flux_percentage = 95            # Flux percentile limit for refining jet edges (100 => no change)
 

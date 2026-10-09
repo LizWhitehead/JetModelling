@@ -30,9 +30,13 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
 
         # Create the jet ridgelines
         if JMC.ridgeline_method == JMC.RidgelineMethod.FROMDATA:
-            flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFD.CreateRidgelines()
+            flux_array = JMA.GetCutout(JMS.map_file, JMS.mCentre, JMS.sSize)    # Create a cutout array, to reduce processing time
+            ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLFD.CreateRidgelines(flux_array)
+
         elif JMC.ridgeline_method == JMC.RidgelineMethod.RLXID:
-            flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines()
+            flux_array = JMA.GetCutout(JMS.map_file, JMS.mCentre, JMS.sSize)    # Create a cutout array, to reduce processing time
+            ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RL.CreateRidgelines(flux_array)
+
         else:   # JMC.RidgelineMethod.SKELETONIZE
             flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2 = RLS.CreateRidgelines()
 
@@ -46,3 +50,12 @@ if __name__ == '__main__':      # The main function shouldn't execute for spawne
 
             # Compute parameters along the jet
             JP.ComputeJetParameters(section_parameters1, section_parameters2)
+
+    # if multiple maps for the same AGN, determine the spectral index along the jet
+    if JMS.map_count > 1 and not JMC.ridgeline_only:
+
+        # Find the common set of jet sections across all maps
+        start_time, common_section_params1, common_section_params2 = JS.CommonJetSections()
+
+        # Determine the spectral index along the jet
+        JP.ComputeSpectralIndex(start_time, common_section_params1, common_section_params2)

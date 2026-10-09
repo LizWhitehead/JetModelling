@@ -20,3 +20,8 @@ SR2 = indir+'/regions/%s_%s_sectionregions2.txt'
 RGS = indir+'/regions/%s_%s_all_sections.reg'
 EPimage = indir+'/sections/%s_%s_edgepoints.png'
 SCimage = indir+'/sections/%s_%s_sections.png'
+
+# Spectral index files
+SIimage = indir+'/sections/spectralindex/%s_%s_sections.png'
+SI1 = indir+'/sections/spectralindex/%s_%s_sectionparameters1.txt'
+SI2 = indir+'/sections/spectralindex/%s_%s_sectionparameters2.txt'

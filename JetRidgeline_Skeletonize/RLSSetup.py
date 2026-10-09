@@ -3,12 +3,11 @@
 
 """
 RLSSetup.py
-Create a flattened 2D version of the input FITS file.
+Initialise ridgeline folders.
 Created by LizWhitehead - 24/08/2025
 """
 
 import JetModelling_MapSetup as JMS
-from astropy.io import fits
 import os
 
 def Setup():
@@ -28,10 +27,3 @@ def Setup():
             else:
                 # Directory doesn't exist. Create it.
                 print ("Made directory ", newd)
-
-    # Get the flux array from the map file
-    hdu = fits.open(JMS.map_file)
-    flux_array = hdu[0].data.squeeze()
-    hdu.close()
-
-    return flux_array
