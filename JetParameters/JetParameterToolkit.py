@@ -410,13 +410,13 @@ def GetSpectralIndexParameters(common_section_params1, common_section_params2):
         map_spectralindex_parameters1 = np.empty((0,3)); map_spectralindex_parameters2 = np.empty((0,3))
 
         for [x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, area_section] in section_params1:
-            R_section = R_section * JMS.ddels[map_number] * 3600                                    # Distance from source in kpc
+            R_section = R_section * JMS.ddels[map_number] * 3600 * arcsec_to_kpc                    # Distance from source in kpc
             flux_section = flux_section / JMS.beamareas[map_number]                                 # Flux in Janskys (rather than Jy/beam)
             area_section = area_section * pow((JMS.ddels[map_number] * 3600 * arcsec_to_kpc), 2)    # Area in kpc squared
             map_spectralindex_parameters1 = np.vstack((map_spectralindex_parameters1, np.array([R_section, flux_section, area_section])))
 
         for [x1,y1, x2,y2, x3,y3, x4,y4, R_section, flux_section, area_section] in section_params2:
-            R_section = R_section * JMS.ddels[map_number] * 3600                                    # Distance from source in kpc
+            R_section = R_section * JMS.ddels[map_number] * 3600 * arcsec_to_kpc                    # Distance from source in kpc
             flux_section = flux_section / JMS.beamareas[map_number]                                 # Flux in Janskys (rather than Jy/beam)
             area_section = area_section * pow((JMS.ddels[map_number] * 3600 * arcsec_to_kpc), 2)    # Area in kpc squared
             map_spectralindex_parameters2 = np.vstack((map_spectralindex_parameters2, np.array([R_section, flux_section, area_section])))
@@ -427,8 +427,14 @@ def GetSpectralIndexParameters(common_section_params1, common_section_params2):
         lst_spectralindex_params1.append(map_spectralindex_parameters1)
         lst_spectralindex_params2.append(map_spectralindex_parameters2)
 
-    SaveSpectralIndexFileForSide(JPF.JP_spindex_side1, np.array(lst_spectralindex_params1))
-    SaveSpectralIndexFileForSide(JPF.JP_spindex_side2, np.array(lst_spectralindex_params2))
+    spectralindex_parameters1 = np.array(lst_spectralindex_params1)                                 # Spectral index data for all maps (side 1)
+    spectralindex_parameters2 = np.array(lst_spectralindex_params2)                                 # Spectral index data for all maps (side 2)
+
+    SaveSpectralIndexDataForSide(JPF.JP_spindex_data_side1, spectralindex_parameters1)
+    SaveSpectralIndexDataForSide(JPF.JP_spindex_data_side2, spectralindex_parameters2)
+
+    CalculateAndPlotSpectralIndexForSide(1, spectralindex_parameters1)
+    CalculateAndPlotSpectralIndexForSide(2, spectralindex_parameters2)
 
 #############################################
 
@@ -508,10 +514,10 @@ def SaveSpectralIndexFilesForMap(map_number, spectralindex_params1, spectralinde
 
 #############################################
 
-def SaveSpectralIndexFileForSide(filename, spectralindex_params):
+def SaveSpectralIndexDataForSide(filename, spectralindex_params):
 
     """
-    Saves the spectral index file for one side of the jet in all maps.
+    Saves the spectral index data for one side of the jet in all maps.
 
     Parameters
     -----------
@@ -529,10 +535,10 @@ def SaveSpectralIndexFileForSide(filename, spectralindex_params):
     ordered_freqs = (JMS.freqs).argsort()                                                       # Order output by frequency
 
     # Construct output data
-    output = np.empty((0, (JMS.map_count * 4) + 2))                                             # Initialise the output array
+    sp_data = np.empty((0, (JMS.map_count * 4) + 2))                                            # Initialise the output array
     sect_count = np.size(spectralindex_params, 1)                                               # Section count
     for sect_num in range(sect_count):
-        line = np.array([spectralindex_params[0,sect_num,0]])                                   # Distance from source
+        line = np.array([spectralindex_params[0,sect_num,0]])                                   # Distance from source (kpc)
         spindex_data = np.empty((0,2))                                                          # Data for calculation of section spectral index
         for map_number in ordered_freqs:
             norm_area = spectralindex_params[map_number,0,2]                                    # Normalising area
@@ -549,17 +555,146 @@ def SaveSpectralIndexFileForSide(filename, spectralindex_params):
             line = np.hstack((line, flux_for_freq))
             spindex_data = np.vstack((spindex_data, logfreq_logflux))
 
-        logfreq = spindex_data[:,0]; logflux = spindex_data[:,1]                                # Calculate spectral index
-        a = np.vstack((np.ones_like(logfreq), logfreq)).T
-        first_part = np.linalg.inv(np.dot(a.T, a))
-        intercept, gradient = np.dot(first_part, np.dot(a.T, logflux))                          # Find gradient of logflux/logfreq plot
-        spindex = - gradient                                                                    # Spectral index = -(gradient)
+        logfreq = spindex_data[:,0]; logflux = spindex_data[:,1]
+        gradient, intercept = np.polyfit(logfreq, logflux, 1)
+        spindex = - gradient                                                                    # Spectral index for single section
 
         line = np.hstack((line, spindex))
-        output = np.vstack((output, line))
+        sp_data = np.vstack((sp_data, line))
 
     # Header
     header_text = "section R (kpc)"
     for map_number in range(JMS.map_count): header_text += ", freq(MHz), log freq, flux (Jy), log flux, spectral index"
 
-    np.savetxt(filename %(JMS.sName), output, delimiter=' ', header=header_text)
+    np.savetxt(filename %(JMS.sName), sp_data, delimiter=' ', header=header_text)
+
+#############################################
+
+def CalculateAndPlotSpectralIndexForSide(side_number, spectralindex_params):
+
+    """
+    Divide the jet into lengths, for which to find the spectral index. 
+    Plot log flux vs log freq and determine the spectral index for each of these lengths.
+
+    Parameters
+    -----------
+    side_number - number of the jet side being processed
+
+    spectralindex_params - 3D array, shape(m,n,3)
+                           Array for all maps, for one side of the jet, with distance from source, flux and area.
+                           n: number of sections
+                           m: number of maps
+
+    Returns
+    -----------
+    """
+
+    SPINDEX_INNER_JET_LENGTH = 10                               # Length of the inner jet to ignore in spectral index calculation (kpc)
+
+    # Initialise output file names
+    if side_number == 1:
+        calculated_spindex_filename = JPF.JP_spectralindex_side1
+        spindex_data_plot_filename = JPF.JP_spectralindex_plot_side1
+    else:
+        calculated_spindex_filename = JPF.JP_spectralindex_side2
+        spindex_data_plot_filename = JPF.JP_spectralindex_plot_side2
+
+    section_Rs = np.array(spectralindex_params[0,:,0])          # Distance from source for all jet sections (kpc)
+
+    # Find the minimum section length, to ensure that the jet is split into lengths having at least one set of data
+    min_section_length = 0
+    for sect_num in range(1, np.size(section_Rs)):
+        R_diff = section_Rs[sect_num] - section_Rs[sect_num-1]
+        if min_section_length < R_diff: min_section_length = R_diff
+    spindex_split_length = np.ceil(R_diff)
+
+    # Find the first section which has R greater than the inner jet length
+    for sect_num in range(np.size(section_Rs)):
+        if section_Rs[sect_num] >= SPINDEX_INNER_JET_LENGTH:
+            sect_first = sect_num
+            R_start = section_Rs[sect_num]
+            sect_start = sect_first
+            break
+
+    # Divide the jet into lengths, to find the spectral index
+    spindex_data = np.empty((0,2))                                                              # Initialise spectral index data for jet length
+    calc_spindex_data = np.empty((0,3))                                                         # Initialise calculated spectral index data
+    for sect_num in range(sect_first, np.size(section_Rs)):
+        if (section_Rs[sect_num] - R_start) < spindex_split_length:
+            for map_number in range(JMS.map_count):
+                norm_area = spectralindex_params[map_number,0,2]                                # Normalising area
+                norm_factor = norm_area / spectralindex_params[map_number,sect_num,2]           # Normalisation factor
+
+                freq = JMS.freqs[map_number] / 1e6                                              # Freq (MHz)
+                log_freq = log10(freq)                                                          # Log freq
+                section_flux = spectralindex_params[map_number,sect_num,1] * norm_factor        # Flux (Jy)
+                log_section_flux = log10(section_flux)                                          # Log flux
+
+                logfreq_logflux = np.array([log_freq,log_section_flux])                         # Freq and flux log values for this map section
+                spindex_data = np.vstack((spindex_data, logfreq_logflux))
+
+            if sect_num == np.size(section_Rs) - 1:                                             # Check whether we've reached the end of the jet
+                R_end = section_Rs[sect_num]
+                logfreq = spindex_data[:,0]; logflux = spindex_data[:,1]
+                gradient, intercept = np.polyfit(logfreq, logflux, 1)
+                spindex = - gradient                                                            # Spectral index for this length of the jet
+
+                PlotSpectralIndexData(spindex_data_plot_filename, spindex, logfreq, logflux, gradient, intercept, R_start, R_end)
+                calc_spindex_data = np.vstack((calc_spindex_data, np.array([R_start, R_end, spindex])))
+        else:
+            R_end = section_Rs[sect_num]
+            logfreq = spindex_data[:,0]; logflux = spindex_data[:,1]
+            gradient, intercept = np.polyfit(logfreq, logflux, 1)
+            spindex = - gradient                                                                # Spectral index for this length of the jet
+
+            PlotSpectralIndexData(spindex_data_plot_filename, spindex, logfreq, logflux, gradient, intercept, R_start, R_end)
+            calc_spindex_data = np.vstack((calc_spindex_data, np.array([R_start, R_end, spindex])))
+
+            spindex_data = np.empty((0,2))                                                      # Re-initialise spectral index data for jet length
+            R_start = section_Rs[sect_num]
+            sect_start = sect_num
+
+    # Save the calculated spectral indices for the jet lengths
+    np.savetxt(calculated_spindex_filename %(JMS.sName), calc_spindex_data, delimiter=' ', header='R_start(kpc), R_end(kpc), spectral index')
+
+#############################################
+
+def PlotSpectralIndexData(plot_filename, spectral_index, logfreq, logflux, gradient, intercept, R_start, R_end):
+
+    """
+    Plot the spectral index data - log flux density vs log frequency.
+
+    Parameters
+    -----------
+    plot_filename - name of the output plot file
+
+    spectral_index - spectral index value
+
+    logfreq - log frequency (x) values
+
+    logflux - log flux density (y) values
+
+    gradient, intercept - gradient, intercept of best fit straight line
+
+    R_start, R_end - start and end distances from source for this jet length
+
+    Returns
+    -----------
+    """
+
+    plt.figure()
+
+    # Plot the data points
+    plt.plot(logfreq, logflux, 'o', label='Spectral index = ' + str(spectral_index), markersize=4, c='black')
+
+    # Plot the best fit straight line
+    min_x = np.floor(np.min(logfreq) * 2) / 2; max_x = np.ceil(np.max(logfreq) * 2) / 2
+    x = np.linspace(min_x, max_x, 10)
+    plt.plot(x, (gradient * x) + intercept, c='red')
+
+    plt.xlabel('log frequency')
+    plt.ylabel('log flux density')
+
+    plt.legend()
+
+    plt.savefig(plot_filename %(JMS.sName, format(R_start, ".1f"), format(R_end, ".1f")))

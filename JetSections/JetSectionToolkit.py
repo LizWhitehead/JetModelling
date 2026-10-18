@@ -73,21 +73,21 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
         print('Finding edge points')
 
         # Find initial edge points
-        init_edge_points1 = FindInitEdgePoints(1, flux_array, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
+        init_edge_points1 = FindInitEdgePoints(flux_array, np.array(ridge1[0]), phi_val1[0], Rlen1[0])
 
         # The initial edge points were ordered relative to the ridge phi for the first side. Re-order for the second side.
         init_edge_points2 = np.array([init_edge_points1[2], init_edge_points1[3], \
                                       init_edge_points1[0], init_edge_points1[1], init_edge_points1[4], init_edge_points1[5], init_edge_points1[6]])
 
         # Find all edgepoints for each side of the jet
-        edge_points1 = FindAllEdgePointsForJetSide(1, flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
-        edge_points2 = FindAllEdgePointsForJetSide(2, flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
+        edge_points1 = FindAllEdgePointsForJetSide(flux_array, init_edge_points1, ridge1, phi_val1, Rlen1)
+        edge_points2 = FindAllEdgePointsForJetSide(flux_array, init_edge_points2, ridge2, phi_val2, Rlen2)
 
         # Interpolate extra edge points at points in the jet where significant flux or area (=> calculated volume) is cut off.
         # This will ensure that summed flux and volume are correct when merging segments.
         print('Adding extra edge points')
-        edge_points1 = AddEdgePoints(1, flux_array, edge_points1)
-        edge_points2 = AddEdgePoints(2, flux_array, edge_points2)
+        edge_points1 = AddEdgePoints(flux_array, edge_points1)
+        edge_points2 = AddEdgePoints(flux_array, edge_points2)
 
         # Refine the edges using a percentile of the flux distribution
         edge_points1 = JMA.RefineEdgesAlongJetSide(flux_array, edge_points1)
@@ -112,16 +112,13 @@ def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_va
 
 #############################################
 
-def FindAllEdgePointsForJetSide(side_number, flux_array, init_edge_points, ridge, phi_val, Rlen):
+def FindAllEdgePointsForJetSide(flux_array, init_edge_points, ridge, phi_val, Rlen):
 
     """
     Find all edge points for one side of the jet
 
     Parameters
     -----------
-    side_number - integer
-                  jet side being processed
-
     flux_array - 2D array,
                  raw image array
 
@@ -169,10 +166,10 @@ def FindAllEdgePointsForJetSide(side_number, flux_array, init_edge_points, ridge
                 break
 
             if (Rlen[ridge_count] - Rlen[ridge_count-1]) < (JMC.MaxRFactor * JMC.R_es):  # Test whether the last step size has increased by too much
-                new_edge_points = FindEdgePoints(side_number, flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
+                new_edge_points = FindEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count], prev_edge_points = edge_points[-1])
             else:
                 # Re-initialise edge points algorithm
-                new_edge_points = FindInitEdgePoints(side_number,flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
+                new_edge_points = FindInitEdgePoints(flux_array, ridge[ridge_count], phi_val[ridge_count], Rlen[ridge_count])
 
             if not np.isnan(new_edge_points).any(): 
                 edge_points = np.vstack((edge_points, new_edge_points))
@@ -183,7 +180,7 @@ def FindAllEdgePointsForJetSide(side_number, flux_array, init_edge_points, ridge
 
 #############################################
 
-def FindEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
+def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -191,9 +188,6 @@ def FindEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R, pre
 
     Parameters
     -----------
-    side_number - integer
-                  jet side being processed
-
     flux_array - 2D array,
                  raw image array
 
@@ -238,7 +232,7 @@ def FindEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R, pre
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the flux values below the RMS value (JMC.nSig * rms)
-    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[side_number-1] * JMS.bgRMS), flux_array).mask
+    rms_mask = np.ma.masked_where(flux_array <= (JMS.nSig * JMS.bgRMS), flux_array).mask
 
     # Get polar coordinates for flux_array, around the ridge point
     r, phi = PolarCoordinates(flux_array, ridge_point)
@@ -385,7 +379,7 @@ def GetEdgepointsInRadius(flux_array, r, phi, rms_mask, prev_edge_pix, r_radius1
 
 #############################################
 
-def FindInitEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R):
+def FindInitEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R):
 
     """
     Returns edge points, on either side of the jet, corresponding to
@@ -393,9 +387,6 @@ def FindInitEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R)
 
     Parameters
     -----------
-    side_number - integer
-                  jet side being processed
-
     flux_array - 2D array,
                  raw image array
 
@@ -433,7 +424,7 @@ def FindInitEdgePoints(side_number, flux_array, ridge_point, ridge_phi, ridge_R)
     flux_array_valid = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the jet - where flux values are above (JMC.nSig * rms)
-    jet_mask = np.ma.masked_where(flux_array_valid > (JMC.nSig[side_number-1] * JMS.bgRMS), flux_array_valid).mask
+    jet_mask = np.ma.masked_where(flux_array_valid > (JMS.nSig * JMS.bgRMS), flux_array_valid).mask
 
     # Search for an edge at right angles to the ridge direction
     search_phi_range1 = PiRange(ridge_phi + (pi*90/180) - (pi*5/180))     # +/- 5 degrees
@@ -552,7 +543,7 @@ def FindSearchAngleRanges(phi_prev1, phi_prev2, ridge_phi):
 
 #############################################
 
-def AddEdgePoints(side_number, flux_array, edge_points):
+def AddEdgePoints(flux_array, edge_points):
 
     """
     Interpolates extra edge points at points in the jet where
@@ -560,9 +551,6 @@ def AddEdgePoints(side_number, flux_array, edge_points):
 
     Parameters
     -----------
-    side_number - integer
-                  jet side being processed
-
     flux_array - 2D array, shape(n,2)
                  raw image array
 
@@ -592,7 +580,7 @@ def AddEdgePoints(side_number, flux_array, edge_points):
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
 
     # Mask the flux values below the RMS value (JMC.nSig * rms)
-    rms_mask = np.ma.masked_where(flux_array <= (JMC.nSig[side_number-1] * JMS.bgRMS), flux_array).mask
+    rms_mask = np.ma.masked_where(flux_array <= (JMS.nSig * JMS.bgRMS), flux_array).mask
 
     # Loop for each side of the jet
     jet_side = 1
@@ -2502,7 +2490,7 @@ def CommonJetSectionsAcrossMultipleMaps():
     print('Find a set of common jet sections for all maps')
 
     # Find the source centres (in pixels) for all maps
-    src_centres = np.empty((0,2))                               # Initialise the source centres (x,y) for the maps
+    src_centres = np.empty((0,2))                                           # Initialise the source centres (x,y) for the maps
     for map_number in range(JMS.map_count):
         r1 = np.loadtxt(RLF.R1 %(JMS.sName, str(map_number+1)), delimiter=' ')
         src_centres = np.vstack((src_centres, r1[0,0:2]))
@@ -2515,7 +2503,7 @@ def CommonJetSectionsAcrossMultipleMaps():
     cn_section_params1 = np.array(cn_section_params1[:max_1_sections])
     cn_section_params2 = np.array(cn_section_params2[:max_2_sections])
 
-    lst_allmaps_section_params1 = []                            # Initialise list of common section parameters for all maps
+    lst_allmaps_section_params1 = []                                        # Initialise list of common section parameters for all maps
     lst_allmaps_section_params2 = []
     for dest_map_number in range(0, JMS.map_count):
 
@@ -2524,16 +2512,15 @@ def CommonJetSectionsAcrossMultipleMaps():
             map_section_params1 = UpdateCoordinates(cn_map_number, dest_map_number, src_centres, cn_section_params1)
             map_section_params2 = UpdateCoordinates(cn_map_number, dest_map_number, src_centres, cn_section_params2)
         else:
-            map_section_params1 = cn_section_params1            # Common sections were derived from this map so don't update co-ordinates
+            map_section_params1 = cn_section_params1                        # Common sections were derived from this map so don't update co-ordinates
             map_section_params2 = cn_section_params2
 
-        # Update the flux and area for this map. Ensure that we only include flux for areas > than the sigma of the background RMS.
+        # Update the flux and area for this map. Ensure that we only include flux for areas > than the sigma of the background RMS for this map.
         flux_array = JMA.GetCutout(JMS.map_files[dest_map_number], JMS.mCentres[dest_map_number], JMS.sSizes[dest_map_number])
-        flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)  # Mask invalid pixels
-        flux_array_side1 = np.ma.filled(np.ma.masked_where(flux_array <= (JMC.nSig[0] * JMS.bgRMSs[dest_map_number]), flux_array), JMS.bgMeans[dest_map_number])
-        UpdateFluxForCommonSections(flux_array_side1, map_section_params1, map_section_params2[0])
-        flux_array_side2 = np.ma.filled(np.ma.masked_where(flux_array <= (JMC.nSig[1] * JMS.bgRMSs[dest_map_number]), flux_array), JMS.bgMeans[dest_map_number])
-        UpdateFluxForCommonSections(flux_array_side2, map_section_params2, map_section_params1[0])
+        flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)      # Mask invalid pixels
+        flux_array_above_RMS = np.ma.filled(np.ma.masked_where(flux_array <= (JMS.nSig * JMS.bgRMSs[dest_map_number]), flux_array), JMS.bgMeans[dest_map_number])
+        UpdateFluxForCommonSections(flux_array_above_RMS, map_section_params1, map_section_params2[0])
+        UpdateFluxForCommonSections(flux_array_above_RMS, map_section_params2, map_section_params1[0])
 
         # Save the file of section parameters and plot the sections for this map
         SaveSpectralIndexSectionFiles(JMS.sName, dest_map_number, map_section_params1, map_section_params2)

@@ -1810,7 +1810,7 @@ def TrialSeries(flux_array):
     lmsize = np.max(JMS.sSize)      # pixels
     
     # Get thresholded flux array
-    thres = JMC.nSig[0] * JMS.bgRMS
+    thres = JMS.nSig * JMS.bgRMS
     flux_array[flux_array < thres] = np.nan
         
     optical_pos = (float(lmsize), float(lmsize))

@@ -21,7 +21,6 @@ ridgeline_only = False          # Run ridgeline code only
 use_manual_RMS_and_mean = True  # Use background RMS and mean flux values read manually from the map
 geo_lentol = 0.2                # Tolerance for calculation of geometric lengths (pixels)
 geo_angtol = 0.01               # Tolerance for calculation of geometric angles (radians)
-nSig = np.array([2.0, 2.0])     # The sigma of the RMS flux threshold value (side1, side2)
 
 # Ridgelines
 ridgeline_method = RidgelineMethod.FROMDATA  # Method for creating ridgelines

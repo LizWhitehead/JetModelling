@@ -9,9 +9,12 @@ Created by LizWhitehead - 18/04/2025
 import numpy as np
 from math import nan
 
-# Parameters for all maps in this run
+###########################################################################################################
+# Parameters for all maps for this source
+###########################################################################################################
 map_count = 3                   # count of map files in this run
 sName = '3C31'                  # Source name
+nSig = 2.0                      # The sigma of the RMS flux threshold value
 
 ###########################################################################################################
 # Set these parameters from the map FITS file
@@ -34,13 +37,6 @@ ridgelines_from_data_side1s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ri
 ridgelines_from_data_side2s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords2.txt',                   # Input ridgeline data file for side2
                                        'C:/JetModelling_FromData/3C31_360MHz_ridge_coords2.txt',
                                        'C:/JetModelling_FromData/3C31_615MHz_ridge_coords2.txt'])
-
-###########################################################################################################
-# Parameters used for map plotting.
-###########################################################################################################
-ImFractions  = np.array([1.0,1.0,1.0])                                                                              # The fraction of the source the final image is cut down to for plotting
-vmins        = np.array([0,0,0])                                                                                    # Linear mapping colour range minimum
-vmaxs        = np.array([0.010,0.010,0.010])                                                                        # Linear mapping colour range maximum
 
 ###########################################################################################################
 # Parameters used for skeletonize ridgelines (these parameters are highly sensitive to the map).
@@ -67,6 +63,13 @@ sRAs = np.empty(map_count); sDecs = np.empty(map_count)
 bgRMSs = np.empty(map_count); bgMeans = np.empty(map_count)
 freqs = np.empty(map_count)
 mCentres = np.empty((map_count,2))
+
+###########################################################################################################
+# Parameters used for map plotting.
+###########################################################################################################
+ImFractions  = np.array([1.0,1.0,1.0])                                                                              # The fraction of the source the final image is cut down to for plotting
+vmins        = np.array([0,0,0])                                                                                    # Linear mapping colour range minimum
+vmaxs        = np.array([0.010,0.010,0.010])                                                                        # Linear mapping colour range maximum
 
 #############################################
 
