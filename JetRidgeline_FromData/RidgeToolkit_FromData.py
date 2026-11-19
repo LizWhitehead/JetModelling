@@ -14,7 +14,7 @@ import JetModelling_MapAnalysis as JMA
 import JetRidgeline_FromData.RidgelineFiles_FromData as RLFDF
 import io
 import numpy as np
-from math import atan2, floor
+from math import atan2, sin, cos, floor
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import copy
@@ -114,16 +114,21 @@ def LoadRidgelineDataForOneSide(input_file_name, ridge, phi_val, Rlen):
             else:
                 x = float(data[0]); y = float(data[1])
                 latest_R += np.sqrt( (x - last_saved_x)**2 + (y - last_saved_y)**2 )
+                latest_phi = atan2((y - last_saved_y), (x - last_saved_x))
 
-                while (latest_R - last_saved_R) > JMC.R:                     # Only save when difference in R > defined max value
-                    fraction_R = float(JMC.R / (latest_R - last_saved_R))
-                    x_save = last_saved_x + ((x - last_saved_x) * fraction_R)
-                    y_save = last_saved_y + ((y - last_saved_y) * fraction_R)
-                    R_save = last_saved_R + ((latest_R - last_saved_R) * fraction_R)
+                while (latest_R - last_saved_R) > JMS.R:                     # Only save when difference in R > defined max value
+                    fraction_R = float(JMS.R / (latest_R - last_saved_R))
+                    delta_R = ((latest_R - last_saved_R) * fraction_R)
+                    delta_x = delta_R * cos(latest_phi)
+                    delta_y = delta_R * sin(latest_phi)
+
+                    x_save = last_saved_x + delta_x
+                    y_save = last_saved_y + delta_y
+                    R_save = last_saved_R + delta_R
 
                     ridge = np.vstack((ridge, np.array([x_save, y_save])))
                     Rlen = np.hstack((Rlen, R_save))
-                    phi_val = np.hstack(( phi_val, atan2((y_save - last_saved_y), (x_save - last_saved_x)) ))
+                    phi_val = np.hstack(( phi_val, latest_phi ))
                     last_saved_x = x_save; last_saved_y = y_save; last_saved_R = R_save
 
             lineidx += 1
@@ -132,7 +137,7 @@ def LoadRidgelineDataForOneSide(input_file_name, ridge, phi_val, Rlen):
         if x != last_saved_x or y != last_saved_y:
             ridge = np.vstack((ridge, np.array([x, y])))
             Rlen = np.hstack((Rlen, latest_R))
-            phi_val = np.hstack(( phi_val, atan2((y - last_saved_y), (x - last_saved_x)) ))
+            phi_val = np.hstack(( phi_val, latest_phi ))
 
         # Add a final phi value, the same as the previous one
         phi_val = np.hstack((phi_val, phi_val[-1]))
@@ -208,7 +213,7 @@ def PlotRidgelines(flux_array, ridge1, ridge2):
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
-    palette.set_bad('k',0.0)
+    palette.with_extremes(bad='k')
 
     y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)

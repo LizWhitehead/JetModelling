@@ -16,10 +16,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from skimage.draw import polygon2mask
 import numpy as np
 from numpy import pi, sin, cos, dot
-from math import tan, atan2, atan, pow, nan, isnan, ceil
+from math import tan, atan2, atan, pow, nan, isnan, floor
 from shapely.geometry import LineString, Polygon
 from regions import PixCoord, PolygonPixelRegion, Regions
-import io
 import copy
 
 def GetEdgepointsAndSections(flux_array, ridge1, phi_val1, Rlen1, ridge2, phi_val2, Rlen2):
@@ -219,14 +218,8 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
     Notes
     -----------
     """
-    # Initialise flags
-    invalid_edge_point = False; moving_backwards = False
-
     # Initialise edge_points array
     edge_points = np.full((1,7), np.nan)
-
-    # Initialise the search angle (radians) from the previous edge point
-    search_angle = JMC.search_angle * pi/180
 
     # Fill invalid (nan) values with zeroes in flux_array
     flux_array = np.ma.filled(np.ma.masked_invalid(flux_array), 0)
@@ -254,7 +247,7 @@ def FindEdgePoints(flux_array, ridge_point, ridge_phi, ridge_R, prev_edge_points
 
         # Check whether we have moved along too many ridge points since the last valid edge points
         ridge_dist = np.sqrt( (prev_edge_points[5] - ridge_point[0])**2 + (prev_edge_points[6] - ridge_point[1])**2 )
-        if (ridge_dist / JMC.R) > 3:
+        if (ridge_dist / JMS.R) > 3:
 
             # If an edge point is exactly at the radius, extend the radius up to a defined number of times, until the edge point is found within the radius
             search_cnt = 1
@@ -533,7 +526,7 @@ def FindSearchAngleRanges(phi_prev1, phi_prev2, ridge_phi):
         search_phi2 = ridge_phi_plus_90             # search at +90 degs to the ridge phi
 
     # Define the angular search range on both sides
-    semi_search_range = (pi/180) * (JMC.search_angle/2.0)
+    semi_search_range = (pi/180) * (JMS.search_angle/2.0)
     phi_min1 = PiRange(search_phi1 - semi_search_range)
     phi_max1 = PiRange(search_phi1 + semi_search_range)
     phi_min2 = PiRange(search_phi2 - semi_search_range)
@@ -2201,7 +2194,7 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
-    palette.set_bad('k',0.0)
+    palette.with_extremes(bad='k')
 
     y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
@@ -2293,9 +2286,9 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
         if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R_es):          # If gap is too big, plot last separator
-            PlotLastSegment(ax, last_sp)
+            PlotLastSegment(ax, last_sp, np.nan)
         last_sp = sp
-    PlotLastSegment(ax, sp)                                                             # Plot last separator
+    PlotLastSegment(ax, sp, edge_points1[-2])                                           # Plot last separator
 
     spcount = 0
     for sp in section_parameters2:
@@ -2304,9 +2297,9 @@ def PlotEdgePointsAndSections(flux_array, source_name, edge_points1, edge_points
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
         if spcount > 1 and (sp[8] - last_sp[9]) > (JMC.MaxRFactor * JMC.R_es):          # If gap is too big, plot last separator
-            PlotLastSegment(ax, last_sp)
+            PlotLastSegment(ax, last_sp, np.nan)
         last_sp = sp
-    PlotLastSegment(ax, sp)                                                             # Plot last separator
+    PlotLastSegment(ax, sp, edge_points2[-2])                                           # Plot last separator
 
     # Add in side edge lines, so as to see the shape of the edge
     epcount = 0
@@ -2387,7 +2380,7 @@ def PlotSpectralIndexSections(flux_array, source_name, map_number, section_param
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
-    palette.set_bad('k',0.0)
+    palette.with_extremes(bad='k')
 
     y, x = np.mgrid[slice((0),(flux_array_plot.shape[0]),1), slice((0),(flux_array_plot.shape[1]),1)]
     y = np.ma.masked_array(y, mask=np.ma.masked_invalid(flux_array_plot).mask)
@@ -2418,7 +2411,7 @@ def PlotSpectralIndexSections(flux_array, source_name, map_number, section_param
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-    PlotLastSegment(ax, sp)                                                             # Plot last separator
+    PlotLastSegment(ax, sp, np.nan)                                                             # Plot last separator
 
     spcount = 0
     for sp in section_parameters2:
@@ -2426,7 +2419,7 @@ def PlotSpectralIndexSections(flux_array, source_name, map_number, section_param
         x_values = np.array([sp[0], sp[2]])
         y_values = np.array([sp[1], sp[3]])
         ax.plot(x_values, y_values, 'y-', linewidth=0.6)                                # Segment separators
-    PlotLastSegment(ax, sp)                                                             # Plot last separator
+    PlotLastSegment(ax, sp, np.nan)                                                             # Plot last separator
 
     # Plot centre line in red, to make it obvious
     sp = section_parameters1[0,:]
@@ -2443,7 +2436,7 @@ def PlotSpectralIndexSections(flux_array, source_name, map_number, section_param
 
 #############################################
 
-def PlotLastSegment(ax, sp):
+def PlotLastSegment(ax, sp, last_3point_base):
 
     """
     Plots the edge points and jet sections on the source.
@@ -2455,11 +2448,22 @@ def PlotLastSegment(ax, sp):
          and computed parameters for last segment
 
     ax - plot axes
+
+    last_3point_base - last set of base coordinates, used in the case of a 3-point segment
     """
 
     # Check if this is a 3-point segment
     if sp[6] == -1:
-        ax.plot(np.array([sp[4]-0.1, sp[4]+0.1]), np.array([sp[5]-0.1, sp[5]+0.1]), 'g-', linewidth=0.6)     # Plot a small line around the 3rd point
+        if not np.isnan(last_3point_base).any():
+            # Plot lines to the 3rd point from the set of edge points that form the last 3-point base
+            ax.plot(np.array([last_3point_base[0], sp[4]]), np.array([last_3point_base[1], sp[5]]), 'g-', linewidth=0.6)
+            ax.plot(np.array([last_3point_base[2], sp[4]]), np.array([last_3point_base[3], sp[5]]), 'g-', linewidth=0.6)
+        else:
+            # Plot a small line around the 3rd point, with the same gradient as the last section separator
+            grad = (sp[3] - sp[1]) / (sp[2] - sp[0])
+            point1_x = sp[4] - 3.0; point1_y = sp[5] - (grad * 3.0)         # 3 pixels change in x on either side of the point
+            point2_x = sp[4] + 3.0; point2_y = sp[5] + (grad * 3.0)
+            ax.plot(np.array([point1_x, point2_x]), np.array([point1_y, point2_y]), 'g-', linewidth=0.6)
     else:
         ax.plot(np.array([sp[4], sp[6]]), np.array([sp[5], sp[7]]), 'g-', linewidth=0.6)
 
@@ -2499,7 +2503,7 @@ def CommonJetSectionsAcrossMultipleMaps():
     cn_map_number, cn_section_params1, cn_section_params2 = GetCommonJetSections()
 
     # Find the maximum number of sections that can be used across all maps
-    max_1_sections, max_2_sections = FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params2)
+    max_1_sections, max_2_sections = FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params2, src_centres)
     cn_section_params1 = np.array(cn_section_params1[:max_1_sections])
     cn_section_params2 = np.array(cn_section_params2[:max_2_sections])
 
@@ -2536,7 +2540,7 @@ def CommonJetSectionsAcrossMultipleMaps():
 
 #############################################
 
-def FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params2):
+def FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params2, src_centres):
 
     """
     Find the maximum number of sections that can be used across all maps
@@ -2554,6 +2558,8 @@ def FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params
                          2D array, shape(n,11)
                          Array with section points (x,y * 4), distance from source,
                          flux and area for one side of the jet.
+
+    src_centres - source centres for all maps
 
     Returns
     -----------
@@ -2592,7 +2598,63 @@ def FindMaxNumberOfSections(cn_map_number, cn_section_params1, cn_section_params
                 max_2_sections = np.size(cn_section_params2, 0) - sect + 1
                 break
 
+    # Check whether the co-ordinates of the maximum common sections lie within the cutouts for the other maps
+    while not AreMaximumSectionCoordsWithinMapCutouts(cn_map_number, cn_section_params1[max_1_sections-1], src_centres):
+        max_1_sections -= 1             # Reduce the maximum section by one and check again
+    while not AreMaximumSectionCoordsWithinMapCutouts(cn_map_number, cn_section_params2[max_2_sections-1], src_centres):
+        max_2_sections -= 1             # Reduce the maximum section by one and check again
+
     return max_1_sections, max_2_sections
+
+#############################################
+
+def AreMaximumSectionCoordsWithinMapCutouts(cn_map_number, max_cn_section_coords, src_centres):
+
+    """
+    Checks whether the co-ordinates of the maximum common sections lie
+    within the cutouts for all the other maps.
+
+    Parameters
+    -----------
+    cn_map_number - common sections map number
+
+    max_cn_section_coords - co-ordinates of the maximum common section
+
+    src_centres - source centres for all maps
+
+    Returns
+    -----------
+    are_within_cutouts - boolean, true if the maximum common section
+                         co-ordinates lie with the cutouts for all other maps
+    """
+    are_within_cutouts = True
+
+    for map_number in range(0, JMS.map_count):
+        if map_number != cn_map_number:
+            map_section_coords = UpdateCoordinates(cn_map_number, map_number, src_centres, max_cn_section_coords)
+
+            cutout_size = JMS.sSizes[map_number]
+            x_min = 0; x_max = cutout_size[0]; y_min = 0; y_max = cutout_size[1]
+
+            if (x_min <= map_section_coords[0] <= x_max) and (x_min <= map_section_coords[2] <= x_max) and \
+               (x_min <= map_section_coords[4] <= x_max):
+                   if map_section_coords[6] != -1 and ((map_section_coords[6] < x_min) or (map_section_coords[6] > x_max)):
+                       are_within_cutouts = False
+                       break
+            else:
+                are_within_cutouts = False
+                break
+
+            if (y_min <= map_section_coords[1] <= y_max) and (y_min <= map_section_coords[3] <= y_max) and \
+               (y_min <= map_section_coords[5] <= y_max):
+                   if map_section_coords[6] != -1 and ((map_section_coords[7] < y_min) or (map_section_coords[7] > y_max)):
+                       are_within_cutouts = False
+                       break
+            else:
+                are_within_cutouts = False
+                break
+
+    return are_within_cutouts
 
 #############################################
 
@@ -2681,15 +2743,26 @@ def UpdateCoordinates(from_map_number, to_map_number, src_centres, from_coords):
     coords = np.copy(from_coords)       # Intialise updated co-ordinates
 
     # Update the section co-ordinates and distance from source
-    coords[:,0] = src_centres[to_map_number,0] + ((coords[:,0] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
-    coords[:,2] = src_centres[to_map_number,0] + ((coords[:,2] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
-    coords[:,4] = src_centres[to_map_number,0] + ((coords[:,4] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
-    coords[:,1] = src_centres[to_map_number,1] + ((coords[:,1] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
-    coords[:,3] = src_centres[to_map_number,1] + ((coords[:,3] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
-    coords[:,5] = src_centres[to_map_number,1] + ((coords[:,5] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
-    coords[:,6] = np.where(coords[:,6] == -1, coords[:,6], src_centres[to_map_number,0] + ((coords[:,6] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
-    coords[:,7] = np.where(coords[:,7] == -1, coords[:,7], src_centres[to_map_number,1] + ((coords[:,7] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
-    coords[:,8] = coords[:,8] * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]       # Distance from source
+    if np.size(coords.shape) == 1:
+        coords[0] = src_centres[to_map_number,0] + ((coords[0] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[2] = src_centres[to_map_number,0] + ((coords[2] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[4] = src_centres[to_map_number,0] + ((coords[4] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[1] = src_centres[to_map_number,1] + ((coords[1] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[3] = src_centres[to_map_number,1] + ((coords[3] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[5] = src_centres[to_map_number,1] + ((coords[5] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[6] = np.where(coords[6] == -1, coords[6], src_centres[to_map_number,0] + ((coords[6] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
+        coords[7] = np.where(coords[7] == -1, coords[7], src_centres[to_map_number,1] + ((coords[7] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
+        coords[8] = coords[8] * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]       # Distance from source
+    else:
+        coords[:,0] = src_centres[to_map_number,0] + ((coords[:,0] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[:,2] = src_centres[to_map_number,0] + ((coords[:,2] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[:,4] = src_centres[to_map_number,0] + ((coords[:,4] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[:,1] = src_centres[to_map_number,1] + ((coords[:,1] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[:,3] = src_centres[to_map_number,1] + ((coords[:,3] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[:,5] = src_centres[to_map_number,1] + ((coords[:,5] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number])
+        coords[:,6] = np.where(coords[:,6] == -1, coords[:,6], src_centres[to_map_number,0] + ((coords[:,6] - src_centres[from_map_number,0]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
+        coords[:,7] = np.where(coords[:,7] == -1, coords[:,7], src_centres[to_map_number,1] + ((coords[:,7] - src_centres[from_map_number,1]) * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]))
+        coords[:,8] = coords[:,8] * JMS.ddels[from_map_number] / JMS.ddels[to_map_number]       # Distance from source
 
     return coords
 

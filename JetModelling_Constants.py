@@ -25,15 +25,10 @@ geo_angtol = 0.01               # Tolerance for calculation of geometric angles 
 # Ridgelines
 ridgeline_method = RidgelineMethod.FROMDATA  # Method for creating ridgelines
 
-# Ridgelines (FromData)
-R = 10                          # Maximum step size of ridgeline in pixels
-
 # Ridgelines (RL-Xid)
-R_rl = 5                        # Step size of ridgeline in pixels
 dphi = 60                       # Half angle of search cone
 
 # Edgepoints
-search_angle = 5                # Edgepoint search angle in degrees
 MaxRFactor = 100                # Maximum factor for increase of step size before re-initialising edgepoint algorithm 
 R_es = 5                        # Step size along the jet in pixels
 SearchRadiusIncFactor = 1.25    # Factor (>1) to increase the edgepoint search radius for each ridgepoint (large value <=> no search radius)
@@ -51,3 +46,6 @@ max_vertices = 2000             # maximum number of vertices in a region polygon
 
 # Plotting
 flux_factor = 1                 # Factor to multiply flux by for plotting
+
+# Spectral Index Calculation
+spindex_sections_in_length = 3  # Number of sections in each jet length for spectral index calculation

@@ -1797,13 +1797,13 @@ def TrialSeries(flux_array):
 
     palette = plt.cm.cividis
     palette = copy.copy(plt.get_cmap("cividis"))
-    palette.set_bad('k',0.0)
+    palette.with_extremes(bad='k')
 
     problem_names = np.array([str('#Source_Name'), str('Problem_Type')])
     Error = 'N/A'
         
     source_name = JMS.sName
-    R = JMC.R_rl
+    R = JMS.R
     dphi = JMC.dphi
     Lra = JMS.sRA
     Ldec = JMS.sDec

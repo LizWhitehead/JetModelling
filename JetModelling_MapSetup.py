@@ -6,53 +6,31 @@ Map-specific parameters for all maps in this run (same AGN, different frequencie
 Created by LizWhitehead - 18/04/2025
 """
 
+from astropy.units import R
 import numpy as np
 from math import nan
 
 ###########################################################################################################
 # Parameters for all maps for this source
 ###########################################################################################################
-map_count = 3                   # count of map files in this run
+map_count = 4                   # count of map files in this run
 sName = '3C31'                  # Source name
-nSig = 2.0                      # The sigma of the RMS flux threshold value
+nSig = 3.0                      # The sigma of the RMS flux threshold value
 
 ###########################################################################################################
 # Set these parameters from the map FITS file
 ###########################################################################################################
 map_files =  np.array(['C:/Maps/3C31.HGEOM2.FITS',                                                                  # FITS map file
                        'C:/Maps/3C31_VLA_360MHz_9arcs.fits',
-                       'C:/Maps/3C31_GMRT_615MHz_5arcs.fits'])
-sSizes    =  np.array([np.array([455,815]), np.array([510,900]), np.array([520,1000])])                             # Source size in pixels (x,y sides of containing rectangle, centred on mCentre)
+                       'C:/Maps/3C31_GMRT_615MHz_5arcs.fits',
+                       'C:/Maps/3C31_LOFAR_HBA_145MHz_16arcs.fits'])
+sSizes    =  np.array([np.array([455,815]), np.array([510,900]), np.array([520,1000]), np.array([300,500])])        # Source size in pixels (x,y sides of containing rectangle, centred on mCentre)
 rmSources =  np.array([np.array([[798,860,10],[952,1090,8],[894,732,15],[764,735,16],[761,780,12],[1038,1098,12]]), # Data to remove bright stars (centre x, centre y, +/- no. of pixels); array of -1's if none
                        np.array([[2075,2161,9],[1918,1847,20],[1922,1889,12],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]),
-                       np.array([[1538,1668,10],[1516,1884,15],[1402,1756,15],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]])])
-bgRMSs_manual =  np.array([0.0002, 0.0003, 0.0004]); bgMeans_manual = np.array([-0.000079, -0.000062, -0.000081])   # Background RMS and mean flux values read manually from the map (empty arrays if not present)
-
-###########################################################################################################
-# Parameters used for from-data ridgelines.
-###########################################################################################################
-ridgelines_from_data_side1s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords1.txt',                   # Input ridgeline data file for side1
-                                       'C:/JetModelling_FromData/3C31_360MHz_ridge_coords1.txt',
-                                       'C:/JetModelling_FromData/3C31_615MHz_ridge_coords1.txt'])
-ridgelines_from_data_side2s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords2.txt',                   # Input ridgeline data file for side2
-                                       'C:/JetModelling_FromData/3C31_360MHz_ridge_coords2.txt',
-                                       'C:/JetModelling_FromData/3C31_615MHz_ridge_coords2.txt'])
-
-###########################################################################################################
-# Parameters used for skeletonize ridgelines (these parameters are highly sensitive to the map).
-# Modify these parameters to achieve the best ridgeline. Run multiple times with the ridgeline_only flag
-# set to True until the best ridgeline is achieved.
-###########################################################################################################
-CutdownSize0s =            np.array([1000,1270,1000])                                                               # Cut-down size of image (y axis) for skeletonize
-CutDownSize1s =            np.array([1000,1270,1000])                                                               # Cut-down size of image (x axis) for skeletonize
-GaussSigmaFilters =        np.array([35,40,35])                                                                     # Sigma level for thresholding
-ContoursLevelPercs =       np.array([80,80,80])                                                                     # Percentile level for finding contours
-MaxRemoveSmallHolesAreas = np.array([200,1000,1000])                                                                # Maximum area of "holes" in skeleton that will be removed
-MaximumLoopJumpPixelss =   np.array([20,20,20])                                                                     # Maximum jump between points, used in finding "loops"
-nSig_ss =                  np.array([12,20,20])                                                                     # The multiple of sigma for RMS reduction; nan if not required
-SplitInnerOuterSkeletons = np.array([True,True,True])                                                               # Flag for joining together skeletons for inner and outer jets
-nSig_s_outers =            np.array([nan,nan,nan])                                                                  # Value used if joining together skeletons for inner and outer jets
-JoinInterpolatePointss =   np.array([6,30,6])                                                                       # Number of points in the smoothing interpolation at the join
+                       np.array([[1538,1668,10],[1516,1884,15],[1402,1756,15],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]),
+                       np.array([[932,689,6],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]])])
+bgRMSs_manual =  np.array([0.00015, 0.0003, 0.0004, 0.00036])                                                       # Background RMS and mean flux values read manually from the map (empty arrays if not present)
+bgMeans_manual = np.array([-0.0001, 0.00006, -0.0003, -0.00009])
 
 ###########################################################################################################
 # Parameters populated automatically from the FITS file header
@@ -65,11 +43,49 @@ freqs = np.empty(map_count)
 mCentres = np.empty((map_count,2))
 
 ###########################################################################################################
+# Parameters used for from-data ridgelines.
+###########################################################################################################
+ridgelines_from_data_side1s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords1.txt',                   # Input ridgeline data file for side1
+                                        'C:/JetModelling_FromData/3C31_360MHz_ridge_coords1.txt',
+                                        'C:/JetModelling_FromData/3C31_615MHz_ridge_coords1.txt',
+                                        'C:/JetModelling_FromData/3C31_145MHz_16_ridge_coords1.txt'])
+ridgelines_from_data_side2s = np.array(['C:/JetModelling_FromData/3C31_1.6GHz_ridge_coords2.txt',                   # Input ridgeline data file for side2
+                                        'C:/JetModelling_FromData/3C31_360MHz_ridge_coords2.txt',
+                                        'C:/JetModelling_FromData/3C31_615MHz_ridge_coords2.txt',
+                                        'C:/JetModelling_FromData/3C31_145MHz_16_ridge_coords2.txt'])
+
+###########################################################################################################
+# Parameters used for skeletonize ridgelines (these parameters are highly sensitive to the map).
+# Modify these parameters to achieve the best ridgeline. Run multiple times with the ridgeline_only flag
+# set to True until the best ridgeline is achieved.
+###########################################################################################################
+CutdownSize0s =            np.array([1000,1270,1000,1000])                                                          # Cut-down size of image (y axis) for skeletonize
+CutDownSize1s =            np.array([1000,1270,1000,1000])                                                          # Cut-down size of image (x axis) for skeletonize
+GaussSigmaFilters =        np.array([35,40,35,35])                                                                  # Sigma level for thresholding
+ContoursLevelPercs =       np.array([80,80,80,80])                                                                  # Percentile level for finding contours
+MaxRemoveSmallHolesAreas = np.array([200,1000,1000,1000])                                                           # Maximum area of "holes" in skeleton that will be removed
+MaximumLoopJumpPixelss =   np.array([20,20,20,20])                                                                  # Maximum jump between points, used in finding "loops"
+nSig_ss =                  np.array([12,20,20,20])                                                                  # The multiple of sigma for RMS reduction; nan if not required
+SplitInnerOuterSkeletons = np.array([True,True,True,True])                                                          # Flag for joining together skeletons for inner and outer jets
+nSig_s_outers =            np.array([nan,nan,nan,nan])                                                              # Value used if joining together skeletons for inner and outer jets
+JoinInterpolatePointss =   np.array([6,30,6,6])                                                                     # Number of points in the smoothing interpolation at the join
+
+###########################################################################################################
+# Parameters used for ridgelines
+###########################################################################################################
+Rs  = np.array([5,5,5,3])                                                                                           # Step size of ridgeline in pixels
+
+###########################################################################################################
+# Parameters used for searching for edges
+###########################################################################################################
+search_angles  = np.array([5,6,5,12])                                                                                # Edgepoint search angle in degrees
+
+###########################################################################################################
 # Parameters used for map plotting.
 ###########################################################################################################
-ImFractions  = np.array([1.0,1.0,1.0])                                                                              # The fraction of the source the final image is cut down to for plotting
-vmins        = np.array([0,0,0])                                                                                    # Linear mapping colour range minimum
-vmaxs        = np.array([0.010,0.010,0.010])                                                                        # Linear mapping colour range maximum
+ImFractions  = np.array([1.0,1.0,1.0,1.0])                                                                          # The fraction of the source the final image is cut down to for plotting
+vmins        = np.array([0,0,0,0])                                                                                  # Linear mapping colour range minimum
+vmaxs        = np.array([0.010,0.010,0.010,0.080])                                                                  # Linear mapping colour range maximum
 
 #############################################
 
@@ -115,6 +131,8 @@ def InitialiseMap(current_map_number):
     global ridgelines_from_data_side1               # Input ridgeline data file for side1
     global ridgelines_from_data_side2               # Input ridgeline data file for side2
 
+    global R                                        # Step size of ridgeline in pixels
+    global search_angle                             # Edgepoint search angle in degrees
     global ImFraction                               # The fraction of the source the final image is cut down to for plotting
     global vmin                                     # Linear mapping colour range minimum
     global vmax                                     # Linear mapping colour range maximum
@@ -139,6 +157,8 @@ def InitialiseMap(current_map_number):
     ridgelines_from_data_side1 = ridgelines_from_data_side1s[map_number]
     ridgelines_from_data_side2 = ridgelines_from_data_side2s[map_number]
 
+    R = Rs[map_number]
+    search_angle = search_angles[map_number]
     ImFraction = ImFractions[map_number]; vmin = vmins[map_number]; vmax = vmaxs[map_number]
 
     CutdownSize0 = CutdownSize0s[map_number]; CutDownSize1 = CutDownSize1s[map_number]
